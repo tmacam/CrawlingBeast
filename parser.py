@@ -44,8 +44,19 @@ class InvalidCharError (ParsingError):
     "unexpected char" errors that ocurr in a tag-like element promote this
     tag-like into a text data element."""
 
+class ParserEOFError(ParsingError):
+    """We unexpectedly found the end of the parsing data."""
+
 
 class BaseParser(object):
+    """A simple, almost stupid non-validating (x)HTML push parser.
+
+    Handling Validation Errors
+    ==========================
+
+    Errors found during tag processing "promote" that thought-to-be-tag
+    content into text content.
+    """
     
     def __init__(self, text=''):
         self._text = unicode(text)
@@ -68,11 +79,32 @@ class BaseParser(object):
     def handleStartTag(self, tag_name, attrs={}):
         pass
 
-    def handleGenericTag(self):
+    def handleProcessingInstruction(self, text):
+        pass
+
+    def handleComment(self,comment):
         pass
 
     # Private Functions
     # #########################################################################
+
+    # This-ought-to-have-a-tokenizer aux. Functions ###########################
+
+    def _advanceReadingPosition(self):
+        """Advance current reading position in text by one character.
+
+        This function should be used when you must advance the reading position
+        and read content immediately after. This situation usually arises
+        during rule processing, where a given token is expected and consumed
+        and immediately after you should validate the existence of/check for
+        some other token.
+        
+        @warning May raise ParserEOFError if we go past the end of the buffer.
+        """
+        self._start += 1
+        if self._start > self._end:
+            raise ParserEOFError()
+
 
     # Commom Syntatic Constructs (S 2.3) Rules ################################
     
@@ -118,7 +150,7 @@ class BaseParser(object):
         
         @param delimiters A list with all the delimiters. It can be a single
                           string (each character is a delimiter) or a a list
-                          with strings, each string being a delimiter.
+                          with single character strings, each being a delimiter.
         """
         i = self._start
         while i <= self._end and (self._text[i] not in delimiters):
@@ -129,6 +161,32 @@ class BaseParser(object):
         self._start = i
 
         return data
+    
+    def _readUntilDelimiterMark(self,mark):
+        """Returns whatever exists until the delimiter mark is found.
+
+        After callig this function the reading position is located one
+        character after last demilimiter mark character.
+        
+        @param delimiter A string.
+
+        @returns the text found until (but not cotaining) the delimiter
+        """
+        text_end = self._start
+        where = self._text.find(mark, self._start)
+        if where == -1:
+            # Not found?
+            raise ParserEOFError("While looking for delimiter mark '%s'" % mark)
+        else:
+            text_end = where + len(mark)
+            
+        data = self._text[self._start: where]
+        # Parsing restart after the mark
+        self._start = text_end
+
+        return data
+
+
 
     def _readAttValue(self):
         """Reads a AttValue rule and a possible preceding Eq rule.
@@ -145,16 +203,16 @@ class BaseParser(object):
             self._start = previous_start # Get back
             value = None
         else:
-            self._start += 1    # Get past the '='
+            self._advanceReadingPosition() # Get past the '='
             self._readSpace()
             if self._text[self._start] == u"'":
-                self._start += 1    # Get past the first '
+                self._advanceReadingPosition()  # Get past the first '
                 value =  self._readUntilDelimiter(u"'")
-                self._start += 1    # Get past the end '
+                self._advanceReadingPosition()    # Get past the end '
             elif self._text[self._start] == u'"':
-                self._start += 1    # Get past the first "
+                self._advanceReadingPosition()    # Get past the first "
                 value =  self._readUntilDelimiter(u'"')
-                self._start += 1    # Get past the end "
+                self._advanceReadingPosition()    # Get past the end "
             else:
                 # Old HTML-style attribute
                 value =  self._readUntilDelimiter(WHITESPACE + u">")
@@ -214,27 +272,47 @@ class BaseParser(object):
         
         If it starts with a <, and is not followed by space or & characters
         then it is assuped to be a tag-like content.
+
+        Errors during tag-like-content decoding "promote" the tag-like to 
+        text content.
         """
-        i = self._start
-        next_pos = i + 1
+        previous_start = self._start
+        next_pos = self._start + 1
         next = None
 
         # Is this really  a tag-like content?
         if not self._tagFollows():
-            # not a tag, actually, just text...
-            self.handleText( self._text[i:i +1])
+            # not a tag, actually, just text... 
+            self.handleText( self._text[ self._start : self._start +1])
             self._start += 1
             return
 
         # Bellow here things start to get weird. We should do as a normal
         # grammar-based parser would...
+        # _tagFollows garantees this is a valid reading positin
         next = self._text[next_pos]
         
-        if next.isalpha():
-            # Start-Tag, section 3.1
-            self._readStartTag()
-        else:
-            self._readGenericTagConstruction()
+        try:
+            if next.isalpha():
+                # Start-Tag, section 3.1
+                self._readStartTag()
+            elif next == u'?':
+                # Start-Tag, section 2.6
+                self._readProcessingInstructions()
+            elif next == u'!':
+                # let's hope is a Comment
+                if self._text[next_pos:].startswith(u"!--"):
+                    self._readComment()
+                else:
+                    # FIXME
+                    self._readGenericTagConstruction()
+            else:
+                self._readGenericTagConstruction()
+        except ParserEOFError:
+            # EOF found before we could finish parsing this tag-like content?
+            # Just turn everything we had from previouos start to _end into
+            # text content.
+            self.handleText( self._text[ previous_start : self._end +1])
         
 
     def _readStartTag(self):
@@ -246,7 +324,7 @@ class BaseParser(object):
         name = None
         attrs = {}
 
-        self._start += 1 # go past the '<'
+        self._advanceReadingPosition() # go past the '<'
         name = self._readName()
         attrs = self._readAttributeList()
         self._readSpace()
@@ -261,6 +339,33 @@ class BaseParser(object):
 
         # parsing should restart after the >
         self._start = i + 1
+
+    def _readProcessingInstructions(self):
+        """Reads a Processing Instruction construction.
+        
+        Parsing restarts after the tag's closing ">"."""
+        # [16] PI ::=  '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
+        content = None
+        self._advanceReadingPosition() # go past the '<'
+        self._advanceReadingPosition() # go past the '?'
+        content = self._readUntilDelimiterMark("?>")
+        # we are already past the '?>' mark. No need to update _start
+        self.handleProcessingInstruction(content)
+
+    def _readComment(self):
+        """Reads a Comment.
+        
+        Parsing restarts after the tag's closing ">"."""
+        # [15] Comment ::= '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
+        content = None
+        self._advanceReadingPosition() # go past the '<'
+        self._advanceReadingPosition() # go past the '!'
+        self._advanceReadingPosition() # go past the '-'
+        self._advanceReadingPosition() # go past the '-'
+        content = self._readUntilDelimiterMark("-->")
+        # we are already past the '-->' mark. No need to update _start
+        self.handleComment(content)
+
 
     def _readGenericTagConstruction(self):
         """Reads a generic construction.
@@ -296,11 +401,14 @@ class TestParser(BaseParser):
     >>> TestParser("a<b>c").parse().items
     [('TEXT', u'a'), ('TAG', u'b', {}), ('TEXT', u'c')]
 
-    >>> TestParser('#<a duplas="x"'+" simples='what' html=antigo attrhtml />#").parse().items == [('TEXT', u'#'), ('TAG', u'a', {u'duplas': u'x', u'simples': u'what', u'html': u'antigo', u'attrhtml': None }), ('TEXT', u'#')]
+    >>> TestParser('#<a duplas="x y"'+" simples='what is that' html=antigo attrhtml />#").parse().items == [('TEXT', u'#'), ('TAG', u'a', {u'duplas': u'x y', u'simples': u'what is that', u'html': u'antigo', u'attrhtml': None }), ('TEXT', u'#')]
     True
 
     >>> TestParser("a<b style=").parse().items
-    [('TEXT', u'a <b style=')]
+    [('TEXT', u'a'), ('TEXT', u'<b style=')]
+    
+    >>> TestParser("a <? xml blah ?><!-- <b> --> c").parse().items
+    [('TEXT', u'a '), ('PI', u' xml blah '), ('COMMENT', u' <b> '), ('TEXT', u' c')]
     """
 
     #>>> TestParser('#<a&whatever duplas="x"'+" simples='what' html=antigo attrhtml />#").parse().items
@@ -319,6 +427,26 @@ class TestParser(BaseParser):
 
     def handleStartTag(self, tag_name, attrs={}):
         self.items.append(("TAG",tag_name,attrs))
+
+    def handleProcessingInstruction(self,text):
+        self.items.append(("PI",text))
+
+    def handleComment(self,comment):
+        self.items.append(("COMMENT",comment))
+
+class LogParser(BaseParser):
+    def handleText(self,text):
+        print self._start, "TEXT",text
+
+    def handleStartTag(self, tag_name, attrs={}):
+        print self._start, "TAG",tag_name,attrs
+
+    def handleProcessingInstruction(self,text):
+        print self._start, "PI",text
+
+    def handleComment(self,comment):
+        print self._start, "COMMENT",comment
+
 
 
 
@@ -383,9 +511,14 @@ if __name__ == '__main__':
         data = u"asdajsdh\tAsasd.ASdasd < ajk>dajkaXXX<dh title=''>XXX \x00\xa4 "
         parser = TestParser(data)
         parser.parse()
-        print "Original stream:", data
+        print "\n\nOriginal stream:", data
         for content in parser.items:
             print content
+
+#        data=unicode(open('/tmp/uol.html','r').read(),'latin1')
+#        p=LogParser(data)
+#        p.parse()
+
 
 
 
