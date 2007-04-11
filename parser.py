@@ -47,8 +47,26 @@ class InvalidCharError (ParsingError):
 class ParserEOFError(ParsingError):
     """We unexpectedly found the end of the parsing data."""
 
+class AbstractParser(object):
+    """Abstract definition of our parser"""
+    # Callbacks - Must be implemented
+    def handleText(self, text):
+        pass
 
-class BaseParser(object):
+    def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
+        pass
+
+    def handleEndTag(self,tag_name):
+        pass
+
+    def handleProcessingInstruction(self, text):
+        pass
+
+    def handleComment(self,comment):
+        pass
+
+
+class BaseParser(AbstractParser):
     """A simple, almost stupid non-validating (x)HTML push parser.
 
     Handling Validation Errors
@@ -70,20 +88,9 @@ class BaseParser(object):
                 self._readTagLike()
             else:
                 self._readText()
+        return self
 
 
-    # Callbacks - Must be implemented
-    def handleText(self, text):
-        pass
-
-    def handleStartTag(self, tag_name, attrs={}):
-        pass
-
-    def handleProcessingInstruction(self, text):
-        pass
-
-    def handleComment(self,comment):
-        pass
 
     # Private Functions
     # #########################################################################
@@ -102,8 +109,11 @@ class BaseParser(object):
         @warning May raise ParserEOFError if we go past the end of the buffer.
         """
         self._start += 1
+        self._checkForEOF()
+
+    def _checkForEOF(self,msg=""):
         if self._start > self._end:
-            raise ParserEOFError()
+            raise ParserEOFError(msg)
 
 
     # Commom Syntatic Constructs (S 2.3) Rules ################################
@@ -128,7 +138,7 @@ class BaseParser(object):
         return name
 
     def _readSpace(self,optional=True):
-        """Reads a 'S' rule, as close as possible to the XML specification.
+        """Reads a 'S*' rule, as close as possible to the XML specification.
         
         Returns True if any space was read/consumed."""
         i = self._start
@@ -185,6 +195,33 @@ class BaseParser(object):
         self._start = text_end
 
         return data
+
+    def _readUntilEndTag(self,tag_name):
+        """Returns whatever exists until a end-tag w/ name tag_name is found.
+        
+        Notice:
+            * Tag matching is case insensitive.
+            * You will lose an EndTag event for this tag.
+        """
+        # [42] ETag ::= '</' Name S? '>'
+        found = False
+        while not found:
+            self._readUntilDelimiterMark("</")
+            i = self._start 
+            self._start += len(tag_name)
+            self._checkForEOF("While looking for the EndTag for " + tag_name)
+            if self._text[i:i+len(tag_name)].lower() != tag_name.lower():
+                # This is not the tag we are looking for...
+                # Keep looking...
+                continue
+            self._readSpace()
+            self._checkForEOF() # FIXME
+            # FIXME O problema é que depois de um readspace nos podemos estar em
+            # FIXME uma situação de EOF! Verificar se é o caso
+            # FIXME do readSpace verificar por EOF ao final
+            if self._start  > self._end and self._text[self._start] != u'>':
+                raise ParserEOFError("While looking for the EndTag for " + tag_name)
+            
 
 
 
@@ -321,24 +358,29 @@ class BaseParser(object):
         Parsing restarts after the tag's closing ">"."""
         # See Section 3.1 from XML Specification
         # [40] STag ::= '<' Name (S  Attribute)* S? '>'
+        # [44] EmptyElemTag ::= '<' Name (S  Attribute)* S? '/>'
         name = None
         attrs = {}
+        empty_element_tag = False
 
         self._advanceReadingPosition() # go past the '<'
         name = self._readName()
         attrs = self._readAttributeList()
         self._readSpace()
 
+        # Is this an empty element tag?
         i = self._start
-        while i <= self._end and self._text[i] != '>':
-            i = i + 1
+        if i <= self._end and self._text[i] == '/':
+            empty_element_tag = True
+            self._advanceReadingPosition()  # Go past the '/'
+        self._advanceReadingPosition()  # Go past the >
 
-        # just get the text between < and >
-        #self.handleStartTag(name, {self._text[ self._start + 1: i] : None})
-        self.handleStartTag(name, attrs)
+        self.handleStartTag(name, attrs, empty_element_tag)
+        if empty_element_tag:
+            self.handleEndTag(name)
 
+        # we are already past the '>', so there is no need to update _start
         # parsing should restart after the >
-        self._start = i + 1
 
     def _readProcessingInstructions(self):
         """Reads a Processing Instruction construction.
@@ -407,6 +449,9 @@ class TestParser(BaseParser):
     >>> TestParser("a<b style=").parse().items
     [('TEXT', u'a'), ('TEXT', u'<b style=')]
     
+    >>> TestParser("a<b style=b ").parse().items
+    [('TEXT', u'a'), ('TEXT', u'<b style=')]
+    
     >>> TestParser("a <? xml blah ?><!-- <b> --> c").parse().items
     [('TEXT', u'a '), ('PI', u' xml blah '), ('COMMENT', u' <b> '), ('TEXT', u' c')]
     """
@@ -425,7 +470,7 @@ class TestParser(BaseParser):
     def handleText(self,text):
         self.items.append(("TEXT",text))
 
-    def handleStartTag(self, tag_name, attrs={}):
+    def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
         self.items.append(("TAG",tag_name,attrs))
 
     def handleProcessingInstruction(self,text):
@@ -438,7 +483,7 @@ class LogParser(BaseParser):
     def handleText(self,text):
         print self._start, "TEXT",text
 
-    def handleStartTag(self, tag_name, attrs={}):
+    def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
         print self._start, "TAG",tag_name,attrs
 
     def handleProcessingInstruction(self,text):
