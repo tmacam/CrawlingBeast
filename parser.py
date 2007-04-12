@@ -13,6 +13,9 @@ import sys
 #   accordingly
 #
 # FIXME tag-end is not being handled properly
+# FIXME a _consumeCharacter could be created, based/using 
+#       _advanceReadingPosition
+# FIXME missing: <!DOCBOOK, <![CDATA ]]>
 
 
 import string
@@ -140,7 +143,11 @@ class BaseParser(AbstractParser):
     def _readSpace(self,optional=True):
         """Reads a 'S*' rule, as close as possible to the XML specification.
         
-        Returns True if any space was read/consumed."""
+        Returns True if any space was read/consumed. After calling this
+        function the current reading position should be on a non-space
+        character.
+
+        @warning This function calls _checkForEOF"""
         i = self._start
         found = False
         if (not optional) and (not self._text[i].isspace()):
@@ -152,6 +159,7 @@ class BaseParser(AbstractParser):
         # Parsing restart after the end of this rule
         # in this case, if may be in the same place it started...
         self._start = i
+        self._checkForEOF()
 
         return found
 
@@ -214,16 +222,14 @@ class BaseParser(AbstractParser):
                 # This is not the tag we are looking for...
                 # Keep looking...
                 continue
-            self._readSpace()
-            self._checkForEOF() # FIXME
-            # FIXME O problema é que depois de um readspace nos podemos estar em
-            # FIXME uma situação de EOF! Verificar se é o caso
-            # FIXME do readSpace verificar por EOF ao final
-            if self._start  > self._end and self._text[self._start] != u'>':
-                raise ParserEOFError("While looking for the EndTag for " + tag_name)
+            self._readSpace() #_checkForEOF was called for us already
+            if self._text[self._start] != u'>':
+                raise ParserEOFError( "While looking for the EndTag for " +\
+                                      tag_name )
+            self._advanceReadingPosition()  # Get past the '>'
+            # Yeah! The EndTag was found. We are done
+            found = True
             
-
-
 
     def _readAttValue(self):
         """Reads a AttValue rule and a possible preceding Eq rule.
@@ -369,8 +375,8 @@ class BaseParser(AbstractParser):
         self._readSpace()
 
         # Is this an empty element tag?
-        i = self._start
-        if i <= self._end and self._text[i] == '/':
+        i = self._start # _readSpace already did a _checkForEOF for us...
+        if self._text[i] == '/':
             empty_element_tag = True
             self._advanceReadingPosition()  # Go past the '/'
         self._advanceReadingPosition()  # Go past the >
@@ -450,7 +456,7 @@ class TestParser(BaseParser):
     [('TEXT', u'a'), ('TEXT', u'<b style=')]
     
     >>> TestParser("a<b style=b ").parse().items
-    [('TEXT', u'a'), ('TEXT', u'<b style=')]
+    [('TEXT', u'a'), ('TEXT', u'<b style= ')]
     
     >>> TestParser("a <? xml blah ?><!-- <b> --> c").parse().items
     [('TEXT', u'a '), ('PI', u' xml blah '), ('COMMENT', u' <b> '), ('TEXT', u' c')]
@@ -479,12 +485,21 @@ class TestParser(BaseParser):
     def handleComment(self,comment):
         self.items.append(("COMMENT",comment))
 
+
 class LogParser(BaseParser):
+    """Our first try into a HTML parser that treats style and script
+    correctly.
+    """
+
     def handleText(self,text):
         print self._start, "TEXT",text
 
     def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
         print self._start, "TAG",tag_name,attrs
+        if tag_name.lower() in [u'script', u'style'] and not empty_element_tag:
+            # A troublesome tag with troublesome content. Skipt it.
+            raw_input()
+            self._readUntilEndTag(tag_name)
 
     def handleProcessingInstruction(self,text):
         print self._start, "PI",text
@@ -548,7 +563,8 @@ def _test():
 
 if __name__ == '__main__':
     if len(sys.argv) > 1:
-        process(sys.argv[1])
+        data=unicode(open(sys.argv[1],'r').read(),'latin1')
+        LogParser(data).parse()
     else:
 
         _test()
