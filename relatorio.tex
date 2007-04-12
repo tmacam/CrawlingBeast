@@ -1,0 +1,56 @@
+
+
+\section{Parser}
+
+O parser deveria ser mais do que um simples extrator de URL de tags 'a'.
+
+Como não era possível usar um parser HTML pronto nem depender de expressões regulares, acaba sendo necessário então escrever um pequeno parser \emph{push} para HTML.
+
+Toda a infra-estrutura criada para esse parar será futuramente re-utilizada para o indexador. Dessa forma, preferimos no extender um pouco mais na sua criação, garantindo assim ganho de tempo na versao do indexador e, ao mesmo tempo, garantindo que o nosso parser seja mais do que capaz de lidar com a tarefa que lhe é solicitada no momento.
+
+Observer os documentos HTML existentes na Web atual não totalmente válidos e/ou bem formado se confrontados com os padroes existentes e publicados pela W3C para html. Mais Do que isso, os documentos da web atual são uma mistura de documentos HTML e XML e nem todos eles são documentos bem formados. Dessa forma
+\begin{itemize}
+\item Devido a essa mescla de XML e HTML, o parser deveria ser capaz de lidar com a maioria das construções de XML e HTML e ser capaz de lidar com documentos de se situam no interim desses dois padrões, mesmo em se tratando de erros.
+
+\item Mais do que isso, o parser deve ser capaz de lidar dom
+
+\item o parser deveria ser bem toleante a erros e tolerar documentos mal-formados da mesma forma com que os navegadores toleram. 
+
+Oscilar entre os padrões.... Tags de fechamento, de abertura, atributos sem
+valor, com seu conteudo não delimitado por \" ou \'. Tentamos conciliar o
+compromisso de pegar todo o texto que um navegador fosse capaz de interpretar
+mas lidar com erros corretamente.
+
+\end{itemize}
+
+Dessa forma, para que o parser cumprisse sua função de extrair o máximo de informação útil possível de páginas, de maneira similar ao navegadores. Para isso, tentamos garantir que ele se comporta-se tão próximo dos modelos de fererência quanto possível (Firefox, BeautifulSoup). Entretanto, isso nos levou a algumas escolhas quanto á forma de lidar com erro que vão de encontro até mesmo com a especificação de XML e HTML.
+
+No fragmento abaixo, de acordo com as especificaçõe de XML, não existe nenhuma tag:
+\verbatim{<a&whatever duplas="x" simples='what' html=antigo attrhtml />}
+
+Isso deve-se pela especificação do que pode ser o nome (\emph{Name}) de uma tag, e o caractere \& não faz parte dele. Entretanto, para esse exemplo, o firefox reconhece a existência de uma tag 'a&whatever', enquanto o BeautifulSoup reconhece a existência de uma tag 'a'.
+
+Nossa queremos seguir o firefox tanto quanto possível.
+
+\subsection{Tags Especiais}
+
+Script, Style, textarea e blocos XML CDATA não devem ter seu conteúdo processados pelo parser.
+
+Tags empty (que fecham sozinhas). Por isso, nosso parser difere de outros por
+já sinalizar que uma tag é auto-closing. Isso permite ao programador
+diferenciar se essa é uma Start Tag normal, o que torna possívevl ao usuário
+avançar forçosamente o texto para o local onde a tag de fechamento está,
+ignorando assim seu conteúdo e protegendo o próprio parser, ou se ela é uma tag
+Empty, o que não torna necessário nenhuma intervenção do usuário.
+
+\section{URL}
+
+RFC 3986
+
+http://en.wikipedia.org/wiki/URL_normalization
+http://en.wikipedia.org/wiki/Percent-encoding
+
+
+
+% vim:fileencoding=utf-8:syn=tex:ai:tw=72:smartindent:
+% vim:spell:spelllang=pt:

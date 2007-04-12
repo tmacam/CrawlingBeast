@@ -510,52 +510,6 @@ class LogParser(BaseParser):
 
 
 
-def read_tag(data,start,length):
-    end = start
-    next = start + 1
-    # After the < there MUST be a character that is not a white-space, not a &
-    # and not a >
-    if (start + 1) >= length or data[next].isspace() or data[next] == u'&' :
-        # not a tag, actually
-        got_text(data[start:end + 1])
-        return end + 1
-    while end < length and data[end] != '>':
-        end = end + 1
-
-    got_tag(data[start:end +1])
-
-    return end # includes tag closing '>'
-
-def read_text(data,start,length):
-    end = start
-    while end < length and data[end] != '<':
-        end = end + 1
-
-    end = end - 1 # we don't include '<'
-
-    got_text(data[start:end])
-
-    return end
-
-
-def parse(data):
-    i = 0
-    size =  len(data)
-    end = i
-    while i < size:
-        character = data[i]
-        if character == '<':
-            end = read_tag(data,i,size)
-        else:
-            end = read_text(data,i,size)
-
-        i = end +1
-
-
-def process(filename):
-    data = open(filename,'r').read()
-    parse(data)
-
 def _test():
     import doctest
     doctest.testmod()
@@ -579,9 +533,6 @@ if __name__ == '__main__':
 #        data=unicode(open('/tmp/uol.html','r').read(),'latin1')
 #        p=LogParser(data)
 #        p.parse()
-
-
-
 
 
 
