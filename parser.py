@@ -12,9 +12,6 @@ import sys
 #   should be ready do process the NEXT rule. So, _start should be updated
 #   accordingly
 #
-# FIXME tag-end is not being handled properly
-# FIXME a _consumeCharacter could be created, based/using 
-#       _advanceReadingPosition
 # FIXME missing: <!DOCBOOK, <![CDATA ]]>
 
 
@@ -100,6 +97,26 @@ class BaseParser(AbstractParser):
 
     # This-ought-to-have-a-tokenizer aux. Functions ###########################
 
+    def _consumeToken(self,token):
+        """Verifies that the current reading is valid and equal to token.
+
+        After callig this function the reading position is located one
+        character after last demilimiter mark character.
+        
+        EOF-ness is not verified at the end of the function.
+
+        @param token The string you expect to be present in the current
+                     reading pos.
+        """
+        for c in token:
+            self._checkForEOF()
+            if c != self._text[ self._start ]:
+                raise InvalidCharError("Expected '%s' but found '%s'" % \
+                                       (c, self._text[ self._start ]))
+            self._start += 1
+
+    # FIXME Do we really need this function as it is today? Does it really
+    # FIXME need to call _checkForEOF at it's end?
     def _advanceReadingPosition(self):
         """Advance current reading position in text by one character.
 
@@ -165,6 +182,9 @@ class BaseParser(AbstractParser):
 
     def _readUntilDelimiter(self, delimiters):
         """Returns whatever exists until the one of the delimiters is found.
+
+        After callig this function the reading position is advanced to the
+        position of the first delimiter found.
         
         @param delimiters A list with all the delimiters. It can be a single
                           string (each character is a delimiter) or a a list
@@ -184,7 +204,7 @@ class BaseParser(AbstractParser):
         """Returns whatever exists until the delimiter mark is found.
 
         After callig this function the reading position is located one
-        character after last demilimiter mark character.
+        character AFTER last demilimiter mark character.
         
         @param delimiter A string.
 
@@ -206,6 +226,9 @@ class BaseParser(AbstractParser):
 
     def _readUntilEndTag(self,tag_name):
         """Returns whatever exists until a end-tag w/ name tag_name is found.
+
+        After callig this function the reading position is located one
+        character AFTER the EndTag construct.
         
         Notice:
             * Tag matching is case insensitive.
@@ -226,7 +249,7 @@ class BaseParser(AbstractParser):
             if self._text[self._start] != u'>':
                 raise ParserEOFError( "While looking for the EndTag for " +\
                                       tag_name )
-            self._advanceReadingPosition()  # Get past the '>'
+            self._consumeToken('>')
             # Yeah! The EndTag was found. We are done
             found = True
             
@@ -246,16 +269,18 @@ class BaseParser(AbstractParser):
             self._start = previous_start # Get back
             value = None
         else:
-            self._advanceReadingPosition() # Get past the '='
+            self._consumeToken('=') # Get past the '='
             self._readSpace()
             if self._text[self._start] == u"'":
-                self._advanceReadingPosition()  # Get past the first '
-                value =  self._readUntilDelimiter(u"'")
-                self._advanceReadingPosition()    # Get past the end '
+                token = u"'"
+                self._consumeToken(token)  # Get past the first '
+                value =  self._readUntilDelimiter(token)
+                self._consumeToken(token)    # Get past the end '
             elif self._text[self._start] == u'"':
-                self._advanceReadingPosition()    # Get past the first "
-                value =  self._readUntilDelimiter(u'"')
-                self._advanceReadingPosition()    # Get past the end "
+                token = u'"'
+                self._consumeToken(token)    # Get past the first "
+                value =  self._readUntilDelimiter(token)
+                self._consumeToken(token)    # Get past the end "
             else:
                 # Old HTML-style attribute
                 value =  self._readUntilDelimiter(WHITESPACE + u">")
@@ -332,15 +357,18 @@ class BaseParser(AbstractParser):
 
         # Bellow here things start to get weird. We should do as a normal
         # grammar-based parser would...
-        # _tagFollows garantees this is a valid reading positin
+        # _tagFollows garantees this is a valid reading position
         next = self._text[next_pos]
         
         try:
             if next.isalpha():
                 # Start-Tag, section 3.1
                 self._readStartTag()
+            elif next == u'/':
+                # End-Tag, section 3.1
+                self._readEndTag()
             elif next == u'?':
-                # Start-Tag, section 2.6
+                # Processing Instruction, section 2.6
                 self._readProcessingInstructions()
             elif next == u'!':
                 # let's hope is a Comment
@@ -353,9 +381,16 @@ class BaseParser(AbstractParser):
                 self._readGenericTagConstruction()
         except ParserEOFError:
             # EOF found before we could finish parsing this tag-like content?
-            # Just turn everything we had from previouos start to _end into
+            # Just turn everything we had from previous_start to _end into
             # text content.
             self.handleText( self._text[ previous_start : self._end +1])
+        except InvalidCharError:
+            # InvalidCharError found?
+            # Just turn everything we had from previous_start to _end into
+            # text content.
+            self.handleText( self._text[ previous_start : self._end +1])
+            # Go past the offending character
+            self._start += 1
         
 
     def _readStartTag(self):
@@ -369,7 +404,7 @@ class BaseParser(AbstractParser):
         attrs = {}
         empty_element_tag = False
 
-        self._advanceReadingPosition() # go past the '<'
+        self._consumeToken('<') # go past the '<'
         name = self._readName()
         attrs = self._readAttributeList()
         self._readSpace()
@@ -378,13 +413,31 @@ class BaseParser(AbstractParser):
         i = self._start # _readSpace already did a _checkForEOF for us...
         if self._text[i] == '/':
             empty_element_tag = True
-            self._advanceReadingPosition()  # Go past the '/'
-        self._advanceReadingPosition()  # Go past the >
+            self._consumeToken('/')  # Go past the '/'
+        self._consumeToken('>')  # Go past the >
 
         self.handleStartTag(name, attrs, empty_element_tag)
         if empty_element_tag:
             self.handleEndTag(name)
 
+        # we are already past the '>', so there is no need to update _start
+        # parsing should restart after the >
+
+    
+    def _readEndTag(self):
+        """Reads an End-Tag construction.
+        
+        Parsing restarts after the tag's closing ">"."""
+        # [42] ETag ::= '</' Name  S? '>'
+        self._consumeToken('</') # go past the '</'
+        name = self._readName()
+        self._readSpace()
+        # Mozilla just ignores whatever comes after the 'Name S?' sequence
+        # but before a '>' Let's just do the same!
+        self._readUntilDelimiter(">")
+        self._consumeToken('>')  # go past the '>'
+        
+        self.handleEndTag(name)
         # we are already past the '>', so there is no need to update _start
         # parsing should restart after the >
 
@@ -394,8 +447,7 @@ class BaseParser(AbstractParser):
         Parsing restarts after the tag's closing ">"."""
         # [16] PI ::=  '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
         content = None
-        self._advanceReadingPosition() # go past the '<'
-        self._advanceReadingPosition() # go past the '?'
+        self._consumeToken('<?') # go past the '<?'
         content = self._readUntilDelimiterMark("?>")
         # we are already past the '?>' mark. No need to update _start
         self.handleProcessingInstruction(content)
@@ -406,10 +458,7 @@ class BaseParser(AbstractParser):
         Parsing restarts after the tag's closing ">"."""
         # [15] Comment ::= '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
         content = None
-        self._advanceReadingPosition() # go past the '<'
-        self._advanceReadingPosition() # go past the '!'
-        self._advanceReadingPosition() # go past the '-'
-        self._advanceReadingPosition() # go past the '-'
+        self._consumeToken('<!--') # go past the '<'
         content = self._readUntilDelimiterMark("-->")
         # we are already past the '-->' mark. No need to update _start
         self.handleComment(content)
@@ -449,17 +498,31 @@ class TestParser(BaseParser):
     >>> TestParser("a<b>c").parse().items
     [('TEXT', u'a'), ('TAG', u'b', {}), ('TEXT', u'c')]
 
-    >>> TestParser('#<a duplas="x y"'+" simples='what is that' html=antigo attrhtml />#").parse().items == [('TEXT', u'#'), ('TAG', u'a', {u'duplas': u'x y', u'simples': u'what is that', u'html': u'antigo', u'attrhtml': None }), ('TEXT', u'#')]
+    >>> TestParser("<b>").parse().items
+    [('TAG', u'b', {})]
+
+    >>> TestParser('#<a duplas="x y"'+" simples='what is that' html=antigo attrhtml />#").parse().items == [('TEXT', u'#'), ('TAG', u'a', {u'duplas': u'x y', u'simples': u'what is that', u'html': u'antigo', u'attrhtml': None }), ('ENDTAG', u'a'), ('TEXT', u'#')]
     True
 
     >>> TestParser("a<b style=").parse().items
     [('TEXT', u'a'), ('TEXT', u'<b style=')]
     
     >>> TestParser("a<b style=b ").parse().items
-    [('TEXT', u'a'), ('TEXT', u'<b style= ')]
+    [('TEXT', u'a'), ('TEXT', u'<b style=b ')]
+
+    # EndTag 
+    #
+    # Mozilla just ignores whatever comes after the 'Name S?' sequence
+    # but before a '>' Let's just do the same!
+    >>> TestParser("a<b style='>'></b 1 asd asd asd>").parse().items
+    [('TEXT', u'a'), ('TAG', u'b', {u'style': u'>'}), ('ENDTAG', u'b')]
+
     
     >>> TestParser("a <? xml blah ?><!-- <b> --> c").parse().items
     [('TEXT', u'a '), ('PI', u' xml blah '), ('COMMENT', u' <b> '), ('TEXT', u' c')]
+
+    >>> TestParser("a<b style=b 1").parse().items
+    [('TEXT', u'a'), ('TEXT', u'<b style=b 1')]
     """
 
     #>>> TestParser('#<a&whatever duplas="x"'+" simples='what' html=antigo attrhtml />#").parse().items
@@ -479,6 +542,9 @@ class TestParser(BaseParser):
     def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
         self.items.append(("TAG",tag_name,attrs))
 
+    def handleEndTag(self,tag_name):
+        self.items.append(("ENDTAG",tag_name))
+
     def handleProcessingInstruction(self,text):
         self.items.append(("PI",text))
 
@@ -486,20 +552,40 @@ class TestParser(BaseParser):
         self.items.append(("COMMENT",comment))
 
 
-class LogParser(BaseParser):
+class SloppyHtmlParser(BaseParser):
     """Our first try into a HTML parser that treats style and script
     correctly.
     """
+    TROUBLESOME_TAGS = [u'script', u'style']
+
+    def skipTagIfTroublesome(self, tag_name, empty_element_tag):
+        """Skip content inside a tag if it is a troublesome one.
+
+        @warning You should probably call handleEndTag if the the
+                 tag was indeed skiped.
+        
+        @return content inside the Tag, None if the Tag is not a
+                troublesome one.
+        """
+        content = None
+        if tag_name.lower() in self.TROUBLESOME_TAGS  and not empty_element_tag:
+            # A troublesome tag with troublesome content. Skipt it.
+            content = self._readUntilEndTag(tag_name)
+        return content
+
+class LogParser(SloppyHtmlParser):
 
     def handleText(self,text):
         print self._start, "TEXT",text
 
     def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
         print self._start, "TAG",tag_name,attrs
-        if tag_name.lower() in [u'script', u'style'] and not empty_element_tag:
-            # A troublesome tag with troublesome content. Skipt it.
-            raw_input()
-            self._readUntilEndTag(tag_name)
+
+        if self.skipTagIfTroublesome(tag_name, empty_element_tag):
+            self.handleEndTag(tag_name)
+
+    def handleEndTag(self,tag_name):
+        print self._start, "ENDTAG", tag_name
 
     def handleProcessingInstruction(self,text):
         print self._start, "PI",text
@@ -507,7 +593,23 @@ class LogParser(BaseParser):
     def handleComment(self,comment):
         print self._start, "COMMENT",comment
 
+class LinkExtractor (SloppyHtmlParser):
+    LINK_TAGS = { u'a'      : u'href',
+                  u'link'   : u'href'}
 
+    def __init__(self,text):
+        # setup base class
+        super(LinkExtractor,self).__init__(text)
+        self.links = set()
+
+    def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
+        # Extract Links
+        name = tag_name.lower()
+        if name  in self.LINK_TAGS:
+            self.links.add( attrs[ self.LINK_TAGS[name] ])
+        # Deal with troublesome tags
+        if self.skipTagIfTroublesome(tag_name, empty_element_tag):
+            self.handleEndTag(tag_name)
 
 
 def _test():
@@ -518,7 +620,10 @@ def _test():
 if __name__ == '__main__':
     if len(sys.argv) > 1:
         data=unicode(open(sys.argv[1],'r').read(),'latin1')
-        LogParser(data).parse()
+        p = LinkExtractor(data)
+        p.parse()
+        for i in p.links:
+            print i
     else:
 
         _test()
