@@ -6,6 +6,7 @@ import sys
 # FIXME Percent-encoding RFC 3986, Section 2.1
 # FIXME Establishing a Base URI, RFC 3986, Section 5.1
 # FIXME URL Normalization, RFC 3986, Sections 6.2.2 and 6.2.3
+# FIXME ":server/" is supposed to be a valid URL?
 
 
 import string
@@ -130,23 +131,18 @@ class BaseURLParser(BaseParser):
         """
         T = BaseURLParser()
         Base = self
-        if R.scheme is not None:
+        if R.scheme:
             # This is an absolute URL already!
             T.scheme    = R.scheme
             # authority
             T.userinfo, T.host, T.port = Base.userinfo, Base.host, Base.port
-            # T.path      = remove_dot_segments(R.path)
-            # remove_dot_segments was called during path's parsing,
-            # in _readPath
+            T.path      = self.removeDotSegments(R.path)
             T.query     = R.query
         else:
-            if (R.userinfo is not None) or (R.host is not None) or \
-               (R.port is not None):
-                    T.userinfo, T.host, T.port = R.userinfo, R.host, R.port
-                    # T.path      = remove_dot_segments(R.path);
-                    # remove_dot_segments was called during path's parsing,
-                    # in _readPath
-                    T.query     = R.query;
+            if R.host: # This is the only non-opitional part of authority
+                T.userinfo, T.host, T.port = R.userinfo, R.host, R.port
+                T.path      = self.removeDotSegments(R.path);
+                T.query     = R.query;
             else:
                 if R.path == "":
                     T.path = Base.path;
@@ -156,16 +152,14 @@ class BaseURLParser(BaseParser):
                         T.query = Base.query
                 else:
                    if R.path.startswith("/"):
-                        #T.path = remove_dot_segments(R.path);
-                        # remove_dot_segments was called during path's parsing,
-                        # in _readPath
-                        pass
+                        T.path = self.removeDotSegments(R.path);
                    else:
-                      T.path = self.mergePath(Base.path, R.path);
+                      T.path = self.mergePath(Base, R);
                       # we  MUST call remove_dot_segments again...
                       T.path = self.removeDotSegments(T.path);
                    T.query = R.query
                 #endif R.path
+                # T.authority = Base.authority
                 T.userinfo, T.host, T.port = Base.userinfo, Base.host, Base.port
             # endif R.authority
             T.scheme = Base.scheme
@@ -178,58 +172,151 @@ class BaseURLParser(BaseParser):
         """Remove special "." and ".." from a path segment according to rules
         in RFC 3986, Section 5.2.4
 
+        One extra rule was added between rules 2D and 2E: rule 2D-E.
+        It does the following: s#^//#/#
+
         >>> u = BaseURLParser()
         >>> u.removeDotSegments("/a/b/c/./../../g")
         u'/a/g'
         >>> u.removeDotSegments("mid/content=5/../6")
         u'mid/6'
+        >>> u.removeDotSegments("mid/content=5////../6")
+        u'mid/6'
         """
+        # NOTE: The RFC algorithm is writen with a string/buffer in mind
+        # while here we deal with an list of segments (created by split("/")).
+        # This introduce some peculiarities to our implementation.
+        # This is particularly important to have in mind, specially when
+        # dealing with absolute dirs, i.e, paths that start with '/'.
+        # In our case, absolute dirs are identified by an empty
+        # string in the first position of a list of segments.
+        # 
+        # Adding an element to the output segment list automatically adds a
+        # preceding "/" to it's element.  as well. The only case were you
+        # should realy take care is when adding/removing segments from/to an
+        # absolute paths in the input buffer.
+        #
         input = path.split('/')
         output = []
-        print "1", output, input
+        #print "1", "\t-\t", "/".join(output), "\t-\t", "/".join(input)
         while len(input) > 0:
             # Rule 'A'
             if len(input) > 1 and input[0] in [u"..", u"."]:
-                input = input[1:]
-                print "2A", output, input
+                del input[0]
+                #print "2A", "\t-\t", "/".join(output), "\t-\t", "/".join(input)
                 continue
             # Rule 'B'
             elif len(input) > 1 and input[0:2] == [u'', u'.']:
                 input = [u''] + input[2:]
-                print "2B", output, input
+                #print "2B", "\t-\t", "/".join(output), "\t-\t", "/".join(input), input
                 continue
             # Rule 'C'
+            # if the input buffer begins with a prefix of "/../" or "/.."
             elif len(input) > 1 and input[0:2] == [u'', u'..']:
+                # then replace that prefix with "/" in the input buffer
                 input = [u''] + input[2:]
+                # ... and remove the last segment and its preceding "/"
+                # (if any) from the output buffer
                 output.pop()
-                print "2C", output, input
+                if len(output) and output[-1] == u"":
+                    output.pop()
+                #print "2C", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
                 continue
             # Rule 'D'
-            if input == [u".."] or input == [u"."]:
+            elif input == [u".."] or input == [u"."]:
                 input.pop()
-                print "2D", output, input
+                #print "2D", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
+                continue
+            # RULE 'D-E': Our extra rule
+            elif len(input) > 1 and input[:2] == [u"",u""]:
+                # We may end up with "//" in the input string. Convert
+                # it to a single "/"
+                del input[0]
+                #print "2DE", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
                 continue
             # Rule 'E' FIXME FIXME FIXME FIXME FIXME FIXME FIXME
-            if input[0] == u'' and len(output) == 0 : # remove initial "/"
-                output.append( input[0] )
-                del input[0]
-            if len(input):
-                output.append( input[0] )
-                del input[0]
-            if len(input): # still got segments? then add the initial "/" back
-                input.insert(0, u"")
-            print "2E", output, input
-            continue
+            else:
+                # Move the first path segment in the input buffer to the end of
+                # the output buffer, including the initial "/" character (if
+                # any) and any subsequent characters up to, but not including,
+                # the next "/" character or the end of the input buffer
+                if len(input) > 1 and input[0] == u"":
+                    # If output buffer is still empty, this is an absolute
+                    # path and a initial "/" must be added to output
+                    if len(output) == 0:
+                        output.append(u"")
+                    # Remove the first segment, including it's  "/"
+                    output.append( input[1] )
+                    del input[1]
+                    del input[0]
+                else:
+                    output.append( input[0] )
+                    del input[0]
+                # Now, if there still is something left in the input,
+                # add the initial "/" back
+                if len(input) and input[0] != u"":
+                    input.insert(0,u"")
+                #print "2E", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
+                continue
+
+        #print "3", "\t-\t", "/".join(output), "\t-\t", "/".join(input), len(input)
         return u"/".join(output)
 
 
+    def mergePath(self,base, rel):
+        """Merges a relative-path URI to a base URI (base).
 
+        @param base A URL instance with the Base URL
+        @param rel  A URL instance with the relative-path URI
+        
+        We follow the algorithm from RFC 3986, Section 5.2.3.
+        """
+        if base.host and (base.path == u"" or base.path == u"/"):
+            return u"/" + rel.path
+        else:
+            rightmost = base.path.rfind("/")
+            if rightmost < 0:
+                # This code should never be reached: ALL URIs have a
+                # at least "/" as path! This is automatically added by
+                # parse, just after readPath
+                return rel.path
+            else:
+                return base.path[:rightmost] + "/" + rel.path
+            
 
+    def __str__(self):
+        """Recompose the parsed URI elements from this URL into a string.
+        
+        We follow the algorithm from RFC 3986, Section 5.3
+        """
+        # FIXME FIXME FIXME FIXME Test me
+        
+        result = u""
 
-        raise NotImplementedError()
+        if self.scheme:
+            result += self.scheme
+            result += u":"
+        
+        if self.host or self.port:
+            result += "//"
+            if self.userinfo:
+                result += self.userinfo    
+                result += "@"
+            result += self.host
+            if self.port:
+                result += ":"
+                result += self.port
 
-    def mergePath(self,base, ref):
-        raise NotImplementedError()
+        result += self.path
+
+        if self.query:
+            result += u"?"
+            result += self.query
+        if self.fragment:
+            result += u"#"
+            result += self.fragment
+        
+        return result;
 
     # Syntax Components (S. 3) Rules ##########################################
     
@@ -304,13 +391,25 @@ class BaseURLParser(BaseParser):
         return (userinfo, host, port)
 
     def _readPath(self):
-        """Reads a path component."""
-        # FIXME remove_dot_segments
+        """Reads a path component.
+        
+        Empty paths in absolute URIs are handled by parse()
+
+        >>> u = BaseURLParser("http://www.exemple.com/")
+        >>> v = BaseURLParser("http://www.exemple.com")
+        >>> u == v
+        True
+        >>> v.path
+        u'/'
+
+        Dot segments ("./..///a/b/../c" -> /a/c) and Percent-encoding
+        normalization is handled here as well.
+        """
         path = self._readUntilDelimiter(u"?#")
-        #FIXME relative->absolute (__add__) should deal with it
-        #FIXME if not path:
-        #FIXME    path = '/'
-        return self.fixPercentEncoding(path)
+        path = self.removeDotSegments(path)
+        path = self.fixPercentEncoding(path)
+
+        return path
 
     def fixPercentEncoding(self,path):
         """
@@ -424,11 +523,12 @@ class TestURLParser(BaseURLParser):
     >>> relative_urls = [TestURLParser(u) for u in list_of_relatives]
     >>> reduce(operator.and_, [u.isRelative() for u in relative_urls] )
     True
-    >>> [u.path for u in relative_urls] == list_of_relatives
-    True
-    >>> absolute = TestURLParser("http://a.com/index.html")
-    >>> [absolute + u for u in relative_urls]
-    []
+    >>> [u.path for u in relative_urls]
+    [u'/p4', u'p4/', u'', u'isso.html', u'file.html']
+
+    >>> absolute = TestURLParser("http://a.com/base/index.html")
+    >>> [str(absolute + u) for u in relative_urls]
+    ['http://a.com/p4', 'http://a.com/base/p4/', 'http://a.com/base/index.html', 'http://a.com/base/isso.html', 'http://a.com/base/file.html']
 
     >>> TestURLParser("http://www.exemple.com") != TestURLParser("http://exemple.com")
     True
@@ -442,6 +542,11 @@ class TestURLParser(BaseURLParser):
 
     >>> TestURLParser(u"http://a.com/%7e é %41") == TestURLParser(u"http://a.com/~%20%C3%A9%20A")
     True
+
+    >>> u = BaseURLParser("http://AeXAMPLE/a/./b/../b/%63/%7bfoo%7d")
+    >>> v = BaseURLParser("http://aexample://a/b/c/%7Bfoo%7D")
+    >>> u == v
+    True
     """
     pass
 
@@ -452,6 +557,7 @@ def _test():
 
 if __name__ == '__main__':
     _test()
+
 
 
 
