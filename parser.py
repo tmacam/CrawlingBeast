@@ -47,54 +47,25 @@ class InvalidCharError (ParsingError):
 class ParserEOFError(ParsingError):
     """We unexpectedly found the end of the parsing data."""
 
-class AbstractParser(object):
-    """Abstract definition of our parser"""
-    # Callbacks - Must be implemented
-    def handleText(self, text):
-        pass
-
-    def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
-        pass
-
-    def handleEndTag(self,tag_name):
-        pass
-
-    def handleProcessingInstruction(self, text):
-        pass
-
-    def handleComment(self,comment):
-        pass
 
 
-class BaseParser(AbstractParser):
-    """A simple, almost stupid non-validating (x)HTML push parser.
+########################################################################
+#                                GENERIC PARSER 
+########################################################################
 
-    Handling Validation Errors
-    ==========================
-
-    Errors found during tag processing "promote" that thought-to-be-tag
-    content into text content.
+class BaseParser(object):
+    """Common infrastructure for building generic recursive descendent parsers.
     """
-    
     def __init__(self, text=''):
         self._text = unicode(text)
         self._start = 0
         self._end = len(text) - 1
 
     def parse(self):
-        while self._start <= self._end:
-            character = self._text[ self._start ]
-            if character == '<':
-                self._readTagLike()
-            else:
-                self._readText()
-        return self
+        # return self
+        raise NotImplementedError()
 
-
-
-    # Private Functions
-    # #########################################################################
-
+    # Private Functions ###############################################
     # This-ought-to-have-a-tokenizer aux. Functions ###########################
 
     def _consumeToken(self,token):
@@ -135,6 +106,94 @@ class BaseParser(AbstractParser):
         if self._start > self._end:
             raise ParserEOFError(msg)
 
+    def _readUntilDelimiter(self, delimiters):
+        """Returns whatever exists until the one of the delimiters is found.
+
+        After callig this function the reading position is advanced to the
+        position of the first delimiter found.
+        
+        @param delimiters A list with all the delimiters. It can be a single
+                          string (each character is a delimiter) or a a list
+                          with single character strings, each being a delimiter.
+        """
+        i = self._start
+        while i <= self._end and (self._text[i] not in delimiters):
+            i += 1
+
+        data = self._text[self._start: i]
+        # Parsing restart after the end of this rule
+        self._start = i
+
+        return data
+    
+    def _readUntilDelimiterMark(self,mark):
+        """Returns whatever exists until the delimiter mark is found.
+
+        After callig this function the reading position is located one
+        character AFTER last demilimiter mark character.
+        
+        @param delimiter A string.
+
+        @returns the text found until (but not cotaining) the delimiter
+        """
+        text_end = self._start
+        where = self._text.find(mark, self._start)
+        if where == -1:
+            # Not found?
+            raise ParserEOFError("While looking for delimiter mark '%s'" % mark)
+        else:
+            text_end = where + len(mark)
+            
+        data = self._text[self._start: where]
+        # Parsing restart after the mark
+        self._start = text_end
+
+        return data
+
+
+########################################################################
+#                                HTML PARSER 
+########################################################################
+
+class AbstractHTMLParser(object):
+    """Abstract definition of our parser"""
+    # Callbacks - Must be implemented
+    def handleText(self, text):
+        pass
+
+    def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
+        pass
+
+    def handleEndTag(self,tag_name):
+        pass
+
+    def handleProcessingInstruction(self, text):
+        pass
+
+    def handleComment(self,comment):
+        pass
+
+
+class BaseHTMLParser(AbstractHTMLParser, BaseParser):
+    """A simple, almost stupid non-validating (x)HTML push parser.
+
+    Handling Validation Errors
+    ==========================
+
+    Errors found during tag processing "promote" that thought-to-be-tag
+    content into text content.
+    """
+    def parse(self):
+        while self._start <= self._end:
+            character = self._text[ self._start ]
+            if character == '<':
+                self._readTagLike()
+            else:
+                self._readText()
+        return self
+
+    # Private Functions
+    # #########################################################################
 
     # Commom Syntatic Constructs (S 2.3) Rules ################################
     
@@ -180,49 +239,6 @@ class BaseParser(AbstractParser):
 
         return found
 
-    def _readUntilDelimiter(self, delimiters):
-        """Returns whatever exists until the one of the delimiters is found.
-
-        After callig this function the reading position is advanced to the
-        position of the first delimiter found.
-        
-        @param delimiters A list with all the delimiters. It can be a single
-                          string (each character is a delimiter) or a a list
-                          with single character strings, each being a delimiter.
-        """
-        i = self._start
-        while i <= self._end and (self._text[i] not in delimiters):
-            i += 1
-
-        data = self._text[self._start: i]
-        # Parsing restart after the end of this rule
-        self._start = i
-
-        return data
-    
-    def _readUntilDelimiterMark(self,mark):
-        """Returns whatever exists until the delimiter mark is found.
-
-        After callig this function the reading position is located one
-        character AFTER last demilimiter mark character.
-        
-        @param delimiter A string.
-
-        @returns the text found until (but not cotaining) the delimiter
-        """
-        text_end = self._start
-        where = self._text.find(mark, self._start)
-        if where == -1:
-            # Not found?
-            raise ParserEOFError("While looking for delimiter mark '%s'" % mark)
-        else:
-            text_end = where + len(mark)
-            
-        data = self._text[self._start: where]
-        # Parsing restart after the mark
-        self._start = text_end
-
-        return data
 
     def _readUntilEndTag(self,tag_name):
         """Returns whatever exists until a end-tag w/ name tag_name is found.
@@ -301,7 +317,7 @@ class BaseParser(AbstractParser):
     def _readText(self):
         """Reads text until the start of something that *seems* like a tag."""
         # XXX   in the future, this should handle PCDATA, IIRC, it means it
-        #       should handle entities and such. Ignore it for BaseParser
+        #       should handle entities and such. Ignore it for BaseHTMLParser
         i = self._start
         while i <= self._end and \
             (self._text[i] != '<' or not self._tagFollows(i)):
@@ -483,7 +499,7 @@ class BaseParser(AbstractParser):
 
 
 
-class TestParser(BaseParser):
+class TestParser(BaseHTMLParser):
     """Simple Test class for the parser.
 
     The aim of this class is to be simple fixure upon which unittests can be
@@ -500,6 +516,9 @@ class TestParser(BaseParser):
 
     >>> TestParser("<b>").parse().items
     [('TAG', u'b', {})]
+
+    >>> TestParser("<a href=http://www.uol.com.br/>").parse().items
+    [('TAG', u'a', {u'href': u'http://www.uol.com.br/'})]
 
     >>> TestParser('#<a duplas="x y"'+" simples='what is that' html=antigo attrhtml />#").parse().items == [('TEXT', u'#'), ('TAG', u'a', {u'duplas': u'x y', u'simples': u'what is that', u'html': u'antigo', u'attrhtml': None }), ('ENDTAG', u'a'), ('TEXT', u'#')]
     True
@@ -552,7 +571,7 @@ class TestParser(BaseParser):
         self.items.append(("COMMENT",comment))
 
 
-class SloppyHtmlParser(BaseParser):
+class SloppyHtmlParser(BaseHTMLParser):
     """Our first try into a HTML parser that treats style and script
     correctly.
     """
