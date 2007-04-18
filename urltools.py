@@ -3,10 +3,17 @@ import sys
 
 # Assumptions
 #
-# FIXME Percent-encoding RFC 3986, Section 2.1
 # FIXME Establishing a Base URI, RFC 3986, Section 5.1
-# FIXME URL Normalization, RFC 3986, Sections 6.2.2 and 6.2.3
 # FIXME ":server/" is supposed to be a valid URL?
+# FIXME add test examples from http://www.mnot.net/python/urlnorm.py
+# FIXME Max URL size per HTTP protocol specs. (RFC 2616)
+# FIXME Perhaps normalization procedures should be moved from parsing, making
+#       it easier to find what and where are we dealing with each issue related
+#       to normalization...
+
+# FIXME Verify if the following is already FIXed
+# FIXME Percent-encoding RFC 3986, Section 2.1
+# FIXME URL Normalization, RFC 3986, Sections 6.2.2 and 6.2.3
 
 
 import string
@@ -37,8 +44,9 @@ class BaseURLParser(BaseParser):
         information - we don't crawl pages that require auth, so no point
         in parsing them either.
 
-    Despite thos limitations, our parser does URL normalization on absolute and
-    on relative URLs.
+    Despite those limitations, our parser does URL normalization on absolute and
+    on relative URLs. Normalization happens durring parsing an during the merge
+    of URIs.
 
     We also assume URL data is in UTF-8.
 
@@ -234,7 +242,7 @@ class BaseURLParser(BaseParser):
                 del input[0]
                 #print "2DE", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
                 continue
-            # Rule 'E' FIXME FIXME FIXME FIXME FIXME FIXME FIXME
+            # Rule 'E'
             else:
                 # Move the first path segment in the input buffer to the end of
                 # the output buffer, including the initial "/" character (if
@@ -289,7 +297,7 @@ class BaseURLParser(BaseParser):
         
         We follow the algorithm from RFC 3986, Section 5.3
         """
-        # FIXME FIXME FIXME FIXME Test me
+        # FIXME Test me
         
         result = u""
 
@@ -377,7 +385,7 @@ class BaseURLParser(BaseParser):
             if hostport.count(u':'):
                 host, port = hostport.split(u":",1)
                 # Clean port if it is equal to default http port
-                if port == u'80' or port == u'':
+                if self.scheme == u'http' and (port == u'80' or port == u''):
                     port = None
             else:
                 host = hostport
@@ -393,7 +401,10 @@ class BaseURLParser(BaseParser):
     def _readPath(self):
         """Reads a path component.
         
-        Empty paths in absolute URIs are handled by parse()
+        Empty paths in absolute URIs are handled by parse().
+        
+        Observe that http://www.exemple.com/ == http://www.exemple.com ,
+        as inscructed by RFC 3986, Section 6.2.3,
 
         >>> u = BaseURLParser("http://www.exemple.com/")
         >>> v = BaseURLParser("http://www.exemple.com")
@@ -402,6 +413,22 @@ class BaseURLParser(BaseParser):
         >>> v.path
         u'/'
 
+        and by  and by RFC 2616, Section 3.2.3.
+
+        >>> i = BaseURLParser('http://abc.com:80/~smith/home.html')
+        >>> j = BaseURLParser('http://ABC.com/%7Esmith/home.html')
+        >>> k = BaseURLParser('http://ABC.com:/%7esmith/home.html')
+        >>> i == j == k
+        True
+        
+        But for absolute URIs a defined path, the last "/" does produce
+        different URIs
+
+        >>> u = BaseURLParser("http://www.exemple.com/foo")
+        >>> v = BaseURLParser("http://www.exemple.com/foo/")
+        >>> u != v
+        True
+    
         Dot segments ("./..///a/b/../c" -> /a/c) and Percent-encoding
         normalization is handled here as well.
         """
@@ -557,6 +584,7 @@ def _test():
 
 if __name__ == '__main__':
     _test()
+    print "Done."
 
 
 
