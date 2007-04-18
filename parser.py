@@ -167,7 +167,7 @@ class AbstractHTMLParser(object):
     def handleEndTag(self,tag_name):
         pass
 
-    def handleProcessingInstruction(self, text):
+    def handleProcessingInstruction(self, name, attrs):
         pass
 
     def handleComment(self,comment):
@@ -305,7 +305,7 @@ class BaseHTMLParser(AbstractHTMLParser, BaseParser):
     def _readAttributeList(self):
         """Reas a (S Attribute)* rule"""
         attrs = {}
-        while self._readSpace() and self._text[self._start] not in u'/>':
+        while self._readSpace() and self._text[self._start] not in u'?/>':
             name = self._readName()
             val = self._readAttValue()
             attrs[name] = val
@@ -464,9 +464,16 @@ class BaseHTMLParser(AbstractHTMLParser, BaseParser):
         # [16] PI ::=  '<?' PITarget (S (Char* - (Char* '?>' Char*)))? '?>'
         content = None
         self._consumeToken('<?') # go past the '<?'
-        content = self._readUntilDelimiterMark("?>")
+        #content = self._readUntilDelimiterMark("?>")
         # we are already past the '?>' mark. No need to update _start
-        self.handleProcessingInstruction(content)
+        #self.handleProcessingInstruction(content)
+
+        self._readSpace()
+        name = self._readName()
+        attrs = self._readAttributeList()
+        self._readSpace()
+        self._consumeToken('?>') 
+        self.handleProcessingInstruction(name,attrs)
 
     def _readComment(self):
         """Reads a Comment.
@@ -538,7 +545,7 @@ class TestParser(BaseHTMLParser):
 
     
     >>> TestParser("a <? xml blah ?><!-- <b> --> c").parse().items
-    [('TEXT', u'a '), ('PI', u' xml blah '), ('COMMENT', u' <b> '), ('TEXT', u' c')]
+    [('TEXT', u'a '), ('PI', u'xml', {u'blah': None}), ('COMMENT', u' <b> '), ('TEXT', u' c')]
 
     >>> TestParser("a<b style=b 1").parse().items
     [('TEXT', u'a'), ('TEXT', u'<b style=b 1')]
@@ -564,8 +571,8 @@ class TestParser(BaseHTMLParser):
     def handleEndTag(self,tag_name):
         self.items.append(("ENDTAG",tag_name))
 
-    def handleProcessingInstruction(self,text):
-        self.items.append(("PI",text))
+    def handleProcessingInstruction(self,name,attrs):
+        self.items.append(("PI",name,attrs))
 
     def handleComment(self,comment):
         self.items.append(("COMMENT",comment))
@@ -606,8 +613,8 @@ class LogParser(SloppyHtmlParser):
     def handleEndTag(self,tag_name):
         print self._start, "ENDTAG", tag_name
 
-    def handleProcessingInstruction(self,text):
-        print self._start, "PI",text
+    def handleProcessingInstruction(self,name,attrs):
+        print self._start, "PI",text,attrs
 
     def handleComment(self,comment):
         print self._start, "COMMENT",comment
@@ -644,7 +651,6 @@ if __name__ == '__main__':
         for i in p.links:
             print i
     else:
-
         _test()
 
         data = u"asdajsdh\tAsasd.ASdasd < ajk>dajkaXXX<dh title=''>XXX \x00\xa4 "
