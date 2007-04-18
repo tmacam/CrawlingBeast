@@ -54,3 +54,58 @@ http://en.wikipedia.org/wiki/Percent-encoding
 
 % vim:fileencoding=utf-8:syn=tex:ai:tw=72:smartindent:
 % vim:spell:spelllang=pt:
+
+\section{Detecção de Mapas de Caracteres}
+
+\subsection{Mapas de Caracteres, Unicode e Codificação de Texto}
+BOM, UTF-8
+
+\subsection{Problemas na decodificação de textos na Web}
+
+Em algumas situações não teremos informações sobre charset: o HTTP não
+informou, não existe informação no documento. Assumiremos utf-8 e, em
+último caso, Latin1 caso.
+
+    (This is harder than it sounds, because standards can overlap. If
+    you fetch an XML document over HTTP, you need to support both
+    standards and figure out which one wins if they give you conflicting
+    information.)
+    
+    Sometimes you receive text with verifiably inaccurate encoding information.
+    
+    [chardet.feedparser.org]
+
+
+http://feedparser.org/docs/character-encoding.html
+
+    COmo é feito no XML
+        Mas ele tem UTF8 como default
+        http://www.w3.org/TR/REC-xml/#sec-guessing-no-ext-info
+
+    HTTP defaults to ISO 8859-1 (Latin 1)
+
+    O que a RFC 3023 diz? HTTP  Headers -> XML Dec. -> UTF-8
+
+
+Windows-1252 (http://en.wikipedia.org/wiki/ISO_8859-1)
+
+How browsers do?
+
+\begin{enumerate}
+\item The HTTP headers, where available, always take precedence over other information.
+\item  If the first 2-4 bytes are an XML Byte Order Mark (BOM), this is used.
+\item  If the document starts with an XML declaration <?xml .... ?>, this determines encoding by XML rules.
+ \item If the document contains the HTML hack <meta http-equiv="Content-Type" ...>, any charset declared here is used.
+\end{enumerate}
+
+Finally, As a last resort, detection.
+
+A composite approach to language/encoding detection,
+    http://www.mozilla.org/projects/intl/UniversalCharsetDetection.html
+    http://www.unicode.org/iuc/iuc19/program.html
+
+\subsection{Solução encontrada}
+
+KISS.
+
+Tentaremos seguir a RFC 3023.
