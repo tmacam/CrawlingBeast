@@ -214,7 +214,7 @@ class BaseHTMLParser(AbstractHTMLParser, BaseParser):
         # Parsing restart after the end of this rule
         self._start = i
 
-        return name
+        return name.lower()
 
     def _readSpace(self,optional=True):
         """Reads a 'S*' rule, as close as possible to the XML specification.
