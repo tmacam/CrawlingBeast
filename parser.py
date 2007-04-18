@@ -498,7 +498,7 @@ class BaseHTMLParser(AbstractHTMLParser, BaseParser):
             i = i + 1
 
         # just get the text between < and >
-        self.handleStartTag( self._text[ self._start + 1: i])
+        self.handleStartTag( self._text[ self._start + 1: i],{},False)
 
         # parsing should restart after the >
         self._start = i + 1
