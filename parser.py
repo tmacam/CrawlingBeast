@@ -631,7 +631,7 @@ class LinkExtractor (SloppyHtmlParser):
     def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
         # Extract Links
         name = tag_name.lower()
-        if name  in self.LINK_TAGS:
+        if name  in self.LINK_TAGS and self.LINK_TAGS[name] in attrs:
             self.links.add( attrs[ self.LINK_TAGS[name] ])
         # Deal with troublesome tags
         if self.skipTagIfTroublesome(tag_name, empty_element_tag):
@@ -644,7 +644,7 @@ def _test():
 
 
 if __name__ == '__main__':
-    if len(sys.argv) > 1:
+    if len(sys.argv) > 1 and sys.argv[1] != '-v':
         data=unicode(open(sys.argv[1],'r').read(),'latin1')
         p = LinkExtractor(data)
         p.parse()

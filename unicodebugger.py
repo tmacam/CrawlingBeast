@@ -6,10 +6,53 @@ import sys
 Inspired in UnicodeDammit, from BeautifuSoup.
 """
 
+__all__ = [ 'CannotFindSuitableEncodingException',
+            'CharsetDetectedException',
+            'UnicodeBugger',
+            'get_charset_from_content_type'
+            'XML_MARKS',
+            'BOM_MARKS',
+            'ALL_MARKS']
+
 
 import string
 import codecs
 from parser import SloppyHtmlParser
+
+
+
+# Used for BOM/XML charset recognition
+XML_MARKS = (
+    ('utf-32LE','\x3c\x00\x00\x00'),
+    ('utf-32BE','\x00\x00\x00\x3c'),
+    ('utf-16LE','\x3c\x00\x3f\x00'),
+    ('utf-16BE','\x00\x3c\x00\x3f'),
+)
+
+BOM_MARKS = ( 
+    ('utf-8',   '\xef\xbb\xbf'),
+    ('utf-32LE','\xff\xfe\x00\x00'),
+    ('utf-32BE','\x00\x00\xfe\xff'),
+    ('utf-16LE','\xff\xfe'),
+    ('utf-16BE','\xfe\xff'),
+)
+
+ALL_MARKS = XML_MARKS + BOM_MARKS
+
+
+def get_charset_from_content_type(content=''):
+    """
+    @return None is no encoding value is found inside content
+    """
+    charset = None
+    if 'charset' in content:
+        charset = content[content.find('charset'):]
+        charset = charset[charset.find('=') + 1:]
+        charset = charset.strip()
+    if not charset:
+        charset = None
+    return charset
+
 
 class CannotFindSuitableEncodingException(Exception):
     """The name says it all. We gave up."""
@@ -45,9 +88,8 @@ class FindEncParser(SloppyHtmlParser):
            attrs.get('http-equiv','').lower() =='content-type':
                 content = attrs.get('content','').lower()
                 content = content.lower()
-                if 'charset' in content:
-                    charset = content[content.find('charset'):]
-                    charset = charset[charset.find('=') + 1:]
+                charset = get_charset_from_content_type(content)
+                if charset:
                     self.enc = charset.strip()
                     raise CharsetDetectedException("Found in a Meta Tag")
 
@@ -55,26 +97,6 @@ class FindEncParser(SloppyHtmlParser):
     def getEnc(self):
         return self.enc
             
-
-
-# Used for BOM/XML charset recognition
-XML_MARKS = (
-    ('utf-32LE','\x3c\x00\x00\x00'),
-    ('utf-32BE','\x00\x00\x00\x3c'),
-    ('utf-16LE','\x3c\x00\x3f\x00'),
-    ('utf-16BE','\x00\x3c\x00\x3f'),
-)
-
-BOM_MARKS = ( 
-    ('utf-8',   '\xef\xbb\xbf'),
-    ('utf-32LE','\xff\xfe\x00\x00'),
-    ('utf-32BE','\x00\x00\xfe\xff'),
-    ('utf-16LE','\xff\xfe'),
-    ('utf-16BE','\xfe\xff'),
-)
-
-ALL_MARKS = XML_MARKS + BOM_MARKS
-
 
 
 
