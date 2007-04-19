@@ -1,4 +1,4 @@
-import sys
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
 
 # Assumptions
@@ -644,6 +644,7 @@ def _test():
 
 
 if __name__ == '__main__':
+    import sys
     if len(sys.argv) > 1 and sys.argv[1] != '-v':
         data=unicode(open(sys.argv[1],'r').read(),'latin1')
         p = LinkExtractor(data)

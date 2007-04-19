@@ -1,25 +1,18 @@
-import sys
+#!/usr/bin/python
 # -*- coding: utf-8 -*-
-"""A simple, almost stupid conversor of webdata to unicode.
+"""
+unicodebugger
 
+A simple, almost stupid conversor of webdata to unicode.
 
 Inspired in UnicodeDammit, from BeautifuSoup.
+UnicodeDammit, in turn, is inspired on Mark Pilgrim's Universal
+Feed Parser.
 """
-
-__all__ = [ 'CannotFindSuitableEncodingException',
-            'CharsetDetectedException',
-            'UnicodeBugger',
-            'get_charset_from_content_type'
-            'XML_MARKS',
-            'BOM_MARKS',
-            'ALL_MARKS']
-
 
 import string
 import codecs
 from parser import SloppyHtmlParser
-
-
 
 # Used for BOM/XML charset recognition
 XML_MARKS = (
@@ -63,6 +56,13 @@ class CharsetDetectedException(Exception):
     pass
 
 class FindEncParser(SloppyHtmlParser):
+    """Tries to find a document encoding declaration on the document.
+    
+    * If the document starts with an XML declaration <?xml .... ?>, this
+      determines encoding by XML rules.
+    *  If the document contains the HTML hack <meta http-equiv="Content-Type"
+       ...>, any charset declared here is used.
+    """
     def __init__(self,data):
         super(FindEncParser,self).__init__(data)
         self.enc = None
@@ -101,7 +101,18 @@ class FindEncParser(SloppyHtmlParser):
 
 
 class UnicodeBugger(object):
-    """Convers streams to UTF-8
+    """Tries to convert (x)HTML-like content to UTF-8.
+
+    It follows the following heuristics to convert text from
+    unknown encoding into UTF-8, stoping at the first one that succeeds:
+
+     + Tries to use any one of the suggested encodings to convert,
+     + Tries to guess the encoding using UTF-X Byte Order Mark (BOM) or
+       a XML content encoded into UTF-16 or UTF-32.
+     + Tries to guess the encoding using some meta-information availiable on
+       the document (XML declaration or HTML Meta tag).
+     + Tries to convert it from UTF-8
+     + Tries to convert it from Latin1
     """
     # We read up to MAX_META_POS characters in data to find an indicative
     # character encoding (In XML header of in a HTML Meta Tag
@@ -118,6 +129,10 @@ class UnicodeBugger(object):
         self.tried_encodings = set()
 
     def convert(self):
+        """Request data conversion o UTF-8.
+
+        @return Data converted to UTF-8 or None.
+        """
         u = None
         data = self.data
         if isinstance(data,unicode):
