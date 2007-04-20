@@ -10,6 +10,8 @@ UnicodeDammit, in turn, is inspired on Mark Pilgrim's Universal
 Feed Parser.
 """
 
+# FIXME add unit tests!!!
+
 import string
 import codecs
 from parser import SloppyHtmlParser
@@ -192,7 +194,7 @@ class UnicodeBugger(object):
         length = len(self.data)
         u = None
         for enc, mark in ALL_MARKS:
-            if length > len(mark) and data.startswith(mark):
+            if length > len(mark) and self.data.startswith(mark):
                 u = self._convertFrom(enc)
                 if u:
                     break
