@@ -30,7 +30,7 @@ RESERVED    = GEN_DELIMS + SUB_DELIMS
 UNRESERVED  = LETTERS + DIGITS +  u"-._~"
 
 
-class NotSupported(Exception):
+class NotSupportedException(Exception):
     """Our URL parser is rather limited. If it doesn't implement a certain funcionalyty, if just fails :-)"""
 
 class BaseURLParser(BaseParser):
@@ -64,7 +64,7 @@ class BaseURLParser(BaseParser):
         self.userinfo = None
         self.host = None
         self.port = None
-        self.path = None
+        self.path = ''
         self.query = None
         self.fragment = None
 
@@ -94,7 +94,7 @@ class BaseURLParser(BaseParser):
             self.scheme = self._readScheme()
             if self.scheme:
                 if self.scheme != u'http':
-                    raise NotSupported("We only deal with plain HTTP.")
+                    raise NotSupportedException("We only deal with plain HTTP.")
             
             # Now, what follows? Authority?
             self.userinfo, self.host, self.port = self._readAuthority()
@@ -431,10 +431,17 @@ class BaseURLParser(BaseParser):
     
         Dot segments ("./..///a/b/../c" -> /a/c) and Percent-encoding
         normalization is handled here as well.
+
+        Observe: empty URLs doesn't mean undefined paths, but empty paths!
+        This is per algorithm from RFC 3986, Section 5.3
         """
         path = self._readUntilDelimiter(u"?#")
         path = self.removeDotSegments(path)
         path = self.fixPercentEncoding(path)
+
+        # There is not such a thing as empty path
+        if not path:
+            path = u''
 
         return path
 
