@@ -9,24 +9,24 @@ No documentation yet.
 # FIXME DocID not being used,
 # FIXME page not being saved to disc
 # FIXME dynamic pages should NOT be index or retrieved, but normalized
-# FIXME Page::parse -> this is where dynamic and fragments should be removed
+# FIXME PageDownloader::parse -> this is where dynamic and fragments
+#       should be removed
 
 import string
 from unicodebugger import UnicodeBugger, get_charset_from_content_type
 from parser import LinkExtractor
-from urltools import BaseURLParser as URL, NotSupportedException
+from urltools import BaseURLParser as URL, NotSupportedSchemeException
 import urllib2
 
-class Page(object):
-    """Simple abstraction for a page/URL"""
+class PageDownloader(object):
+    """Simple downloader for a page/URL"""
 
     DEFAULT_ENCODING = 'utf-8'
 
-    def __init__(self, url, id):
-        # All url normalization and sanitization is dealt in Page::parse.
-        # But it doesn't hurt trying to do it again...
+    def __init__(self, url):
+        # All url normalization and sanitization is dealt in
+        # PageDownloader::parse, but it doesn't hurt trying to do it again...
         self.url = self.sanitizeURL(url)
-        self.id = id
 
         # Page contents (raw)
         self.contents = None
@@ -65,7 +65,10 @@ class Page(object):
             self.err = True
             self.errstr = str(e)
             raise
-
+        except NotSupportedSchemeException:
+            self.errstr = "Redirected to a unsuported protocol scheme [%s]" % \
+                    self.base
+            raise
         return self
 
     def download(self):
@@ -73,7 +76,11 @@ class Page(object):
         redirected_url = None
         page = urllib2.urlopen(self.url)
         # Obtain information from HTTP headers
-        redirected_url = self.sanitizeURL( str(URL(page.geturl())) )
+        try:
+            redirected_url = self.sanitizeURL( str(URL(page.geturl())) )
+        except NotSupportedSchemeException:
+            self.base = page.geturl()
+            raise
         if  original_url != redirected_url:
             self.aliases.add(redirected_url)
             self.base = redirected_url
@@ -111,13 +118,12 @@ class Page(object):
         parser.parse()
         self.parser = parser
         if parser.base:
-            base = self.sanitizeURL(parser.base)
+            self.base = self.sanitizeURL(parser.base)
         self.follow = parser.follow
         self.index = parser.index
 
         # Prepare to get all the links from the page
         base_url = URL(self.base)
-        self.base = str(base_url)
         for u in parser.links:
             try:
                 l = URL(u)
@@ -128,14 +134,24 @@ class Page(object):
                     self.links.add(str(base_url + l))
                 else:
                     self.links.add(str(l))
-            except NotSupportedException:
+            except NotSupportedSchemeException:
                 # We just blindly ignore unsupported URLs
                 pass
 
         return self
 
+    def writeMeta(self,fh):
+        """Writes metadata about this page to file-like object fh."""
+        index = "noindex"
+        if self.index: index = "index"
+
+        follow = "nofollow"
+        if self.follow: follow = "follow"
+
+        fh.write("encoding: %s\nrobots: %s,%s\n" % (self.encoding,follow,index))
+
 def get_page(url):
-    p = Page(url,0)
+    p = PageDownloader(url)
     p.get()
     return (p.base, p.parser.links, p.links, p.encoding)
 

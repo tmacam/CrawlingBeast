@@ -30,7 +30,7 @@ RESERVED    = GEN_DELIMS + SUB_DELIMS
 UNRESERVED  = LETTERS + DIGITS +  u"-._~"
 
 
-class NotSupportedException(Exception):
+class NotSupportedSchemeException(Exception):
     """Our URL parser is rather limited. If it doesn't implement a certain funcionalyty, if just fails :-)"""
 
 class BaseURLParser(BaseParser):
@@ -94,7 +94,7 @@ class BaseURLParser(BaseParser):
             self.scheme = self._readScheme()
             if self.scheme:
                 if self.scheme != u'http':
-                    raise NotSupportedException("We only deal with plain HTTP.")
+                    raise NotSupportedSchemeException("We only deal with plain HTTP.")
             
             # Now, what follows? Authority?
             self.userinfo, self.host, self.port = self._readAuthority()
@@ -366,6 +366,13 @@ class BaseURLParser(BaseParser):
         those characters on the current reading position.
         
         @warning We don't validate host and port information.
+
+        >>> u = BaseURLParser("http:// invalid.url:80/")
+        InvalidUrlException()
+
+        We DON'T support international URLs
+        >>> u = BaseURLParser("http://www.ficções.net/biblioteca_conto/")
+        InvalidUrlException()
         """
         # authority = [ userinfo "@" ] host [ ":" port ]
         userinfo, host, port = None, None, None

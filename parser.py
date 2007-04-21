@@ -504,6 +504,9 @@ class BaseHTMLParser(AbstractHTMLParser, BaseParser):
         self._start = i + 1
 
 
+########################################################################
+#                     UNIT/DOC TESTS AND DEBUGING CLASSES
+########################################################################
 
 
 class TestParser(BaseHTMLParser):
@@ -578,6 +581,11 @@ class TestParser(BaseHTMLParser):
         self.items.append(("COMMENT",comment))
 
 
+########################################################################
+#                            HTML FORGUIVEFUL PARSING
+########################################################################
+
+
 class SloppyHtmlParser(BaseHTMLParser):
     """Our first try into a HTML parser that treats style and script
     correctly.
@@ -619,23 +627,65 @@ class LogParser(SloppyHtmlParser):
     def handleComment(self,comment):
         print self._start, "COMMENT",comment
 
+
 class LinkExtractor (SloppyHtmlParser):
+    """Simple link extractor.
+
+    It parses a HTML page and extracts it's links and some useful
+    meta-information from it.
+
+    Atributes:
+
+     links: set of links found on the page, as string and unparsed.
+     base:  head/meta/base/[@href] contents, or none if non-existent
+     follow: should this page be followed? Defaults to True and is
+            modified according to the contents of a meta robots tag.
+     index: should this page be index? Defaults to True and is
+            modified according to the contents of a meta robots tag.
+
+
+    """
+    # FIXME metainformation outside the page's head should be ignored
     LINK_TAGS = { u'a'      : u'href',
-                  u'link'   : u'href'}
+                  u'link'   : u'href',
+                  u'iframe' : u'src',
+                  u'frame'  : u'src',
+                  u'area'   : u'href',
+                  }
 
     def __init__(self,text):
         # setup base class
         super(LinkExtractor,self).__init__(text)
         self.links = set()
+        self.base = None
+        self.index = True
+        self.follow = True
 
     def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
-        # Extract Links
-        name = tag_name.lower()
-        if name  in self.LINK_TAGS and self.LINK_TAGS[name] in attrs:
-            self.links.add( attrs[ self.LINK_TAGS[name] ])
-        # Deal with troublesome tags
+        self.safeHandleStartTag(tag_name, attrs, empty_element_tag)
         if self.skipTagIfTroublesome(tag_name, empty_element_tag):
             self.handleEndTag(tag_name)
+
+    def safeHandleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
+        name = tag_name.lower()
+        # Base should be treat separately
+        if name == 'base' and u'href' in attrs:
+            self.base = attrs[u'href']
+        elif name == 'meta':
+            self.handleMetaTag(tag_name, attrs)
+        # Extract Links
+        if name  in self.LINK_TAGS and self.LINK_TAGS[name] in attrs:
+            self.links.add( attrs[ self.LINK_TAGS[name] ])
+
+    def handleMetaTag(self, name, attrs):
+        """Handles meta tag with ROBOTS.txt information"""
+        name = name.lower()
+        if attrs.get('name','').lower() == 'robots':
+            content = attrs.get('content','').lower()
+            if 'nofollow' in content:
+                self.follow = False
+            if 'noindex' in content:
+                self.index = False
 
 
 def _test():
@@ -646,11 +696,15 @@ def _test():
 if __name__ == '__main__':
     import sys
     if len(sys.argv) > 1 and sys.argv[1] != '-v':
-        data=unicode(open(sys.argv[1],'r').read(),'latin1')
+        filename = sys.argv[1]
+        data=unicode(open(filename,'r').read(),'latin1')
         p = LinkExtractor(data)
         p.parse()
+        print "File:", filename
+        if p.base:
+            print "\t BASE URL", p.base
         for i in p.links:
-            print i
+            print "\t", i
     else:
         _test()
 
