@@ -11,8 +11,10 @@ manages the list of known and pending URLs.
 
 #FIXME we still handle more than plain text/html - FIXME
 
-from threading import *
 import os
+import time
+from heapq import heappop, heappush
+from threading import *
 from urltools import BaseURLParser, NotSupportedSchemeException
 from getpage import PageDownloader
 
@@ -100,6 +102,8 @@ class Laracna(object):
             # New domain...
             if d not in self.known_domains:
                 dom = self._addNewDomain(d, pages, unserializing)
+                # pages added by Domains constructor,
+                # domain was put in queue by _addNewDomain
             else: 
                 dom = self.known_domains[d]
                 dom.addPages(pages, unserializing)
@@ -126,7 +130,7 @@ class Laracna(object):
         # should this domain really be enqueued?
         if not dom.empty() and not dom.in_queue:
             dom.in_queue = True
-            self.domain_queue.append(dom)
+            heappush(self.domain_queue, dom)
         # If the list of domains in queue was empty,  there may be threads
         # waiting to be notified
         if was_empty:
@@ -141,11 +145,13 @@ class Laracna(object):
         @return a url as string.
         """
         page = None
-        print currentThread(), "popPage" # DEBUG
+        print currentThread(), "popPage", "WAIT" # DEBUG
         while not self.domain_queue:
             self.DOMAIN_LOCK.wait()
         if self.domain_queue:
-            dom = self.domain_queue.pop(0)
+            self.waitUntillSafeToDownload()
+            dom = heappop(self.domain_queue)
+            dom.timestamp = int(time.time() + 30.0)
             page = dom.popPage()
 
             # Deal with empty domains
@@ -153,8 +159,21 @@ class Laracna(object):
                 dom.in_queue = False
             else:
                 # non-empty domains should be added back to the queue
-                self.domain_queue.append(dom)
+                heappush(self.domain_queue, dom)
         return page
+
+    def waitUntillSafeToDownload(self):
+        """If needed, sleep untill it's safe to download the first domain in
+        queue.
+        """
+        if self.domain_queue:
+            # domain_queue is a heap whose smallest element is in pos. 0
+            time_left = int(self.domain_queue[0].timestamp - time.time())
+            print currentThread(), "popPage", "WAITING", self.domain_queue[0].timestamp, time_left # DEBUG
+            if time_left <= 0.0:
+                return
+            else:
+                time.sleep(time_left)
 
 
     @synchronized(DOCID_LOCK)
@@ -227,6 +246,8 @@ class Domain(object):
 
         self.manager = manager
 
+        self.timestamp = 0
+
         # Add initial set of known pages
         self.addPages(pages,unserializing)
 
@@ -255,6 +276,16 @@ class Domain(object):
     def allowedByRobotsTxt(self,urlstr):
         #FIXME This is not implemented yet
         return True
+
+    def __le__(self, other): return self.timestamp <= other.timestamp
+
+    def __lt__(self, other): return self.timestamp < other.timestamp
+
+    def __ge__(self, other): return self.timestamp >= other.timestamp
+
+    def __gt__(self, other): return self.timestamp > other.timestamp
+
+    def __hash__(self): return hash(self.name)
         
 
 class Page(object):
@@ -293,11 +324,11 @@ class OfficeBoy(Thread):
                     data = open(doc_path + "/data",'w',0)
                     data.write(d.contents)
                     data.close()
-                    print "DOWN", currentThread(), page.url
+                    print "DOWN", currentThread(), page.url #DEBUG
                 except NotSupportedSchemeException:
                     # Seems like we got redirected to a not-supported URL
                     manager.reportBadCrawling(page.docid, page.url,
-                                "BAD REDIRECT " +str(d.errestr))
+                                "BAD REDIRECT " +str(d.errstr))
                 except Exception, e:
                     manager.reportBadCrawling(page.docid, page.url,e)
                 
@@ -309,7 +340,9 @@ def _test():
         print "All tests passed."
 
 def main():
-    N_OF_WORKERS = 10
+    N_OF_WORKERS = 1
+
+    print "Giving the boss some coffe..."
     boss = Laracna('/tmp/down/')
     # Load data from previous invocations
     boss.unserialize()
@@ -317,6 +350,7 @@ def main():
 
     workers = [OfficeBoy(boss) for i in range(N_OF_WORKERS)]
 
+    print "Dispaching officeboys"
     for w in workers:
         w.start()
     

@@ -15,7 +15,8 @@ No documentation yet.
 import string
 from unicodebugger import UnicodeBugger, get_charset_from_content_type
 from parser import LinkExtractor
-from urltools import BaseURLParser as URL, NotSupportedSchemeException
+from urltools import BaseURLParser as URL, NotSupportedSchemeException, \
+                InvalidURLException
 import urllib2
 
 class PageDownloader(object):
@@ -134,8 +135,8 @@ class PageDownloader(object):
                     self.links.add(str(base_url + l))
                 else:
                     self.links.add(str(l))
-            except NotSupportedSchemeException:
-                # We just blindly ignore unsupported URLs
+            except NotSupportedSchemeException, InvalidURLException:
+                # We just blindly ignore unsupported and invalid URLs
                 pass
 
         return self

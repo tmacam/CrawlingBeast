@@ -29,9 +29,15 @@ RESERVED    = GEN_DELIMS + SUB_DELIMS
 # FIXME those should not be percent-encoded
 UNRESERVED  = LETTERS + DIGITS +  u"-._~"
 
+class BaseURLException(Exception):
+    "Base class from where all URL-decoding and handling exceptions descend."
+    pass
 
-class NotSupportedSchemeException(Exception):
+class NotSupportedSchemeException(BaseURLException):
     """Our URL parser is rather limited. If it doesn't implement a certain funcionalyty, if just fails :-)"""
+
+class InvalidURLException(BaseURLException):
+    pass
 
 class BaseURLParser(BaseParser):
     """ Simple and limited URL Parser and Normalizer.
@@ -364,15 +370,27 @@ class BaseURLParser(BaseParser):
 
         Authority component is preceeded by "//", and we expect to see
         those characters on the current reading position.
+
+        Observe that:
+            + hostname is the only non-optional component of authority and,
+            + then whole authority can be empty, and still be a valid URL
+              by RFC, (empty host == localhost?)
+        but it just doesn't make any sence for us! Thus, IFF the '//' is
+        present, then a VALID hostname MUST be present in the current URL.
         
         @warning We don't validate host and port information.
 
         >>> u = BaseURLParser("http:// invalid.url:80/")
-        InvalidUrlException()
+        InvalidURLException()
+
+        >>> u = BaseURLParser("http://#urlsite#/estilo.css")
+        Traceback (most recent call last):
+           ...
+        InvalidURLException: Empty hostname in an authority section: 'http://#urlsite#/estilo.css'
 
         We DON'T support international URLs
         >>> u = BaseURLParser("http://www.ficções.net/biblioteca_conto/")
-        InvalidUrlException()
+        InvalidURLException()
         """
         # authority = [ userinfo "@" ] host [ ":" port ]
         userinfo, host, port = None, None, None
@@ -396,6 +414,8 @@ class BaseURLParser(BaseParser):
                     port = None
             else:
                 host = hostport
+            if not host:
+                raise InvalidURLException("Empty hostname in an authority section: '%s'" % self._text)
             host = host.lower()
             if host[-1] == '.':
                 host = host[:-1]
