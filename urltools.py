@@ -29,6 +29,8 @@ RESERVED    = GEN_DELIMS + SUB_DELIMS
 # FIXME those should not be percent-encoded
 UNRESERVED  = LETTERS + DIGITS +  u"-._~"
 
+DOMAINNAME_CHARS = LETTERS + DIGITS + ".-"
+
 class BaseURLException(Exception):
     "Base class from where all URL-decoding and handling exceptions descend."
     pass
@@ -365,6 +367,22 @@ class BaseURLParser(BaseParser):
         # Parsing restart after the end of this rule
         return scheme
 
+    def _validateHostName(self,hostname):
+        """Checks if the hostname is valid according o RFC 1034.
+        
+        Also check agains empty hostnames - @see _readAuthority
+
+        We don't validate for valid ipv4 address and we can't cope
+        with IPv6 addresses.
+        """
+        if not hostname:
+                raise InvalidURLException("Empty hostname in an authority section: '%s'" % self._text)
+        for c in hostname:
+            if c not in DOMAINNAME_CHARS:
+                raise InvalidURLException( \
+                    u"Invalid character '%s' in hostname '%s'" % (c,hostname))
+        return True
+
     def _readAuthority(self):
         """Reads an authority component, if present.
 
@@ -381,16 +399,21 @@ class BaseURLParser(BaseParser):
         @warning We don't validate host and port information.
 
         >>> u = BaseURLParser("http:// invalid.url:80/")
-        InvalidURLException()
+        Traceback (most recent call last):
+           ...
+        InvalidURLException: Invalid character ' ' in hostname ' invalid.url'
 
         >>> u = BaseURLParser("http://#urlsite#/estilo.css")
         Traceback (most recent call last):
            ...
         InvalidURLException: Empty hostname in an authority section: 'http://#urlsite#/estilo.css'
 
+
         We DON'T support international URLs
-        >>> u = BaseURLParser("http://www.ficções.net/biblioteca_conto/")
-        InvalidURLException()
+        >>> u = BaseURLParser(u"http://www.ficções.net/biblioteca_conto/")
+        Traceback (most recent call last):
+           ...
+        InvalidURLException: <unprintable instance object>
         """
         # authority = [ userinfo "@" ] host [ ":" port ]
         userinfo, host, port = None, None, None
@@ -414,9 +437,9 @@ class BaseURLParser(BaseParser):
                     port = None
             else:
                 host = hostport
-            if not host:
-                raise InvalidURLException("Empty hostname in an authority section: '%s'" % self._text)
             host = host.lower()
+            # check if the hostname is valid according to RFC 1034 rules
+            self._validateHostName(host)
             if host[-1] == '.':
                 host = host[:-1]
         except InvalidCharError:
@@ -613,7 +636,9 @@ class TestURLParser(BaseURLParser):
 
 def _test():
     import doctest
-    doctest.testmod()
+    (fail, tests) = doctest.testmod()
+    if not fail:
+        print "All tests passed.", tests, "tests executed."
 
 
 if __name__ == '__main__':

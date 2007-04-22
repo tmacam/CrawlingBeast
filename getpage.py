@@ -64,7 +64,7 @@ class PageDownloader(object):
             self.parse()
         except urllib2.URLError, e:
             self.err = True
-            self.errstr = str(e)
+            self.errstr = unicode(e)
             raise
         except NotSupportedSchemeException:
             self.errstr = "Redirected to a unsuported protocol scheme [%s]" % \

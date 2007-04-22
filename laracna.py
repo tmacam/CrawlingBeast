@@ -45,6 +45,8 @@ class Laracna(object):
     #: controls access to known_domains and domain_queue
     DOMAIN_LOCK = Condition(RLock()) 
 
+    STATS_LOCK = Lock()
+
     def __init__(self, store_dir="/tmp/"):
         """
         @param store_dir The directory where we save our files
@@ -66,6 +68,9 @@ class Laracna(object):
 
         # let threads know when we are stopping
         self.running = True
+
+        # stats
+        self.stats_down = 0
 
     def unserialize(self):
         """Get the list of known docIds/URLs from docids file."""
@@ -99,6 +104,9 @@ class Laracna(object):
             domains.setdefault(u.host,set()).add( str(u) )
         # Add pages per domain:
         for d, pages in domains.items():
+            if not d.endswith(".br"):
+                #ignore non-br domains
+                continue
             # New domain...
             if d not in self.known_domains:
                 dom = self._addNewDomain(d, pages, unserializing)
@@ -134,7 +142,7 @@ class Laracna(object):
         # If the list of domains in queue was empty,  there may be threads
         # waiting to be notified
         if was_empty:
-            self.DOMAIN_LOCK.notify()
+            self.DOMAIN_LOCK.notifyAll()
 
     @synchronized(DOMAIN_LOCK)
     def popPage(self):
@@ -145,7 +153,7 @@ class Laracna(object):
         @return a url as string.
         """
         page = None
-        print currentThread(), "popPage", "WAIT" # DEBUG
+        # print currentThread(), "popPage", "WAIT" # DEBUG
         while not self.domain_queue:
             self.DOMAIN_LOCK.wait()
         if self.domain_queue:
@@ -169,7 +177,7 @@ class Laracna(object):
         if self.domain_queue:
             # domain_queue is a heap whose smallest element is in pos. 0
             time_left = int(self.domain_queue[0].timestamp - time.time())
-            print currentThread(), "popPage", "WAITING", self.domain_queue[0].timestamp, time_left # DEBUG
+            # print currentThread(), "popPage", "WAITING", self.domain_queue[0].timestamp, time_left # DEBUG
             if time_left <= 0.0:
                 return
             else:
@@ -211,8 +219,11 @@ class Laracna(object):
 
     @synchronized(ERRLOG_LOCK)
     def reportBadCrawling(self,id,url,msg):
-        self.errlog.write("%i %s ERR %s\n" % (id, str(url),str(msg)))
+        self.errlog.write(u"%i %s ERR %s\n" % (id, unicode(url),unicode(msg)))
 
+    @synchronized(STATS_LOCK)
+    def incDownloaded(self):
+        self.stats_down += 1
 
 
 
@@ -324,13 +335,38 @@ class OfficeBoy(Thread):
                     data = open(doc_path + "/data",'w',0)
                     data.write(d.contents)
                     data.close()
-                    print "DOWN", currentThread(), page.url #DEBUG
+                    # print "DOWN", currentThread(), page.url #DEBUG
+                    manager.incDownloaded()
                 except NotSupportedSchemeException:
                     # Seems like we got redirected to a not-supported URL
                     manager.reportBadCrawling(page.docid, page.url,
-                                "BAD REDIRECT " +str(d.errstr))
+                                "BAD REDIRECT " +unicode(d.errstr))
                 except Exception, e:
                     manager.reportBadCrawling(page.docid, page.url,e)
+        print currentThread(), "exiting..."
+
+
+class StatsPrinter(Thread):
+    def __init__(self,manager, log_filename):
+        Thread.__init__(self)
+        self.manager = manager
+        self.log = open(log_filename,'w',0)
+
+    def run(self):
+        manager = self.manager
+        down = 0
+        found = 0
+        while manager.running:
+            old_down = down
+            old_found = found
+            down = manager.stats_down
+            found = manager.docId
+            msg =  "STATS : %10i downloaded, %10i found\n" % ( \
+                    down - old_down, found - old_found )
+            self.log.write(msg)
+            print msg.strip()
+            time.sleep(10)
+            
                 
 def _test():
     import doctest
@@ -340,11 +376,13 @@ def _test():
         print "All tests passed."
 
 def main():
-    N_OF_WORKERS = 1
+    N_OF_WORKERS = 20
 
-    print "Giving the boss some coffe..."
+    print "Starting things up..."
     boss = Laracna('/tmp/down/')
-    # Load data from previous invocations
+    stats = StatsPrinter(boss, boss.store_dir + "/stats")
+
+    print "Loading data from previous invocations and from seeds"
     boss.unserialize()
     boss.addPages(['http://www.uol.com.br'])
 
@@ -353,9 +391,16 @@ def main():
     print "Dispaching officeboys"
     for w in workers:
         w.start()
+
+    stats.start()
     
-    if raw_input():
-        boss.running = False
+    # Stop asa soon as the user press any key
+    raw_input()
+    raw_input()
+    boss.running = False
+    boss.running = False
+    boss.running = False
+    print "Exiting. Waiting for threads"
 
     for w in workers:
         w.join()

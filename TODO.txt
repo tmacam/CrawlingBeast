@@ -1,0 +1,12 @@
+
+meta tags should only be read if in head 
+
+
+
+Domínios são colocados numa heap
+	Lista de URLs em um domínio é colocado dentro de uma FIFO.
+	URLs visitadas guardadas em um hashmap
+	Idealmente, poderíamos usar um relaxed heap ou um fibonacci heap: não fugiríamos do hashmap mas poderíamos escalonar as URLs de um domínio melhor.
+
+	http://algorithm.diy.myrice.com/resources/technical_artile/fibonacci_heap/fibonacci.htm
+	http://www.leekillough.com/heaps/
