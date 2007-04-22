@@ -1,0 +1,3 @@
+This is a small (albeit complete) prototype of our parser.
+
+Some python idioms were supressed/avoided to ease translation to C++.

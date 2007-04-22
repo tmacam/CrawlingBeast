@@ -1,0 +1,71 @@
+<html>
+<head>
+<meta name="robots" content="noindex,nofollow">
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+<title>Isso é um teste</title>
+</head>
+<body>
+</body>
+
+<p>URL's fora de uma tag Anchor não devem ser seguidas, tal como esse exemplo aqui: http://en.wikipedia.org/wiki/Web_crawler e esse aqui http://en.wikipedia.org/wiki/URL_normalization</p>
+
+<p><a href="http://html5lib.googlecode.com/svn/tags/0.2_release/src/constants.py" rel="nofollow"> Isso nao deveria ser seguido</a> mas <a href="http://annevankesteren.nl/2006/12/html-parser-functional"> isso deveria</a>.
+
+<script>
+Texto dentro de tags <em>scripts</em> também não deve ser indexado.
+</script>
+
+<![CDATA[ Conteúdo dentro de CDATA deve ser ignorado! ]]>
+
+<p>Ah! HTML5 é a nova onda! Veja <a href=http://wiki.whatwg.org/wiki/HTML_vs._XHTML>HTML vs. XHTML</a>.
+
+<?xml version="1.0"?>
+<!DOCTYPE greeting SYSTEM "hello.dtd>
+
+<p><a href="www.uol.com.br/blah"> isso é um link meio estranho, e não, ele não aponta para um domínio</a>. Se você não usar o esquema HTTP mas colocar um // no href, ele vira um link para outro servidor - mas com mesmo esquema.<a href="//exemplo.com/em/outro/servidor/">Exemplo</a>.</p>
+
+<p> <a name="&gt;x" /> Parece loucura, mas vc deve processara entidades tão logo seja possível (mas não antes de fazer a tokenização, i.e., identificar um '&lt;' de tag. Por exemplo, vc pode encontrar entidades dentro de um href:
+<a href="#&gt;x" > como nessa tag </a ><a></a><!-- Observe o uso de espaco na tag -->
+
+<p>Não se esqueca de tags como<ul><li>frame<li>iframe.<li bogus:attribute>link</ul>
+
+<p>Pela referência do XML, pode-se usar &gt; dentro de <span comment=">" > atributos</span>, mas não se pode usar &lt dentro de atributos, <span comment="<">OK</span>? HTML aparentemente não tem problemas <a href=">">com</a>  <a href=< >disso</a>, mas tem com <a href=> >isso</a>.
+
+<p>Esse é um exemplo de documento HTML mal-formado. Temos uma mistura de HTML com XHTML para todos os lados. Além disso abusamos de rel=nofollow e de tags META.
+
+<p>A <a href=http://www.w3c.org/ rel="nofolow">W3c</a> possui vários documentos sobre internacionalização e documentos (X)HTML e XML. Um link muito interessante é o <a href="http://www.w3.org/International/tutorials/tutorial-char-enc/">Tutorial: Character sets & encodings in XHTML, HTML and CSS</a>. Pessoal da WHATWG também tem coisas sobre <a href=http://wiki.whatwg.org/wiki/HTML_vs._XHTML#Character_Encoding_2>Codificação de caracteres</a>
+
+<p>Essas são várias formas de se representar um "á":
+<ul>
+<li> &#xe1;
+<li> &#225;
+<li> &aacute;
+</ul>
+
+<p>Observe o código python abaixo:
+<pre>
+''.join(["&amp;#%i;" % ord(i)  for i in 'http://www.uol.com.br'])
+</pre>
+<p>Se eu colocar o resultado disso <a href='&#104;&#116;&#116;&#112;&#58;&#47;&#47;&#119;&#119;&#119;&#46;&#117;&#111;&#108;&#46;&#99;&#111;&#109;&#46;&#98;&#114;&#47;'>em um link</a>, isso é um link válido? Eu preciso interpretar entidades até mesmo de um href?
+
+<p><em>Não se esqueça que um documento pode ter todas as suas URLs referentes a BASE</em>
+
+<p> A seguinte passagem está em Checo:
+  <blockquote>
+  Jako efektivn&#x115;j&#x161;&#xED; se n&#xE1;m jev&#xED; po&#x159;&#xE1;d&#xE1;n&#xED; tzv. Road Show prost&#x159;ednictv&#xED;m na&#x161;ich autorizovan&#x1FD;ch dealer&#x16F; v &#x10C;ech&#xE1;ch a na Morav&#x11B;, kter&#xE9; prob&#x11B;hnou v pr&#x16F;b&#x16F;hu z&#xE1; &#x159;&#xED; a &#x159;íjna.
+  </blockquote>
+</p>
+
+<!-- Comentários não deveriam ser indexados -->
+
+
+<p> Dá para misturar tags e entidades? <&#97; href="">Isso é um link?</&#97;>
+
+<p><a href="alert('Morre, porra!')">Links em javascript</a> não precisam ter javascript: no início?<b>Falso!</b></p>
+
+
+<p>Outra coisa interessante de se observar é o uso de caracteres proibídos pelos padrões XML/HTML dentro do texto. Por exemplo, se eu escrevo a > b no meio de um documento, como o mozilla intepreta as coisas? Como eu deveria interpretar? Um símbolo de final de tag sem estar em uma tag pode não causar traumas mas e um símbolo de início de tag? O que aconece se eu digo a < b? E se eu retirar os espaços em branco e deixar a suposta tag se estender até o final do documento como em " a<b  "?
+
+Isso aqui, por exemplo, <b>exemplo</b> não deveria aparecer em negrito.
+</body>
+</html>
