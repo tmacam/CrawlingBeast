@@ -2,10 +2,10 @@
 
 TARGETS = foo runner
 CC=g++
-CXXFLAGS = -ggdb
+CXXFLAGS = -ggdb -O0 -Wall -pthread
 
 
-all: $(TARGETS)
+all: $(TARGETS) test
 
 foo: test.o filebuf.o parser.o htmlparser.o
 

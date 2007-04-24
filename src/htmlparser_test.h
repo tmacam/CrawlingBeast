@@ -6,6 +6,10 @@
 
 #include <sstream>
 
+/* **********************************************************************
+ *				HELPER FUNCTIONS
+ * ********************************************************************** */
+
 std::ostream& operator<<(std::ostream& out, const filebuf& f)
 {
 	std::string s(f.current, f.len());
@@ -29,6 +33,11 @@ std::ostream& operator<<(std::ostream& out,const BaseHTMLParser::attr_list_t& m)
 	return out;
 }
 
+
+/* **********************************************************************
+ *				TEST-READY CLASS
+ * ********************************************************************** */
+
 // Stupid class just to test our methods
 class TestHTMLParser : public BaseHTMLParser {
 public:
@@ -50,8 +59,11 @@ public:
 		this->items << "ENDTAG[" <<  tag_name << "] ";
 	}
 
-	void handleProcessingInstruction(const std::string& name,
-			attr_list_t& attrs){}
+	void handleProcessingInstruction(const std::string& tag_name,
+			attr_list_t& attrs)
+	{
+		this->items << "PI[" <<  tag_name << ", " <<  attrs << "] ";
+	}
 
 	void handleComment(const filebuf& comment){
 		this->items << "COMMENT[" <<  comment << "] ";
@@ -64,6 +76,10 @@ public:
 
 };
 
+
+/* **********************************************************************
+ *				   UNIT TESTS
+ * ********************************************************************** */
 
 class BaseHTMLParserTest : public CxxTest::TestSuite {
 protected:
@@ -111,45 +127,48 @@ void testTagWithCloseAndAllKindOfAttributeDeclaration()
 	"TEXT[#] TAG[a, {'attrhtml':'', 'duplas':'x y', 'html':'antigo', 'simples':'what is that', }] ENDTAG[a] TEXT[#] ");
 }
 
+void testInterruptedTag(){
+	TS_ASSERT_EQUALS( getParsedString("a<b"),
+		"TEXT[a] TEXT[<b] ");
+}
+
+
+void testInterruptedAttributeValue(){
+	TS_ASSERT_EQUALS( getParsedString("a<b style="),
+		"TEXT[a] TEXT[<b style=] ");
+}
+
+void testInterruptedAttributeList(){
+	TS_ASSERT_EQUALS( getParsedString("a<b style=b "),
+		"TEXT[a] TEXT[<b style=b ] ");
+}
+
+// Mozilla just ignores whatever comes after the 'Name S?' sequence
+// but before a '>' Let's just do the same!
+void testNoiseInEndTag(){
+	TS_ASSERT_EQUALS( getParsedString("a<b style='>'></b 1 asd asd asd>"),
+    		"TEXT[a] TAG[b, {'style':'>', }] ENDTAG[b] ");
+}
+
+void testPIAndComment(){
+	TS_ASSERT_EQUALS( getParsedString("a <? xml blah ?><!-- <b> --> c"),
+		"TEXT[a ] PI[xml, {'blah':'', }] COMMENT[ <b> ] TEXT[ c] ");
+}
+
+void testInvalidAttrNameInInterruptedTagList(){
+	TS_ASSERT_EQUALS( getParsedString("a<b style=b 1"),
+		"TEXT[a] TEXT[<b style=b 1] ");
+}
+
+// It is debatable if this test is correct or not...
+//void testinvalidTagName(){
+//        std::cout << getParsedString("#<a&whatever duplas=\"x\" simples='what' html=antigo attrhtml />#");
+//        TS_ASSERT_EQUALS( getParsedString("#<a&whatever duplas=\"x\" simples='what' html=antigo attrhtml />#"),
+//            "TEXT[#], TAG[a&whatever, {'attrhtml':'', 'duplas':'x', 'html':'antigo', 'simples':'what', }], TEXT[#]")
+//        ;
+//}
+
 }; // class  BaseHTMLParserTest
-
-/*
-########################################################################
-#                     UNIT/DOC TESTS AND DEBUGING CLASSES
-########################################################################
-
-
-class TestParser(BaseHTMLParser):
-    """Simple Test class for the parser.
-
-    The aim of this class is to be simple fixure upon which unittests can be
-    easly build. For now, doctests are being used.
-
-
-    >>> TestParser("a<b style=").parse().items
-    [('TEXT', u'a'), ('TEXT', u'<b style=')]
-    
-    >>> TestParser("a<b style=b ").parse().items
-    [('TEXT', u'a'), ('TEXT', u'<b style=b ')]
-
-    # EndTag 
-    #
-    # Mozilla just ignores whatever comes after the 'Name S?' sequence
-    # but before a '>' Let's just do the same!
-    >>> TestParser("a<b style='>'></b 1 asd asd asd>").parse().items
-    [('TEXT', u'a'), ('TAG', u'b', {u'style': u'>'}), ('ENDTAG', u'b')]
-
-    
-    >>> TestParser("a <? xml blah ?><!-- <b> --> c").parse().items
-    [('TEXT', u'a '), ('PI', u'xml', {u'blah': None}), ('COMMENT', u' <b> '), ('TEXT', u' c')]
-
-    >>> TestParser("a<b style=b 1").parse().items
-    [('TEXT', u'a'), ('TEXT', u'<b style=b 1')]
-    """
-
-    #>>> TestParser('#<a&whatever duplas="x"'+" simples='what' html=antigo attrhtml />#").parse().items
-    #[('TEXT', u'#'), ('TAG', u'a&whatever', {u'duplas': u'x', u'simples': u'what', u'html': u'antigo', u'attrhtml': None }), ('TEXT', u'#')]
-*/
 
 #endif // __HTMLPARSER_TEST_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

@@ -93,6 +93,7 @@ public:
 /** A parser just has to know how to parse a text, right? */
 struct AbstractBaseParser {
 	virtual void parse() = 0;
+	virtual ~AbstractBaseParser() {}
 };
 
 /** Common infrastructure for building generic recursive descendent parsers. 
@@ -139,8 +140,6 @@ protected:
 	void consumeToken(const std::string& token);
 
 	void consumeToken(char c){ consumeToken(std::string(1,c));}
-
-	void consumeToken(const char* s){ consumeToken(std::string(s));}
 
 	/**Advance current reading position in text by one character.
 	 *
@@ -193,10 +192,6 @@ protected:
 	 * @throw ParserEOFError if the delimiter mark is not found
 	 */
 	filebuf readUntilDelimiterMark(const std::string& mark);
-
-	filebuf readUntilDelimiterMark(const char* mark) {
-		readUntilDelimiterMark(std::string(mark));
-	}
 	//@}
 
 public:

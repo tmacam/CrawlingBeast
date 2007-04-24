@@ -48,6 +48,32 @@ public:
 		TS_ASSERT_THROWS(*f, std::out_of_range);
 	}
 
+	void test_OperatorEqual()
+	{
+		char a[] = "apples";
+		char b[] = "oranges and apples";
+
+		filebuf i(a,sizeof(a));
+		filebuf j(b,sizeof(b));
+
+		TS_ASSERT_DIFFERS(j.len()  , i.len());
+		TS_ASSERT_DIFFERS(j.start  , i.start);
+		TS_ASSERT_DIFFERS(j.current, i.current);
+		TS_ASSERT_DIFFERS(j.end    , i.end);
+		TS_ASSERT_DIFFERS(*j       , *i);
+
+		i += 4;
+		j += 2;
+		j=i;
+
+		TS_ASSERT_EQUALS(j.len()  , i.len());
+		TS_ASSERT_EQUALS(j.start  , i.start);
+		TS_ASSERT_EQUALS(j.current, i.current);
+		TS_ASSERT_EQUALS(j.end    , i.end);
+		TS_ASSERT_EQUALS(*j       , *i);
+
+	}
+
 };
 
 #endif // __FILEBUF_TEST_H

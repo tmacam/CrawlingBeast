@@ -221,10 +221,10 @@ void BaseHTMLParser::readTagLike()
 			break;
 		case '!':
 			// let's hope is a Comment
-			//const std::string COMMENT_START = "!--";
-
-			if ( (text.len() > 3)  && 
-			     ( std::string(text.current,3) == COMMENT_START) ) 
+			//const std::string COMMENT_START = "<!--";
+			if ( (text.len() > COMMENT_START_LEN)  && 
+			     (std::string(text.current,COMMENT_START_LEN)
+			     	== COMMENT_START) ) 
 			{
 				this->readComment();
 			}else{
@@ -320,7 +320,7 @@ void BaseHTMLParser::readComment()
 	// [15] Comment ::= '<!--' ((Char - '-') | ('-' (Char - '-')))* '-->'
 	filebuf content;
 
-	this->consumeToken("<!--"); // go past the <!--
+	this->consumeToken(COMMENT_START); // go past the <!--
 	content = this->readUntilDelimiterMark("-->");
 	// we are already past the '-->' mark. No need to update _start
 	this->handleComment(content);

@@ -51,7 +51,8 @@ const std::string TAGLIKE_ATTR_LIST_END_CHARS = "?/>";
 
 //!@name Extra String Constants
 //@{
-const std::string COMMENT_START = "!--";
+const std::string COMMENT_START = "<!--";
+const unsigned int COMMENT_START_LEN = 4;
 //@}
  
 
@@ -77,6 +78,8 @@ struct AbstractHTMLParser {
 			attr_list_t& attrs) = 0;
 
 	virtual void handleComment(const filebuf& comment) = 0;
+
+	virtual ~AbstractHTMLParser(){}
 };
 
 /**A simple, almost stupid non-validating (x)HTML push parser.
