@@ -11,8 +11,8 @@
  *
  * The idea of this class is to provide a safe way to use a buffer/array/string
  * as if it was a file: you can read(), seek() and etc on it. On the same
- * time, it also wants to pretend to be a pointer: you can dereference it, add
- * to it. All those operations are bound checked.
+ * time, it also wants to pretend to be a pointer/iterator: you can
+ * dereference it, add  to it. All those operations are bound checked.
  */
 
 struct filebuf {

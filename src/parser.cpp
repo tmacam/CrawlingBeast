@@ -1,6 +1,8 @@
 #include "parser.h"
 
 #include <sstream>
+#include <algorithm>
+#include <ctype.h>
 
 /* **********************************************************************
  *			     STRING TRANFORMATIONS
@@ -48,7 +50,7 @@ filebuf BaseParser::readUntilDelimiter(const std::string& delimiters)
         // Parsing restart after the end of this rule
 
 	// remember: data doesn't include the delimiter
-        return filebuf(data_start, length - 1);
+        return filebuf(data_start, length);
 }
     
 filebuf BaseParser::readUntilDelimiterMark(const std::string& mark)
@@ -74,101 +76,5 @@ filebuf BaseParser::readUntilDelimiterMark(const std::string& mark)
 
         return data;
 }
-
-
-/* **********************************************************************
- *                               HTML PARSER 
- * ********************************************************************** */
-
-void BaseHTMLParser::parse()
-{
-	char c = 0;
-
-	while (not this->text.eof()){
-            c = *text;
-            if (c == '<'){
-                this->readTagLike();
-            } else {
-                this->readText();
-	    }
-	}
-}
-
-std::string BaseHTMLParser::readName()
-{
-        const char* start = text.current;
-	int length = 0;
-	std::string name;
-
-	// First character must be in NAME_START_CHARS
-	if (not is_in(*text, NAME_START_CHARS)){
-		throw InvalidCharError("Error parsing 'Name' rule.");
-	}
-	++text; // go to next char in name
-	++length;
-        // Find the end of this name
-        while ( (not text.eof()) && is_in(*text, NAME_CHARS) ){
-                ++text;
-		++length;
-	}
-        name = std::string( start , length  -1);
-        // Parsing restart after the end of this rule
-
-        return to_lower(name);
-}
-
-
-bool BaseHTMLParser::readSpace(bool optional)
-{
-        bool found = false;
-
-        if ( (not optional) and (not is_in(*text,WHITESPACE)) ) {
-            throw InvalidCharError("Error parsing 'Name' rule.");
-	}
-        // Find the end of this space
-        while ( (not text.eof()) and is_in(*text,WHITESPACE) ) {
-                ++text;
-                found = true;
-	}
-        // Parsing restart after the end of this rule
-        // in this case, if may be in the same place it started...
-        checkForEOF();
-
-        return found;
-}
-
-void BaseHTMLParser::readUntilEndTag(const std::string& tag_name)
-{
-        // [42] ETag ::= '</' Name S? '>'
-        bool found = false;
-	std::string tmp;
-	std::string lower_tagname = tag_name;
-	to_lower(lower_tagname);
-
-        while (not found ) {
-            readUntilDelimiterMark("</");
-	    tmp = std::string(text.current, tag_name.size());
-	    if (to_lower(tmp) != lower_tagname) {
-		    // This is not the tag we are looking for...
-		    // Keep looking...
-		    continue;
-	    }
-	    text += tag_name.size();
-	    readSpace();
-            if (*text != '>'){
-		std::string msg = "While looking for the EndTag for " +\
-                                      tag_name;
-                throw ParserEOFError(msg);
-	    }
-            consumeToken(std::string(">"));
-            // Yeah! The EndTag was found. We are done
-            found = true;
-	}
-}
-
-
-
-
-
 
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

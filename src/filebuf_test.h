@@ -47,6 +47,7 @@ public:
 		// We reached EOF in the line above. Cannot derref anymore!
 		TS_ASSERT_THROWS(*f, std::out_of_range);
 	}
+
 };
 
 #endif // __FILEBUF_TEST_H
