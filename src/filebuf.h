@@ -2,6 +2,7 @@
 #define __FILEBUF_H
 
 #include <stdexcept>
+#include <string>
 
 #ifdef __MEMBUF_F_
 #include "membuf.h"
@@ -85,6 +86,12 @@ struct filebuf {
 		} else {
 			return *current;
 		}
+	}
+
+	/**Convert this buffer into a std::string*/
+	std::string str() const
+	{
+		return std::string(current, len());
 	}
 
 };

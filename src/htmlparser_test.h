@@ -234,5 +234,143 @@ public:
 	}
 };
 
+
+/* **********************************************************************
+ *				 LINK EXTRACTOR
+ * ********************************************************************** */
+
+
+const std::string example_html_page = "\
+<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Transitional//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd\">\
+<html>\
+<head>\
+<meta name=\"robots\" content=\"nofollow, noindex\">\
+<meta name=\"ignoreme\" content=\"follow,index\">\
+<link rel=\"Start\" href=\"SUCCESS_1_5\" />\
+<style type=\"text/css\" media=\"screen\">\
+<a href=\"ERROR\" />\
+<FRAME srC=\"ERROR\" />\
+</style>\
+</head>\
+<body>\
+ <FRAME srC='SUCCESS_FRAME_OK_2_5' />\
+ <iframe srC=\"SUCCESS_FRAME_OK_3_5\" />\
+ <span blah='<FRAME srC=\"ERROR_FRAME_IN_ATTRIBUTE\" />' />\
+ <TExTarea>\
+ <img href=\"ERROR_IMG\">\
+ <a href=\"ERROR_IN_TEXTAREA\">\
+ </tExTarea>\
+ <!-- <area href=\"ERROR\"> -->\
+ <A href=SUCCESS_A_SLASH_4_5/></A> \
+<area href=\"SUCCESS_AREA_5_5\">\
+ </body>\
+</html>\
+";
+
+const std::string html_start = "<html><head>";
+const std::string html_end = "</head></head>";
+
+class LinkExtractorTest : public CxxTest::TestSuite {
+public:
+
+//        std::string getParsedString(const std::string text )
+//        {
+//                filebuf f(text.c_str(), text.size());
+//                LinkExtractor p(f);
+//                p.parse();
+//
+//                return p.items.str();
+//        }
+
+	void testFollow()
+	{
+		std::string meta_follow = html_start + 
+			"<meta name='robots' content='follow,index'>" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.follow, true);
+	}
+
+	void testNoFollow()
+	{
+		std::string meta_follow = html_start + 
+			"<meta name='robots' content='nofollow,index'>" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.follow, false);
+	}
+
+	void testIndex()
+	{
+		std::string meta_follow = html_start + 
+			"<meta name='robots' content='follow,index'>" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.index, true);
+	}
+
+	void testNoIndex()
+	{
+		std::string meta_follow = html_start + 
+			"<meta name='robots' content='nofollow,noindex'>" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.index, false);
+	}
+
+	void testBase()
+	{
+		std::string meta_follow = html_start + 
+			"<base href='SUCCESS' />" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.base, "SUCCESS");
+	}
+
+	/**Verifies if a document with base[@href] does indeed has a empty
+	 * base
+	 */
+	void testNoBase()
+	{
+		std::string meta_follow = html_start + 
+			"<base name='ERROR' />" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.base, "");
+	}
+
+	void voidTestLinkExtraction()
+	{
+		filebuf f = filebuf(example_html_page.c_str(),
+			example_html_page.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS(p.links.size(), 5);
+
+		TS_ASSERT_EQUALS(p.links.count("SUCCESS_1_5"), 1);
+		TS_ASSERT_EQUALS(p.links.count("SUCCESS_FRAME_OK_2_5"), 1);
+		TS_ASSERT_EQUALS(p.links.count("SUCCESS_FRAME_OK_3_5"), 1);
+		TS_ASSERT_EQUALS(p.links.count("SUCCESS_A_SLASH_4_5/"), 1);
+		TS_ASSERT_EQUALS(p.links.count("SUCCESS_AREA_5_5"), 1);
+
+		TS_ASSERT_EQUALS(p.links.count("ERROR_IN_TEXTAREA"), 0);
+
+
+	}
+
+};
+
 #endif // __HTMLPARSER_TEST_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

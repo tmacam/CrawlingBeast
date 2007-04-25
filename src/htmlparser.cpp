@@ -383,7 +383,80 @@ bool SloppyHTMLParser::skipTagIfTroublesome(std::string tag_name,
 	return skiped;
 }
 
+typedef std::pair<std::string, std::string> StrPair;
 
+static const std::pair<std::string, std::string> __LINK_TAGS[] = {
+	StrPair("a"      , "href"),
+	StrPair("link"   , "href"),
+	StrPair("iframe" , "src"),
+	StrPair("frame"  , "src"),
+	StrPair("area"   , "href") 
+}; 
+
+
+const std::map<std::string, std::string> LinkExtractor::LINK_TAGS(
+	__LINK_TAGS, __LINK_TAGS + 5);
+
+void LinkExtractor::handleStartTag(const std::string& tag_name,
+		attr_list_t& attrs, bool empty_element_tag)
+{
+	this->safeHandleStartTag(tag_name, attrs, empty_element_tag);
+	if (this->skipTagIfTroublesome(tag_name,empty_element_tag)) {
+		this->handleEndTag(tag_name);
+	}
+}
+
+void LinkExtractor::safeHandleStartTag(const std::string& tag_name,
+		attr_list_t& attrs, bool empty_element_tag)
+{
+	LinkExtractor::link_tag_map_t::const_iterator _i;
+	std::string _attr;
+
+	std::string name = tag_name;
+	to_lower(name);
+	// Base should be treat separately
+	if ((name == "base") and (attrs.find("href") != attrs.end()) ) {
+		this->base = attrs["href"].str();
+	} else if ( name == "meta" ){
+		this->handleMetaTag(tag_name, attrs);
+	}
+	// Extract Links
+	//  - Is this a tag link?
+	//  - If so, is the corresponding attribute of this tag present?
+	_i = this->LINK_TAGS.find(name);
+	if ( (_i != this->LINK_TAGS.end()) and 
+	     ( attrs.find( _attr = _i->second ) != attrs.end() ))
+	{
+		this->links.insert( attrs[_attr].str() );
+	}
+
+
+}
+
+void LinkExtractor::handleMetaTag( const std::string& tag_name,
+attr_list_t& attrs)
+{
+	std::string value;
+	std::string content;
+
+	attr_list_t::const_iterator name_attr = attrs.find("name");
+
+	if (name_attr != attrs.end()){
+		value = name_attr->second.str();
+		to_lower(value);
+		if (value == "robots"){
+			content = attrs["content"].str();
+			to_lower(content);
+			if (content.find("nofollow") != content.npos){
+				this->follow = false;
+			}
+
+			if (content.find("noindex") != content.npos){
+				this->index = false;
+			}
+		}
+	}
+}
 
 
 

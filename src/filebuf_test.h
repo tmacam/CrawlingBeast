@@ -74,6 +74,14 @@ public:
 
 	}
 
+	void test_Str()
+	{
+		char msg[] = "12345";
+		filebuf f(msg,5);
+
+		TS_ASSERT_EQUALS(f.str(), std::string(msg));
+	}
+
 };
 
 #endif // __FILEBUF_TEST_H

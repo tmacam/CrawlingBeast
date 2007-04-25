@@ -281,9 +281,67 @@ public:
 
 };
 
+/**Simple href extractor.
+ *
+ * It parses a HTML page and extracts it's links and some useful
+ * meta-information from it.
+ *
+ * Atributes:
+ *
+ * links: set of links found on the page, as string and unparsed.
+ *
+ * base:  head/meta/base/[@href] contents, or none if non-existent
+ *
+ * follow: should this page be followed? Defaults to True and is modified
+ * according to the contents of a meta robots tag.
+ *
+ * index: should this page be index? Defaults to True and is modified according
+ * to the contents of a meta robots tag.
+ *
+ *
+*/
+class LinkExtractor : public SloppyHTMLParser {
+
+public:
+	typedef BaseHTMLParser::attr_list_t attr_list_t;
+	
+	//FIXME metainformation outside the page's head should be ignored
+	typedef std::map<std::string, std::string> link_tag_map_t;
+
+	/**Map of TAGS that contain LINKS to other pages/objects and the
+	 * name of their ATTRIBUTES that holds the LINKs.
+	 *
+	 * For instance, for anchor (A) tags, the attribute that holds the link
+	 * for other object is HREF. For (I)FRAME tags, the corresponding attribute
+	 * is called SRC, and so on...
+	 * */
+	static const link_tag_map_t  LINK_TAGS;
+
+	std::set<std::string> links;
+	std::string base;
+	bool index;
+	bool follow;
+
+	LinkExtractor(const filebuf& text) : SloppyHTMLParser(text),
+	links(), base(), index(true), follow(true) {}
+
+
+	void handleStartTag(const std::string& tag_name,
+			attr_list_t& attrs, bool empty_element_tag=false);
+
+	void safeHandleStartTag(const std::string& tag_name,
+			attr_list_t& attrs, bool empty_element_tag=false);
+
+	//!Handles meta tag with ROBOTS.txt information
+	void handleMetaTag(const std::string& tag_name, attr_list_t& attrs);
+};
+
+
+
+
 /* **********************************************************************
  
-class LogParser(SloppyHtmlParser):
+class LogParser(SloppyHTMLParser):
 
     def handleText(self,text):
         print self._start, "TEXT",text
@@ -304,64 +362,6 @@ class LogParser(SloppyHtmlParser):
         print self._start, "COMMENT",comment
 
 
-class LinkExtractor (SloppyHtmlParser):
-    """Simple link extractor.
-
-    It parses a HTML page and extracts it's links and some useful
-    meta-information from it.
-
-    Atributes:
-
-     links: set of links found on the page, as string and unparsed.
-     base:  head/meta/base/[@href] contents, or none if non-existent
-     follow: should this page be followed? Defaults to True and is
-            modified according to the contents of a meta robots tag.
-     index: should this page be index? Defaults to True and is
-            modified according to the contents of a meta robots tag.
-
-
-    """
-    # FIXME metainformation outside the page's head should be ignored
-    LINK_TAGS = { u'a'      : u'href',
-                  u'link'   : u'href',
-                  u'iframe' : u'src',
-                  u'frame'  : u'src',
-                  u'area'   : u'href',
-                  }
-
-    def __init__(self,text):
-        # setup base class
-        super(LinkExtractor,self).__init__(text)
-        self.links = set()
-        self.base = None
-        self.index = True
-        self.follow = True
-
-    def handleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
-        self.safeHandleStartTag(tag_name, attrs, empty_element_tag)
-        if self.skipTagIfTroublesome(tag_name, empty_element_tag):
-            self.handleEndTag(tag_name)
-
-    def safeHandleStartTag(self, tag_name, attrs={}, empty_element_tag=False):
-        name = tag_name.lower()
-        # Base should be treat separately
-        if name == 'base' and u'href' in attrs:
-            self.base = attrs[u'href']
-        elif name == 'meta':
-            self.handleMetaTag(tag_name, attrs)
-        # Extract Links
-        if name  in self.LINK_TAGS and self.LINK_TAGS[name] in attrs:
-            self.links.add( attrs[ self.LINK_TAGS[name] ])
-
-    def handleMetaTag(self, name, attrs):
-        """Handles meta tag with ROBOTS.txt information"""
-        name = name.lower()
-        if attrs.get('name','').lower() == 'robots':
-            content = attrs.get('content','').lower()
-            if 'nofollow' in content:
-                self.follow = False
-            if 'noindex' in content:
-                self.index = False
 
 
 def _test():
