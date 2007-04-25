@@ -23,6 +23,7 @@
 #include "parser.h"
 
 #include <map>
+#include <set>
 
 #include "filebuf.h"
 
@@ -84,6 +85,16 @@ struct AbstractHTMLParser {
 
 /**A simple, almost stupid non-validating (x)HTML push parser.
  *
+ * WWW is a jungle of wild and bad-formed and invalid HTML documents.
+ * Besides all the beasts you will find trying to parse a real page, you
+ * still has to deal with documents that pretend to be X(H)ML, documents
+ * that mixes XML, HTML and old-style markups. This parser tries to 
+ * handle all those sort of documents and survive - intact.
+ *
+ * Most errors are handled graciously: invalid tag, characters outside
+ * the allowed ranges, things that seem like valid tags but ain't, all
+ * those sort of errors are handled in a uniform way: promoting
+ * wanna-be-tag-content to text.
  *
  * @note Errors found during tag processing "promote" that thought-to-be-tag
  *	 content into text content.
@@ -236,34 +247,42 @@ public:
 
 
             
+
 /* **********************************************************************
-
-########################################################################
-#                            HTML FORGUIVEFUL PARSING
-########################################################################
+ *			    FORGUIVEFUL HTML PARSERS
+ * ********************************************************************** */
 
 
-class SloppyHtmlParser(BaseHTMLParser):
-    """Our first try into a HTML parser that treats style and script
-    correctly.
-    """
-    TROUBLESOME_TAGS = [u'script', u'style']
+/**Our first try into a HTML parser that doesn't choke on tags like style
+ * and script.
+ *
+ * Certain HTML tags, like STYLE, SCRIPT, and TEXTAREA, can contain data
+ * that is not expected to validates as valid HTML. Parsing this data will
+ * probably be problesome and such be avoided - and that's exactly what
+ * this parser does. As soon as such a tags is found it forwards text parsing
+ * to the end of corresponding tag, avoding all the mess what it can hold
+ * inside.
+ */
+class SloppyHTMLParser: public BaseHTMLParser {
+protected:
+	static const std::set<std::string> TROUBLESOME_TAGS;
 
-    def skipTagIfTroublesome(self, tag_name, empty_element_tag):
-        """Skip content inside a tag if it is a troublesome one.
+public:
+   /**Skip content inside a tag if it is a troublesome one.
+    *
+    * @warning You should probably call handleEndTag if the the
+    *		 tag was indeed skiped.
+    * @return content inside the Tag, None if the Tag is not a
+    * troublesome one.
+    */
+    bool skipTagIfTroublesome(std::string tag_name, bool empty_element_tag);
 
-        @warning You should probably call handleEndTag if the the
-                 tag was indeed skiped.
-        
-        @return content inside the Tag, None if the Tag is not a
-                troublesome one.
-        """
-        content = None
-        if tag_name.lower() in self.TROUBLESOME_TAGS  and not empty_element_tag:
-            # A troublesome tag with troublesome content. Skipt it.
-            content = self._readUntilEndTag(tag_name)
-        return content
+    SloppyHTMLParser(const filebuf& text): BaseHTMLParser(text) {}
 
+};
+
+/* **********************************************************************
+ 
 class LogParser(SloppyHtmlParser):
 
     def handleText(self,text):

@@ -39,12 +39,13 @@ std::ostream& operator<<(std::ostream& out,const BaseHTMLParser::attr_list_t& m)
  * ********************************************************************** */
 
 // Stupid class just to test our methods
-class TestHTMLParser : public BaseHTMLParser {
+class TestHTMLParser : public SloppyHTMLParser {
+	friend class BaseHTMLParserTest;
 public:
 	std::ostringstream items;
 	
 	TestHTMLParser(const filebuf& t):
-		BaseHTMLParser(t), items() {}
+		SloppyHTMLParser(t), items() {}
 
 	void handleText(filebuf data){
 		this->items << "TEXT[" <<  data << "] ";
@@ -168,7 +169,70 @@ void testInvalidAttrNameInInterruptedTagList(){
 //        ;
 //}
 
+
+void testReadUntilEndTag(){
+
+	const char teste[] = "ERROR<a>ERROR<b>ERROR</b><a>ERROR</a>OK";
+	filebuf f(teste,sizeof(teste));
+	TestHTMLParser p(f);
+
+	filebuf tmp;
+	std::string res;
+
+	p.readUntilEndTag("a");
+	TS_ASSERT_THROWS(p.readUntilEndTag("b"), ParserEOFError);
+}
+
 }; // class  BaseHTMLParserTest
+
+
+/* **********************************************************************
+ *			    FORGUIVEFUL HTML PARSERS
+ * ********************************************************************** */
+
+
+class SloppyTestHTMLParser: public TestHTMLParser {
+public:
+	friend class SloppyHTMLParserTest;
+
+	SloppyTestHTMLParser(const filebuf& t): TestHTMLParser(t)  {}
+
+	void handleStartTag(const std::string& tag_name,
+			attr_list_t& attrs, bool empty_element_tag=false)
+	{
+		this->items << "TAG[" <<  tag_name << ", " <<  attrs << "] ";
+		if (this->skipTagIfTroublesome(tag_name,empty_element_tag)) {
+			this->handleEndTag(tag_name);
+		}
+	}
+
+};
+
+class SloppyHTMLParserTest : public CxxTest::TestSuite {
+public:
+	std::string getParsedString(const std::string text )
+	{
+		filebuf f(text.c_str(), text.size());
+		SloppyTestHTMLParser p(f);
+		p.parse();
+
+		return p.items.str();
+	}
+
+	void testSimpleScript()
+	{
+	    TS_ASSERT_EQUALS( getParsedString(
+		"a<b><script><c><d></script><e>"),
+		"TEXT[a] TAG[b, {}] TAG[script, {}] ENDTAG[script] TAG[e, {}] ");
+	}
+
+	void testSimpleScripEmptyClose()
+	{
+	    TS_ASSERT_EQUALS( getParsedString(
+		"a<b><script/><c><d></script><e>"),
+		"TEXT[a] TAG[b, {}] TAG[script, {}] ENDTAG[script] TAG[c, {}] TAG[d, {}] ENDTAG[script] TAG[e, {}] ");
+	}
+};
 
 #endif // __HTMLPARSER_TEST_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

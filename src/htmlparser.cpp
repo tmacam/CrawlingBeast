@@ -348,10 +348,40 @@ void BaseHTMLParser::readGenericTagConstruction()
         // parsing should restart after the >
 }
 
-/*
 
-*/
+/* **********************************************************************
+ *			    FORGUIVEFUL HTML PARSERS
+ * ********************************************************************** */
 
+
+
+static const char* __TROUBLESOME_TAGS[] = {"script", "style", "textarea"};
+
+const std::set<std::string> SloppyHTMLParser::TROUBLESOME_TAGS(
+	__TROUBLESOME_TAGS, __TROUBLESOME_TAGS + 3);
+
+bool SloppyHTMLParser::skipTagIfTroublesome(std::string tag_name,
+					       bool empty_element_tag)
+{
+	bool skiped = false;
+	
+	// We should only get tag_names in lower case, anyway, but is better
+	// safe than sorry...
+	to_lower(tag_name);
+
+	// Empty tags have no content, so we only check a tag if it is not
+	// empty...
+
+	if ( (not empty_element_tag) &&  
+		(SloppyHTMLParser::TROUBLESOME_TAGS.count(tag_name) > 0) )
+	{
+		// A troublesome tag with troublesome content. Skipt it.
+		this->readUntilEndTag(tag_name);
+		skiped = true;
+	}
+
+	return skiped;
+}
 
 
 
