@@ -85,7 +85,7 @@ public:
 /** We unexpectedly found the end of the parsing data. */
 class ParserEOFError: public ParsingError {
 public:
-	ParserEOFError(const std::string& __arg):
+	ParserEOFError(const std::string& __arg =""):
 		ParsingError(__arg){}
 };
 
