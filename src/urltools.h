@@ -199,7 +199,19 @@ protected:
 	 * >>> u.removeDotSegments("mid/content=5////../6")
 	 * u'mid/6'
 	 */
-	static std::string removeDotSegments(std::string& path);
+	static std::string removeDotSegments(const std::string& path);
+
+	/**Merges a relative-path URI to a base URI (base).
+	 * 
+	 * @param base A URL instance with the Base URL
+	 * @param rel  A URL instance with the relative-path URI
+	 *
+	 * @return The base's path merged with rel's path.
+	 * 
+	 * We follow the algorithm from RFC 3986, Section 5.2.3.
+	 */ 
+	static std::string mergePath(const BaseURLParser& base, const BaseURLParser& rel);
+
 
 	//!Read a single Percent-Encoded character and parses it accordingly.
 	static std::string decodeAndFixPE(const std::string pe_data);
@@ -336,7 +348,14 @@ protected:
 	//!@name Aux. Functions
 	bool hasScheme() const {return ! scheme.empty();}
 
+	/**Verifies if this URL has the a authority section "defined".
+	 *
+	 * Actually, all it does is verify if it has a non-empty
+	 * host(name), as this is the only non-optional part of authority
+	 */
 	bool hasAuthority() const {return ! host.empty();}
+
+	bool hasQuery() const { return ! query.empty(); }
 
 
 
@@ -356,13 +375,10 @@ public:
         std::string port;
 
         std::string path;
-        bool path_defined;
 
         std::string query;
-        bool query_defined;
 
         std::string fragment;
-        bool fragment_defined;
 	//@}
 	
 
@@ -397,20 +413,28 @@ public:
 	bool operator==(const BaseURLParser& other) const;
 
 
-	BaseURLParser& operator+(const BaseURLParser& other);
+	/**Return reference URL R converted into a target URL T using this
+	 * instance as base URL.
+	 * 
+	 * We follow RFC 3986, Section 5.2.2 procedures.
+	 */
+	BaseURLParser operator+(const BaseURLParser& R);
 
 	std::string getScheme() const {return this->scheme;}
 	std::string getPath() const {return this->path;}
 
+        //! Notice that even if this URL has an authority component it still is a
+        //! relative URL per RFC 3986.
+	bool isRelative() const { return !(this->hasScheme()); }
+
+	/**Recompose the parsed URI elements from this URL into a string.
+	 *
+	 * We follow the algorithm from RFC 3986, Section 5.3
+	 */
+	std::string str() const;
+
 
 /* **********************************************************************
-
-
-
-    def isRelative(self):
-        # Notice that even if this URL has an authority component it still is a
-        # relative URL
-        return self.scheme is None
 
     def isDynamic(self):
         return self.query is not None
@@ -422,110 +446,8 @@ public:
         return ( self.scheme, self.userinfo, self.host, self.port, self.path,\
                 self.query, self.fragment )
 
-    def __eq__(self,b):
-        return self.getComponents() == b.getComponents()
 
-    def __add__(self,R):
-        """Return reference URL R converted into a target URL T using this
-        instance as base URL.
-        
-        We follow RFC 3986, Section 5.2.2 procedures.
-        """
-        T = BaseURLParser()
-        Base = self
-        if R.scheme:
-            # This is an absolute URL already!
-            T.scheme    = R.scheme
-            # authority
-            T.userinfo, T.host, T.port = Base.userinfo, Base.host, Base.port
-            T.path      = self.removeDotSegments(R.path)
-            T.query     = R.query
-        else:
-            if R.host: # This is the only non-opitional part of authority
-                T.userinfo, T.host, T.port = R.userinfo, R.host, R.port
-                T.path      = self.removeDotSegments(R.path);
-                T.query     = R.query;
-            else:
-                if R.path == "":
-                    T.path = Base.path;
-                    if R.query is not None:
-                        T.query = R.query
-                    else:
-                        T.query = Base.query
-                else:
-                   if R.path.startswith("/"):
-                        T.path = self.removeDotSegments(R.path);
-                   else:
-                      T.path = self.mergePath(Base, R);
-                      # we  MUST call remove_dot_segments again...
-                      T.path = self.removeDotSegments(T.path);
-                   T.query = R.query
-                #endif R.path
-                # T.authority = Base.authority
-                T.userinfo, T.host, T.port = Base.userinfo, Base.host, Base.port
-            # endif R.authority
-            T.scheme = Base.scheme
-        # endif R.scheme
-        T.fragment = R.fragment
-
-        return T
-
-
-
-    def mergePath(self,base, rel):
-        """Merges a relative-path URI to a base URI (base).
-
-        @param base A URL instance with the Base URL
-        @param rel  A URL instance with the relative-path URI
-        
-        We follow the algorithm from RFC 3986, Section 5.2.3.
-        """
-        if base.host and (base.path == u"" or base.path == u"/"):
-            return u"/" + rel.path
-        else:
-            rightmost = base.path.rfind("/")
-            if rightmost < 0:
-                # This code should never be reached: ALL URIs have a
-                # at least "/" as path! This is automatically added by
-                # parse, just after readPath
-                return rel.path
-            else:
-                return base.path[:rightmost] + "/" + rel.path
             
-
-    def __str__(self):
-        """Recompose the parsed URI elements from this URL into a string.
-        
-        We follow the algorithm from RFC 3986, Section 5.3
-        """
-        # FIXME Test me
-        
-        result = u""
-
-        if self.scheme:
-            result += self.scheme
-            result += u":"
-        
-        if self.host or self.port:
-            result += "//"
-            if self.userinfo:
-                result += self.userinfo    
-                result += "@"
-            result += self.host
-            if self.port:
-                result += ":"
-                result += self.port
-
-        result += self.path
-
-        if self.query:
-            result += u"?"
-            result += self.query
-        if self.fragment:
-            result += u"#"
-            result += self.fragment
-        
-        return result;
 
     # Syntax Components (S. 3) Rules ##########################################
 

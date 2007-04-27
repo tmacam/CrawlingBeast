@@ -10,9 +10,9 @@ BaseURLParser::BaseURLParser(const std::string _url):
 	userinfo(""),
 	host(""),
 	port(""),
-	path(""), path_defined(false), // FIXME
-	query(""), query_defined(false),
-	fragment(""), fragment_defined(false)
+	path(""),
+	query(""),
+	fragment("")
 {
 	parse();
 }
@@ -23,9 +23,9 @@ BaseURLParser::BaseURLParser(const filebuf _buf) :
 	userinfo(""), 
 	host(""),
 	port(""),
-	path(""), path_defined(false), // FIXME
-	query(""), query_defined(false),
-	fragment(""), fragment_defined(false)
+	path(""),
+	query(""),
+	fragment("")
 {
 	parse();
 }
@@ -36,9 +36,9 @@ BaseURLParser::BaseURLParser(const BaseURLParser& other):
 	userinfo(other.userinfo), 
 	host(other.host),
 	port(other.port),
-	path(other.path), path_defined(other.path_defined), // FIXME
-	query(other.query), query_defined(other.query_defined),
-	fragment(other.fragment), fragment_defined(other.fragment_defined)
+	path(other.path),
+	query(other.query),
+	fragment(other.fragment)
 {} // Nothing to read, URL already parsed!
 
 
@@ -48,11 +48,8 @@ bool BaseURLParser::operator==(const BaseURLParser& other) const
 		this->userinfo == other.userinfo && 
 		this->host == other.host && 
 		this->port == other.port && 
-		this->path_defined == other.path_defined && 
 		this->path == other.path && 
-		this->query_defined == other.query_defined && 
 		this->query == other.query && 
-		this->fragment_defined == other.fragment_defined && 
 		this->fragment == other.fragment;
 
 }
@@ -103,9 +100,82 @@ void BaseURLParser::parse()
 }
 
 
-BaseURLParser& BaseURLParser::operator+(const BaseURLParser& other)
+BaseURLParser BaseURLParser::operator+(const BaseURLParser& R)
 {
-	return *this;
+	BaseURLParser T = BaseURLParser();
+	const BaseURLParser& Base = *this;
+
+	if ( R.hasScheme() ) {
+		// This is an absolute URL already!
+		T.scheme    = R.scheme;
+		// authority
+		T.userinfo = R.userinfo;
+		T.host = R.host;
+		T.port = R.port;
+		// the rest of the url...
+		T.path      = removeDotSegments(R.path);
+		T.query     = R.query;
+	} else {
+		if ( R.hasAuthority() ) { 
+			// Authority...
+			T.userinfo = R.userinfo;
+			T.host = R.host;
+			T.port = R.port;
+			// The rest...
+			T.path      = removeDotSegments(R.path);
+			T.query     = R.query;
+		} else {
+			if ( R.path.empty() ){
+				T.path = Base.path;
+				if ( R.hasQuery() ) {
+					T.query = R.query;
+				} else {
+					T.query = Base.query;
+				}
+			} else {
+				if (R.path.size() > 0 && R.path[0] == '/') {
+					T.path = removeDotSegments(R.path);
+				} else {
+					T.path = mergePath(Base, R);
+					// we  MUST call remove_dot_segments
+					// again...
+					T.path = removeDotSegments(T.path);
+				}
+				T.query = R.query;
+			}//endif R.path
+			// T.authority = Base.authority
+			T.userinfo = Base.userinfo;
+			T.host = Base.host;
+			T.port = Base.port;
+		} // endif R.authority
+		T.scheme = Base.scheme;
+	}// endif R.scheme
+	T.fragment = R.fragment;
+
+	return T;
+}
+
+ 
+std::string BaseURLParser::mergePath(const BaseURLParser& base, const BaseURLParser& rel)
+{
+	std::string::size_type rightmost;
+
+        if (base.hasAuthority() and (base.path.empty() or base.path == "/") ) {
+            return std::string("/") + rel.path;
+        } else {
+            rightmost = base.path.rfind("/");
+            if  ( rightmost == base.path.npos ) {
+		// No "/" found!
+		//
+                // This code should never be reached: ALL URIs have a
+                // at least "/" as path! This is automatically added
+		// during parsing, just after readPath
+                return rel.path;
+            } else {
+		// rightmost "/" included in the substring
+                return base.path.substr(0,rightmost +1) + rel.path;
+	    }
+	}
 }
 
 std::string BaseURLParser::readScheme()
@@ -278,7 +348,7 @@ void BaseURLParser::readPath(std::string& path)
 	// Quite a small method, ain't?
 }
 
-std::string BaseURLParser::removeDotSegments(std::string& path)
+std::string BaseURLParser::removeDotSegments(const std::string& path)
 {
         // NOTE: The RFC algorithm is writen with a string/buffer in mind
         // while here we deal with an list of segments (created by split("/")).
@@ -403,11 +473,12 @@ std::string BaseURLParser::decodeAndFixPE(const std::string pe_data)
 
 	// Validate string
 	if (pe_data.size() != 3 and pe_data[0] != '%') {
-		throw std::runtime_error("Error in decodeAndFixPE\n");
+		throw std::runtime_error(
+			"Unexpected error in decodeAndFixPE\n");
 	}
 	std::string value_str = pe_data.substr(1);
 	if ( not isxdigit(value_str[0]) or not isxdigit(value_str[1]) ) {
-		throw InvalidCharError("Invalid percent-encoded data '" +
+		throw InvalidURLException("Invalid percent-encoded data '" +
 				pe_data + "'");
 	}
 
@@ -456,6 +527,46 @@ std::string BaseURLParser::fixPercentEncoding(const std::string path)
 	}
 	return fixed;
 }
+
+std::string BaseURLParser::str() const
+{
+	//FIXME Test me
+
+	std::string result = "";
+
+	if ( hasScheme() ) {
+		result += scheme;
+		result += ":";
+	}
+
+	if ( hasAuthority() ) {
+		result += "//";
+		if ( not userinfo.empty() ) {
+			result += userinfo;
+			result += "@";
+		}
+		result += host;
+		if (not port.empty() ) {
+			result += ":";
+			result += port;
+		}
+	}
+
+	result += path;
+
+	if (not query.empty()) {
+		result += "?";
+		result += query;
+	}
+
+	if (not  fragment.empty()) {
+		result += "#";
+		result += fragment;
+	}
+
+	return result;
+}
+
 
 
 

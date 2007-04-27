@@ -107,6 +107,7 @@ public:
 class FriendBaseURLParser: public BaseURLParser {
 public:
 	friend class PathParsingTests;
+	friend class MiscURLTestes;
 	FriendBaseURLParser(const std::string url=""):
 		BaseURLParser(url) {}
 };
@@ -129,7 +130,7 @@ public:
 		TS_ASSERT_EQUALS(v.getPath(), "/");
 	}
 
-	void test_PercentEncoding()
+	void test_PercentEncodingSimple()
 	{
 		BaseURLParser i("http://abc.com:80/~smith/home.html");
 		BaseURLParser j("http://ABC.com/%7Esmith/home.html");
@@ -138,6 +139,20 @@ public:
 		TS_ASSERT_EQUALS(i,j);
 		TS_ASSERT_EQUALS(j,k);
 		TS_ASSERT_EQUALS(i,k);
+	}
+
+	//! Verifies charToPE only returns strings with length equals to 3.
+	void test_CharToPEAndBack()
+	{
+		int i;
+		char c;
+		std::string res;
+
+		for(i = 0x00; i <= 0xff; ++i) {
+			c = i;
+			res = FriendBaseURLParser::charToPE(c);
+			TS_ASSERT_EQUALS(res.size(),3);
+		}
 	}
 
 	void testTrailingSlashInPath()
@@ -176,7 +191,7 @@ public:
 		TS_ASSERT_EQUALS(u.decodeAndFixPE("%20") ,  "%20");
 		TS_ASSERT_EQUALS(u.decodeAndFixPE("%24") ,  "%24");
 		TS_ASSERT_EQUALS(u.decodeAndFixPE("%5F") , "_");
-		TS_ASSERT_THROWS(u.decodeAndFixPE("%XX") , InvalidCharError);
+		TS_ASSERT_THROWS(u.decodeAndFixPE("%XX") , InvalidURLException);
 
 	}
 
@@ -192,18 +207,157 @@ public:
 };
 
 
+class RelativeAbsoluteURLTests : public CxxTest::TestSuite {
+	typedef std::vector<BaseURLParser> urls_t;
+	typedef std::vector<std::string> paths_t;
+	paths_t paths;
+	urls_t urls;
+public:
+
+	void setUp()
+	{
+		paths.clear();
+		urls.clear();
+
+		paths_t::const_iterator p;
+
+		paths.push_back("/p4");
+		paths.push_back("p4/");
+		paths.push_back("../blah/..");
+		paths.push_back("./isso.html");
+		paths.push_back("file.html");
+
+		for(p = paths.begin(); p != paths.end(); ++p){
+			urls.push_back(BaseURLParser(*p));
+		}
+		
+	}
+
+	void test_AllAreRelative()
+	{
+		bool all_are = true;
+		urls_t::const_iterator i;
+
+		for(i = urls.begin(); i != urls.end(); ++i){
+			all_are &= (i->isRelative());
+		}
+
+		TS_ASSERT(all_are);
+	}
+
+	void testPathsExpected()
+	{
+		TS_ASSERT_EQUALS(paths.size(), urls.size());
+
+		TS_ASSERT_EQUALS("/p4", urls[0].getPath());
+		TS_ASSERT_EQUALS("p4/", urls[1].getPath());
+		TS_ASSERT_EQUALS("", urls[2].getPath());
+		TS_ASSERT_EQUALS("isso.html", urls[3].getPath());
+		TS_ASSERT_EQUALS("file.html", urls[4].getPath());
+	}
+
+	void testAbsoluteResolution()
+	{
+		BaseURLParser base = BaseURLParser("http://a.com/base/index.html");
+
+		urls_t::iterator i;
+
+		for(i = urls.begin(); i != urls.end(); ++i){
+			*i = (base + *i);
+		}
+
+		TS_ASSERT_EQUALS( urls[0], BaseURLParser("http://a.com/p4"));
+		TS_ASSERT_EQUALS( urls[1], BaseURLParser("http://a.com/base/p4/"));
+		TS_ASSERT_EQUALS( urls[2], BaseURLParser("http://a.com/base/index.html"));
+		TS_ASSERT_EQUALS( urls[3], BaseURLParser("http://a.com/base/isso.html"));
+		TS_ASSERT_EQUALS( urls[4], BaseURLParser("http://a.com/base/file.html"));
+	}
+
+	void testAbsolutePlusAbsolute()
+	{
+		BaseURLParser u("http://a.com/base/index.html");
+		BaseURLParser v("http://b.net/a/very/long/path/almost/");
+
+		BaseURLParser x = u + v;
+		TS_ASSERT_EQUALS(x,v);
+	}
+};
+
+
+
+
+class MiscURLTests : public CxxTest::TestSuite {
+public:
+
+	/**Scheme-Based Normalization.
+	 * RFC 3986 section 6.2.3.  
+	 */
+	void testSchemeBasedNormalization()
+	{
+		TS_ASSERT_EQUALS(
+				BaseURLParser("http://www.Exemple.com.:80/"),
+				BaseURLParser("HTTP://WWW.exemple.com")
+				);
+
+		BaseURLParser m("http://example.com");
+		BaseURLParser n("http://example.com/");
+		BaseURLParser o("http://example.com:/");
+		BaseURLParser p("http://example.com:80/");
+
+		TS_ASSERT_EQUALS(m,n);
+		TS_ASSERT_EQUALS(n,o);
+		TS_ASSERT_EQUALS(o,p);
+		TS_ASSERT_EQUALS(p,m);
+	}
+
+	//!We are not handling sub-domain normalization.
+	void testSubDomainNormalization()
+	{
+    		TS_ASSERT_DIFFERS( BaseURLParser("http://www.exemple.com"),
+				BaseURLParser("http://exemple.com"));
+	}
+
+   	/** Protocol-Based Normalization.
+	 * As Defined in RC 3986, section 6.2.4.
+	 *
+	 * @note This is the Trailing Slash in Path normalization procedure!
+	 */
+	void test_Protocol_Based_Normalization()
+	{
+		TS_ASSERT_DIFFERS( BaseURLParser("http://www.exemple.com/sub/"),
+				   BaseURLParser("http://www.exemple.com/sub"));
+	}
+
+
+	void testDotSegmentAndPercentEncoding_One()
+	{
+		TS_ASSERT_EQUALS( BaseURLParser("http://a.com/%7e é %41"),
+				  BaseURLParser("http://a.com/~%20%C3%A9%20A") );
+	}
+
+	void testDotSegmentAndPercentEncoding_Two()
+	{
+    		TS_ASSERT_EQUALS( BaseURLParser("http://AeXAMPLE/a/./b/../b/%63/%7bfoo%7d"),
+			BaseURLParser("http://aexample://a/b/c/%7Bfoo%7D"));
+	}
+
+
+
+
+};
+
 
 
 
 /* **********************************************************************
 
-class TestURLParser(BaseURLParser):
+class BaseURLParser(BaseURLParser):
     """Simple Test class for the parser.
 
     The aim of this class is to be simple fixure upon which unittests can be
     easly build. For now, doctests are being used.
 
-    >>> u = TestURLParser("http://user:pass@Exemple.com.:80/f/file?query#frag")
+    >>> u = BaseURLParser("http://user:pass@Exemple.com.:80/f/file?query#frag")
     >>> u.scheme
     u'http'
     >>> u.userinfo
@@ -219,43 +373,11 @@ class TestURLParser(BaseURLParser):
     >>> u.fragment
     u'frag'
 
-    # 6.2.3.  Scheme-Based Normalization
-    >>> TestURLParser("http://www.Exemple.com.:80/") == TestURLParser("HTTP://WWW.exemple.com")
+
+    >>> BaseURLParser("http://www.exemple.com/?") != BaseURLParser("http://www.exemple.com/")
     True
 
-    >>> TestURLParser('http://example.com') == TestURLParser('http://example.com/') == TestURLParser('http://example.com:/') == TestURLParser('http://example.com:80/')
-    True
-
-    >>> import operator
-    >>> list_of_relatives = ['/p4', 'p4/', '../blah/..', './isso.html', 'file.html']
-    >>> relative_urls = [TestURLParser(u) for u in list_of_relatives]
-    >>> reduce(operator.and_, [u.isRelative() for u in relative_urls] )
-    True
-    >>> [u.path for u in relative_urls]
-    [u'/p4', u'p4/', u'', u'isso.html', u'file.html']
-
-    >>> absolute = TestURLParser("http://a.com/base/index.html")
-    >>> [str(absolute + u) for u in relative_urls]
-    ['http://a.com/p4', 'http://a.com/base/p4/', 'http://a.com/base/index.html', 'http://a.com/base/isso.html', 'http://a.com/base/file.html']
-
-    >>> TestURLParser("http://www.exemple.com") != TestURLParser("http://exemple.com")
-    True
-
-    # 6.2.4.  Protocol-Based Normalization
-    >>> TestURLParser("http://www.exemple.com/sub/") != TestURLParser("http://www.exemple.com/sub")
-    True
-
-    >>> TestURLParser("http://www.exemple.com/?") != TestURLParser("http://www.exemple.com/")
-    True
-
-    >>> TestURLParser(u"http://a.com/%7e é %41") == TestURLParser(u"http://a.com/~%20%C3%A9%20A")
-    True
-
-    >>> u = BaseURLParser("http://AeXAMPLE/a/./b/../b/%63/%7bfoo%7d")
-    >>> v = BaseURLParser("http://aexample://a/b/c/%7Bfoo%7D")
-    >>> u == v
-    True
-    """
+        """
     pass
 
  * ********************************************************************** */
