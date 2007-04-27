@@ -151,7 +151,7 @@ class BaseURLParser(BaseParser):
             # This is an absolute URL already!
             T.scheme    = R.scheme
             # authority
-            T.userinfo, T.host, T.port = Base.userinfo, Base.host, Base.port
+            T.userinfo, T.host, T.port = R.userinfo, R.host, R.port
             T.path      = self.removeDotSegments(R.path)
             T.query     = R.query
         else:
@@ -630,6 +630,12 @@ class TestURLParser(BaseURLParser):
     >>> u = BaseURLParser("http://AeXAMPLE/a/./b/../b/%63/%7bfoo%7d")
     >>> v = BaseURLParser("http://aexample://a/b/c/%7Bfoo%7D")
     >>> u == v
+    True
+
+    >>> u = BaseURLParser("http://a.com/base/index.html");
+	>>> v = BaseURLParser("http://b.net/a/very/long/path/almost/");
+    >>> x = u + v
+    >>> x == v
     True
     """
     pass
