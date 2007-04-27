@@ -38,12 +38,13 @@
 
 #include <string>
 #include <vector>
+#include <sstream>
 
 
 /**Splits a string into pieces using separator as separator.
  *
  * @param inString The string to be splited
- * @param delimiter The string used as delimiter.
+ * @param separator The string used as delimiter.
  * @param maxsplit If non-zero, at most maxsplit splits are done.
  * 		   Defaults to 0, i.e., there is no limit of splits.
  *
@@ -77,7 +78,7 @@ Cont split (const typename Cont::value_type& inString,
 /**Splits a string into pieces using separator as separator.
  *
  * @param inString The string to be splited
- * @param delimiter The string used as delimiter.
+ * @param separator The string used as delimiter.
  * @param maxsplit If non-zero, at most maxsplit splits are done.
  * 		   Defaults to 0, i.e., there is no limit of splits.
  *
@@ -85,6 +86,44 @@ Cont split (const typename Cont::value_type& inString,
 std::vector<std::string>
 split (const std::string &inString, const std::string &separator,
 		unsigned int maxsplit = 0);
+
+/**Joins a string using separator as separator.
+ *
+ * @param delimiter The string used as delimiter.
+ * @param values A STL conteinter with forward iterators.
+ *
+ * @return A string with elements from values joined by
+ * 	separators.
+ *
+ * @note We work differently from ostream_iterator, in that the
+ * former always append a delimiter after a element, and we don't
+ * do that. We only add delimiters between elements.
+ *
+ * Notice:
+ *  - join("/",["a"]) -> "a"
+ *  - join("/",["a","b"]) -> "a/b"
+ *
+ */
+template<class C> 
+std::string join( const typename C::value_type& delimiter,
+			     const C& values)
+{
+	std::ostringstream out;
+
+	typename C::const_iterator i = values.begin();
+
+	if (i != values.end() ){
+		out << *i;
+	}
+	++i;
+
+	for(; i != values.end(); ++i){
+		out << delimiter << *i;
+	}
+
+	return out.str();
+
+} 
 
 
 

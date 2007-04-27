@@ -104,6 +104,96 @@ public:
 };
 
 
+class FriendBaseURLParser: public BaseURLParser {
+public:
+	friend class PathParsingTests;
+	FriendBaseURLParser(const std::string url=""):
+		BaseURLParser(url) {}
+};
+
+
+class PathParsingTests : public CxxTest::TestSuite {
+public:
+
+
+	/** Observe that http://www.exemple.com/ == http://www.exemple.com ,
+	 * as inscructed by RFC 3986, Section 6.2.3.
+	 */
+	void test_TrailingSlashAfterAuthority()
+	{
+		BaseURLParser u = BaseURLParser("http://www.exemple.com/");
+		BaseURLParser v = BaseURLParser("http://www.exemple.com");
+		
+		TS_ASSERT_EQUALS(u,v);
+
+		TS_ASSERT_EQUALS(v.getPath(), "/");
+	}
+
+	void test_PercentEncoding()
+	{
+		BaseURLParser i("http://abc.com:80/~smith/home.html");
+		BaseURLParser j("http://ABC.com/%7Esmith/home.html");
+		BaseURLParser k("http://ABC.com:/%7esmith/home.html");
+
+		TS_ASSERT_EQUALS(i,j);
+		TS_ASSERT_EQUALS(j,k);
+		TS_ASSERT_EQUALS(i,k);
+	}
+
+	void testTrailingSlashInPath()
+	{
+
+		BaseURLParser u("http://www.exemple.com/foo");
+		BaseURLParser v("http://www.exemple.com/foo/");
+		
+		TS_ASSERT_DIFFERS(u,v);
+	}
+
+	void testPathNormalizationOne()
+	{
+
+		TS_ASSERT_EQUALS(
+			BaseURLParser("./..///a/b/../c"),
+			BaseURLParser("/a/c"));
+	}
+	
+	void testRemoveDotSegments()
+	{
+		BaseURLParser u("/a/b/c/./../../g");
+		TS_ASSERT_EQUALS(u.getPath(), "/a/g");
+
+		BaseURLParser v("mid/content=5/../6");
+		TS_ASSERT_EQUALS(v.getPath(), "mid/6");
+
+		BaseURLParser x("mid/content=5////../6");
+		TS_ASSERT_EQUALS(x.getPath(), "mid/6");
+	}
+
+	void testdecodeAndFixPe()
+	{
+		FriendBaseURLParser u = FriendBaseURLParser();
+
+		TS_ASSERT_EQUALS(u.decodeAndFixPE("%20") ,  "%20");
+		TS_ASSERT_EQUALS(u.decodeAndFixPE("%24") ,  "%24");
+		TS_ASSERT_EQUALS(u.decodeAndFixPE("%5F") , "_");
+		TS_ASSERT_THROWS(u.decodeAndFixPE("%XX") , InvalidCharError);
+
+	}
+
+	void testFixPercentEncoding()
+	{
+		FriendBaseURLParser u = FriendBaseURLParser();
+		TS_ASSERT_EQUALS(
+			u.fixPercentEncoding("%41%42%43%61%62%63%25 é%e9%23%3F"),
+        		"ABCabc%25%20%C3%A9%E9%23%3F"
+			);
+	}
+
+};
+
+
+
+
 
 /* **********************************************************************
 

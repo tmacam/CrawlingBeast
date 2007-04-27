@@ -37,6 +37,11 @@ inline bool is_in(unsigned char c, const std::string& where)
         return where.find(c) != std::string::npos;
 }
 
+template<class C> bool is_in(typename C::value_type v, const C& c)
+{
+	return std::find(c.begin(), c.end(), v) != c.end();
+}
+
 
 /* **********************************************************************
  *      			    SYMBOLS
@@ -52,6 +57,7 @@ inline bool is_in(unsigned char c, const std::string& where)
 const std::string LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
 const std::string WHITESPACE = " \t\n\x0b\x0c\r";
 const std::string DIGITS = "0123456789";
+const std::string HEXDIGITS = "0123456789abcdefABCDEF";
 
 //@}
 

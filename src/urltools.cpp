@@ -1,5 +1,7 @@
 #include "urltools.h"
 #include "explode.h"
+#include <deque>
+#include <iomanip>
 
 
 BaseURLParser::BaseURLParser(const std::string _url):
@@ -86,13 +88,12 @@ void BaseURLParser::parse()
             
             // Now, what follows? Authority?
             readAuthority(this->userinfo, this->host, this->port);
+
+            readPath(this->path);
+            // Paths are taken to be not empty when part of authority is set
+	    normalizeTrailingSlashAfterAuthority();
+
 /*
-
-            self.path = self._readPath()
-            # Paths are taken to be not empty when part of authority is set
-            if self.path == u'' and self.host is not None:
-                self.path = u'/'
-
             self.query = self._readQuery()
             self.fragment = self._readFragment()
  */
@@ -250,6 +251,212 @@ void BaseURLParser::validatePort(const std::string& port)
 		}
 	}
 }
+
+
+void BaseURLParser::readPath(std::string& path)
+{
+        path = readUntilDelimiter("?#").str();
+        path = removeDotSegments(path);
+
+	/* We cannot fix percent encoding before
+	 * removing dot-segments.
+	 *
+	 * For instance, after fixing-PE
+	 *
+	 *   .../foo%2Fbar/... becames  .../foo/bar/...
+	 *
+	 * But, in reallity, what the user requested
+	 * was a file inside a directory named "foo/bar".
+	 * In most OS there cannot be such a directory, as the
+	 * "/" is reserved as directory delimiter.
+	 *
+	 * At least, this is apache's behaviour, and is the one
+	 * we are following here.
+	 */
+        path = fixPercentEncoding(path);
+
+	// Quite a small method, ain't?
+}
+
+std::string BaseURLParser::removeDotSegments(std::string& path)
+{
+        // NOTE: The RFC algorithm is writen with a string/buffer in mind
+        // while here we deal with an list of segments (created by split("/")).
+        // This introduce some peculiarities to our implementation.
+        // This is particularly important to have in mind, specially when
+        // dealing with absolute dirs, i.e, paths that start with '/'.
+        // In our case, absolute dirs are identified by an empty
+        // string in the first position of a list of segments.
+        // 
+        // Adding an element to the output segment list automatically adds a
+        // preceding "/" to it's element.  as well. The only case were you
+        // should realy take care is when adding/removing segments from/to an
+        // absolute paths in the input buffer.
+	typedef std::deque<std::string> buffer_t; 
+        
+	buffer_t input = split<buffer_t>(path, "/");
+        buffer_t output;
+
+	while ( ! input.empty() ){
+		// Rule 'A'
+		// If the input buffer begins with a prefix of "../" or "./"
+		if ( (input.size() > 1) and (input[0] == ".." or input[0] == ".") ){
+			// hen remove that prefix from the input buffer
+			input.pop_front();
+			continue;
+		// Rule 'B'
+		// if the input buffer begins with a prefix of "/./" or "/.",
+		} else if ( input.size() > 1 and input[0] == "" and input[1] == "." ){
+			//then replace that prefix with "/" in the input buffer
+			// Python: input = [u''] + input[2:]
+			input.pop_front();
+			input.pop_front();
+			input.push_front("");
+			continue;
+		// Rule 'C'
+		// if the input buffer begins with a prefix of "/../" or "/.."
+		} else if ( input.size() > 1 and  input[0] == ""
+				and input[1] == ".." )
+		{
+			// then replace that prefix with "/" in the input buffer
+			// Python: input = [u''] + input[2:]
+			input.pop_front();
+			input.pop_front();
+			input.push_front("");
+			// ... and remove the last segment and its preceding "/"
+			// (if any) from the output buffer
+			if ( not output.empty() ){ output.pop_back();}
+			// ...remove the preceding "/"
+			//    (only if this was the last segment)
+			if ( (not output.empty()) and
+					(output[output.size() -1] == ""))
+			{
+				output.pop_back();
+			}
+			continue;
+		// Rule 'D'
+		// if the input buffer consists only of "." or ".."
+		} else if ( (input.size() == 1 ) and 
+				(input[0] == ".." or input[0] == ".") ) 
+		{
+			// remove that from the input buffer
+			input.pop_back();
+			continue;
+		// RULE 'D-E': Our extra rule
+		} else if ( input.size() > 1 and input[0] == "" and input[1] == ""){
+			// We may end up with "//" in the input string. Convert
+			// it to a single "/"
+			input.pop_front();
+			continue;
+		// Rule 'E'
+		} else {
+			// Move the first path segment in the input buffer to the end of
+			// the output buffer, including the initial "/" character (if
+			// any) and any subsequent characters up to, but not including,
+			// the next "/" character or the end of the input buffer
+			if (input.size() > 1 and input[0] == "") {
+				// If output buffer is still empty, this is an absolute
+				// path and a initial "/" must be added to output
+				if (output.empty()) {
+					output.push_back("");
+				}
+				// Remove the first segment, including it's  "/"
+				output.push_back( input[1] );
+				// Python: del input[1]; del input[0]
+				input.pop_front();
+				input.pop_front();
+			} else {
+				output.push_back( input[0] );
+				input.pop_front();
+			}
+			// Now, if there still is something left in the input,
+			// add the initial "/" back
+			if (not input.empty() and input[0] != "") {
+				input.push_front("");
+			}
+			continue;
+		}
+	}
+
+        return join("/",output);
+}
+
+std::string BaseURLParser::charToPE(char _c)
+{
+	unsigned char c = _c;
+	int value = c;
+
+	std::ostringstream out;
+
+	// Meu deus! Que diabo prolixo!!!!! Pro inferno com essa linguagem!
+	out << "%" << std::uppercase << std::hex << std::setw(2) << 
+		std::setfill('0') << value;
+	return out.str();
+}
+
+
+std::string BaseURLParser::decodeAndFixPE(const std::string pe_data)
+{
+	char c;
+	unsigned int value;
+
+
+	// Validate string
+	if (pe_data.size() != 3 and pe_data[0] != '%') {
+		throw std::runtime_error("Error in decodeAndFixPE\n");
+	}
+	std::string value_str = pe_data.substr(1);
+	if ( not isxdigit(value_str[0]) or not isxdigit(value_str[1]) ) {
+		throw InvalidCharError("Invalid percent-encoded data '" +
+				pe_data + "'");
+	}
+
+	std::istringstream in(value_str);
+	in >> std::hex >> value;
+	c = value;
+
+	if ( (value < 128) and  is_in(c,UNRESERVED) ){
+		return std::string(1,c);
+	} else {
+		// anything that is not UNRESERVED should be percent-encoded
+		return charToPE(c);
+	}
+}
+
+
+std::string BaseURLParser::fixPercentEncoding(const std::string path)
+{
+	std::string fixed;
+	std::string::size_type i = 0;
+	char c;
+
+
+	while ( i < path.size() ) {
+		c = path[i];
+		if (c == '%') {
+			// percent encoded data?
+			if ( i + 2 < path.size() ) {
+				fixed += decodeAndFixPE(path.substr(i,3)); // %XX
+				i += 3;
+			} else {
+				// Invalid data? Just pass the rest as-is
+				fixed += path.substr(i);
+				i = path.size();
+			}
+		} else if ( is_in(c, RESERVED) or is_in(c,UNRESERVED) ){
+			fixed += c;
+			i += 1;
+		} else { 
+			// non-ascii is always percent-encoded
+			// Anything that is not in RESERVED or in UNRESERVED
+			// Should also be percent encoded
+			fixed += charToPE(c);
+			i += 1;
+		}
+	}
+	return fixed;
+}
+
 
 
 

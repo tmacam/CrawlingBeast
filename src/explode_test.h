@@ -10,9 +10,7 @@
 #include <list>
 
 
-class ExplodeTestSuite : public CxxTest::TestSuite {
-	std::string mixed_case;
-	std::string lower_case;
+class SplitTestSuite : public CxxTest::TestSuite {
 public:
 
 	void test_EmptyVector(void)
@@ -145,7 +143,52 @@ public:
 
 	}
 
-
 };
+
+
+class JoinTestSuite : public CxxTest::TestSuite {
+	std::string splitNjoin(const std::string what,
+			const std::string sep)
+	{
+		std::vector< std::string > res;
+		res = split(what,sep);
+
+		return join(sep,res);
+	}
+public:
+
+	void test_EmptyVector(void)
+	{
+		std::vector< std::string > res;
+		res = split("","/");
+
+		TS_ASSERT_EQUALS(join("/",res), "");
+	}
+
+	void test_SingleVector(void)
+	{
+		std::string sample = "a/b";
+		TS_ASSERT_EQUALS(splitNjoin(sample,"/"), sample);
+	}
+
+	void test_SampleVectorOne(void)
+	{
+		std::string sample = "/a/b/";
+		TS_ASSERT_EQUALS(splitNjoin(sample,"/"), sample);
+	}
+
+	void test_LotsOfSeparators(void)
+	{
+		std::string sample = "/a/b////////";
+		TS_ASSERT_EQUALS(splitNjoin(sample,"/"), sample);
+	}
+
+	void test_MultiCharSeparators(void)
+	{
+		std::string sample = "a::b::c:::";
+		TS_ASSERT_EQUALS(splitNjoin(sample,"::"), sample);
+	}
+};
+
 #endif // __EXPLODE_TEST_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

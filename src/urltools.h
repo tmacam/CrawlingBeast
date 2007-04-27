@@ -181,6 +181,44 @@ protected:
          */
 	void validatePort(const std::string& port);
 
+	/**Remove special "." and ".." from a path segment according to rules
+	 * in RFC 3986, Section 5.2.4.
+	 *
+	 * @param[in] path The path you want to streamline.
+	 *
+	 * @return The path with streamlined acording with RFC's rules.
+	 * 
+	 * One extra rule was added between rules 2D and 2E: rule 2D-E.
+	 * It does the following: s#^//#/#
+	 * 
+	 * >>> u = BaseURLParser()
+	 * >>> u.removeDotSegments("/a/b/c/./../../g")
+	 * u'/a/g'
+	 * >>> u.removeDotSegments("mid/content=5/../6")
+	 * u'mid/6'
+	 * >>> u.removeDotSegments("mid/content=5////../6")
+	 * u'mid/6'
+	 */
+	static std::string removeDotSegments(std::string& path);
+
+	//!Read a single Percent-Encoded character and parses it accordingly.
+	static std::string decodeAndFixPE(const std::string pe_data);
+
+	//! char -> "%" + HEX(c)
+	static std::string charToPE(char _c);
+
+
+	std::string fixPercentEncoding(const std::string path);
+
+	/*! Observe that http://www.exemple.com/ == http://www.exemple.com ,
+	 * as inscructed by RFC 3986, Section 6.2.3,
+	 */
+	inline void normalizeTrailingSlashAfterAuthority()
+	{
+		if (this->path.empty() and this->hasAuthority()) {
+			this->path = "/";
+		}
+	}
 
 	//@}
 	
@@ -253,10 +291,52 @@ protected:
 	void readAuthority(std::string& userinfo, std::string& host,
 				std::string& port);
 
+	/**Reads a path component.
+	 * 
+	 * Empty paths in absolute URIs are handled by parse().
+	 * 
+	 *
+	 * @see PathParsingTests
+	 *
+	 * Observe that http://www.exemple.com/ == http://www.exemple.com ,
+	 * as inscructed by RFC 3986, Section 6.2.3,
+	 *
+	 * @see fixTrailingSlashAfterPath
+	 * 
+	 * and by  and by RFC 2616, Section 3.2.3. :
+	 * 
+	 * @code
+	 * >>> i = BaseURLParser('http://abc.com:80/~smith/home.html')
+	 * >>> j = BaseURLParser('http://ABC.com/%7Esmith/home.html')
+	 * >>> k = BaseURLParser('http://ABC.com:/%7esmith/home.html')
+	 * >>> i == j == k
+	 * True
+	 * @endcode
+	 * 
+	 * But for absolute URIs a defined path, the last "/" does produce
+	 * different URIs
+	 * 
+	 * @code
+	 * >>> u = BaseURLParser("http://www.exemple.com/foo")
+	 * >>> v = BaseURLParser("http://www.exemple.com/foo/")
+	 * >>> u != v
+	 * True
+	 * @endcode
+	 * 
+	 * Dot segments ("./..///a/b/../c" -> /a/c) and Percent-encoding
+	 * normalization is handled here as well.
+	 * 
+	 * Observe: empty URLs doesn't mean undefined paths, but empty paths!
+	 * This is per algorithm from RFC 3986, Section 5.3
+	 */
+	void readPath(std::string& path);
+
 	//@}
 	
 	//!@name Aux. Functions
-	bool hasScheme() {return scheme.size() != 0;}
+	bool hasScheme() const {return ! scheme.empty();}
+
+	bool hasAuthority() const {return ! host.empty();}
 
 
 
@@ -319,7 +399,8 @@ public:
 
 	BaseURLParser& operator+(const BaseURLParser& other);
 
-	std::string getScheme(){return this->scheme;}
+	std::string getScheme() const {return this->scheme;}
+	std::string getPath() const {return this->path;}
 
 
 /* **********************************************************************
@@ -389,99 +470,6 @@ public:
 
         return T
 
-    def removeDotSegments(self,path):
-        """Remove special "." and ".." from a path segment according to rules
-        in RFC 3986, Section 5.2.4
-
-        One extra rule was added between rules 2D and 2E: rule 2D-E.
-        It does the following: s#^//#/#
-
-        >>> u = BaseURLParser()
-        >>> u.removeDotSegments("/a/b/c/./../../g")
-        u'/a/g'
-        >>> u.removeDotSegments("mid/content=5/../6")
-        u'mid/6'
-        >>> u.removeDotSegments("mid/content=5////../6")
-        u'mid/6'
-        """
-        # NOTE: The RFC algorithm is writen with a string/buffer in mind
-        # while here we deal with an list of segments (created by split("/")).
-        # This introduce some peculiarities to our implementation.
-        # This is particularly important to have in mind, specially when
-        # dealing with absolute dirs, i.e, paths that start with '/'.
-        # In our case, absolute dirs are identified by an empty
-        # string in the first position of a list of segments.
-        # 
-        # Adding an element to the output segment list automatically adds a
-        # preceding "/" to it's element.  as well. The only case were you
-        # should realy take care is when adding/removing segments from/to an
-        # absolute paths in the input buffer.
-        #
-        input = path.split('/')
-        output = []
-        #print "1", "\t-\t", "/".join(output), "\t-\t", "/".join(input)
-        while len(input) > 0:
-            # Rule 'A'
-            if len(input) > 1 and input[0] in [u"..", u"."]:
-                del input[0]
-                #print "2A", "\t-\t", "/".join(output), "\t-\t", "/".join(input)
-                continue
-            # Rule 'B'
-            elif len(input) > 1 and input[0:2] == [u'', u'.']:
-                input = [u''] + input[2:]
-                #print "2B", "\t-\t", "/".join(output), "\t-\t", "/".join(input), input
-                continue
-            # Rule 'C'
-            # if the input buffer begins with a prefix of "/../" or "/.."
-            elif len(input) > 1 and input[0:2] == [u'', u'..']:
-                # then replace that prefix with "/" in the input buffer
-                input = [u''] + input[2:]
-                # ... and remove the last segment and its preceding "/"
-                # (if any) from the output buffer
-                output.pop()
-                if len(output) and output[-1] == u"":
-                    output.pop()
-                #print "2C", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
-                continue
-            # Rule 'D'
-            elif input == [u".."] or input == [u"."]:
-                input.pop()
-                #print "2D", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
-                continue
-            # RULE 'D-E': Our extra rule
-            elif len(input) > 1 and input[:2] == [u"",u""]:
-                # We may end up with "//" in the input string. Convert
-                # it to a single "/"
-                del input[0]
-                #print "2DE", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
-                continue
-            # Rule 'E'
-            else:
-                # Move the first path segment in the input buffer to the end of
-                # the output buffer, including the initial "/" character (if
-                # any) and any subsequent characters up to, but not including,
-                # the next "/" character or the end of the input buffer
-                if len(input) > 1 and input[0] == u"":
-                    # If output buffer is still empty, this is an absolute
-                    # path and a initial "/" must be added to output
-                    if len(output) == 0:
-                        output.append(u"")
-                    # Remove the first segment, including it's  "/"
-                    output.append( input[1] )
-                    del input[1]
-                    del input[0]
-                else:
-                    output.append( input[0] )
-                    del input[0]
-                # Now, if there still is something left in the input,
-                # add the initial "/" back
-                if len(input) and input[0] != u"":
-                    input.insert(0,u"")
-                #print "2E", "\t-\t", "/".join(output), "\t-\t", "/".join(input), "\t", input
-                continue
-
-        #print "3", "\t-\t", "/".join(output), "\t-\t", "/".join(input), len(input)
-        return u"/".join(output)
 
 
     def mergePath(self,base, rel):
@@ -543,111 +531,8 @@ public:
 
 
 
-    def _readPath(self):
-        """Reads a path component.
-        
-        Empty paths in absolute URIs are handled by parse().
-        
-        Observe that http://www.exemple.com/ == http://www.exemple.com ,
-        as inscructed by RFC 3986, Section 6.2.3,
 
-        >>> u = BaseURLParser("http://www.exemple.com/")
-        >>> v = BaseURLParser("http://www.exemple.com")
-        >>> u == v
-        True
-        >>> v.path
-        u'/'
-
-        and by  and by RFC 2616, Section 3.2.3.
-
-        >>> i = BaseURLParser('http://abc.com:80/~smith/home.html')
-        >>> j = BaseURLParser('http://ABC.com/%7Esmith/home.html')
-        >>> k = BaseURLParser('http://ABC.com:/%7esmith/home.html')
-        >>> i == j == k
-        True
-        
-        But for absolute URIs a defined path, the last "/" does produce
-        different URIs
-
-        >>> u = BaseURLParser("http://www.exemple.com/foo")
-        >>> v = BaseURLParser("http://www.exemple.com/foo/")
-        >>> u != v
-        True
-    
-        Dot segments ("./..///a/b/../c" -> /a/c) and Percent-encoding
-        normalization is handled here as well.
-
-        Observe: empty URLs doesn't mean undefined paths, but empty paths!
-        This is per algorithm from RFC 3986, Section 5.3
-        """
-        path = self._readUntilDelimiter(u"?#")
-        path = self.removeDotSegments(path)
-        path = self.fixPercentEncoding(path)
-
-        # There is not such a thing as empty path
-        if not path:
-            path = u''
-
-        return path
-
-    def fixPercentEncoding(self,path):
-        """
-
-        >>> u = BaseURLParser(u'')
-        >>> u.fixPercentEncoding(u'%41%42%43%61%62%63%25 é%e9%23%3F')
-        u'ABCabc%25%20%C3%A9%E9%23%3F'
-        """
-        fixed = u''
-        i = 0
-        path_len = len(path)
-        while i < path_len:
-            c = path[i]
-            if c == u'%':
-                # percent encoded data?
-                if i + 2 < path_len :
-                    fixed += self.decodeAndFixPE(path[i:i+3]) # %XX
-                    i += 3
-                else:
-                    # Invalid data? Just pass the rest as-is
-                    fixed += path[i:]
-                    i = path_len
-            elif c in RESERVED or c in UNRESERVED:
-                fixed += c
-                i += 1
-            else: 
-                # non-ascii is always percent-encoded
-                # Anything that is not in RESERVED or in UNRESERVED
-                # Should also be percent encoded
-                fixed += "%%%02X" % ord(c) 
-                i += 1
-        return fixed
-
-    def decodeAndFixPE(self,pe_data):
-        """Read a single Percent-Encoded character and parses it accordingly.
-
-        >>> u = BaseURLParser('')
-        >>> u.decodeAndFixPE("%20")
-        '%20'
-        >>> u.decodeAndFixPE("%24")
-        '%24'
-        >>> u.decodeAndFixPE("%5F")
-        '_'
-        """
-        # Validate string
-        value_str = pe_data[1:]
-        if value_str[0] not in string.hexdigits or \
-           value_str[1] not in string.hexdigits:
-                raise InvalidCharError("Invalid percent-encoded data '%s'" % \
-                                      pe_data)
-        value = int(value_str,16)
-        c=chr(value)
-        if value < 128 and  c in UNRESERVED:
-            return c
-        else:
-            # anything that is not UNRESERVED should be percent-encoded
-            return "%%%02X" % value
-
-        
+       
 
     def _readQuery(self):
         """Reads a query component, if present."""
