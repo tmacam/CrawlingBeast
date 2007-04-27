@@ -341,7 +341,24 @@ public:
 			BaseURLParser("http://aexample://a/b/c/%7Bfoo%7D"));
 	}
 
+	// FIXME we don't include URLs with query and fragment components
+	// in the list bellow.
+	void testToStringConversion()
+	{
+		typedef std::vector<std::string> list_of_ursl_t;
+		list_of_ursl_t normalized_urls;
 
+		normalized_urls.push_back("http://www.slashdot.org/");
+		normalized_urls.push_back("http://www.ubuntu.com/index.html");
+		normalized_urls.push_back("index.html");
+		normalized_urls.push_back("http://user:pass@domain.com:8080/a/");
+
+		list_of_ursl_t::const_iterator i;
+
+		for(i=normalized_urls.begin();i != normalized_urls.end(); ++i){
+			TS_ASSERT_EQUALS(BaseURLParser(*i).str(), *i);
+		}
+	}
 
 
 };
