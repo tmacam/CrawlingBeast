@@ -15,6 +15,13 @@ std::string& to_lower(std::string& s)
 	return s;
 }
 
+std::string& to_upper(std::string& s)
+{
+	std::transform(s.begin(), s.end(), s.begin(), (int(*)(int))toupper);
+	return s;
+}
+
+
 std::string strip(const std::string _s)
 {
 	std::string::size_type start;
