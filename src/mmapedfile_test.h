@@ -17,7 +17,7 @@ public:
 	void setUp()
 	{
 		std::string cmd = std::string("dd if=/dev/zero of=") +
-				filename + " bs=1024 count=2";
+				filename + " bs=1024 count=2 &> /dev/null";
 		system(cmd.c_str());
 	}
 

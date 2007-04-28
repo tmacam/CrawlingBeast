@@ -52,9 +52,21 @@ public:
  * This is almost a clone of Stroustrup example (Sec. 14.4 )
  *
  * These are read-only files.
+ * ManagedFilePtr are non-copyable
+ *
+ * @warning Passing an opened file descriptor to ManagedFilePtr
+ * constructor gives the newly-created instence ownership of this
+ * file!
+ *
  */
 class ManagedFilePtr {
+private:
 	FILE* fh;
+
+	//!This class is non-copyable
+	ManagedFilePtr(const ManagedFilePtr&);
+	//!This class is non-copyable
+	ManagedFilePtr& operator=(const ManagedFilePtr&);
 public:
 	ManagedFilePtr(const char* filename);
 	ManagedFilePtr(FILE* ofh): fh(ofh){}
@@ -72,11 +84,18 @@ public:
  *
  * MMap'ed files are opened just for read!
  *
+ * MMapedFiles are non-copyable!
+ *
  */
 class MMapedFile {
 private:
 	ManagedFilePtr file;
 	filebuf buf;
+
+	//!This class is non-copyable
+	MMapedFile(const MMapedFile& );
+	//!This class is non-copyable
+	MMapedFile& operator=(const MMapedFile&);
 public:
 	MMapedFile(std::string filename);
 	~MMapedFile();
