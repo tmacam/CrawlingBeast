@@ -28,44 +28,15 @@
 
 #include "filebuf.h"
 #include "htmlparser.h"
-
-/* ********************************************************************** *
- *				   CONSTANTS
- * ********************************************************************** */
-
-
-// Used for BOM/XML charset recognition
-//!@name UTF-X and XML detection patters
-//@{
-//! XML in UTF-X marks (X >= 16)
-static const char* XML_MARKS[][2] = {
-    {"utf-32LE","\x3c\x00\x00\x00"},
-    {"utf-32BE","\x00\x00\x00\x3c"},
-    {"utf-16LE","\x3c\x00\x3f\x00"},
-    {"utf-16BE","\x00\x3c\x00\x3f"},
-};
-
-//!UTF Byte Order Marks
-static const char* BOM_MARKS[][2] = { 
-    {"utf-8",   "\xef\xbb\xbf"},
-    {"utf-32LE","\xff\xfe\x00\x00"},
-    {"utf-32BE","\x00\x00\xfe\xff"},
-    {"utf-16LE","\xff\xfe"},
-    {"utf-16BE","\xfe\xff"},
-};
-//@}
-
-// FIXME ALL_MARKS = XML_MARKS + BOM_MARKS
-
+#include "iconv.h"
 
 /* ********************************************************************** *
  *				   EXCEPTIONS
  * ********************************************************************** */
 
-    
-
-
-//!The name says it all. We gave up.
+/**The name says it all.
+ * We gave up.
+ */
 class CannotFindSuitableEncodingException: public std::runtime_error{
 public:
 	CannotFindSuitableEncodingException(std::string msg="") :
@@ -84,6 +55,27 @@ public:
 	CharsetDetectedException(std::string msg="") :
 		std::runtime_error(msg) {}
 };
+
+
+/**Libiconv reported an error.
+ *
+ * Some call to one of libiconv's functions returned an error.
+ * Was it iconv_open, iconv, iconv_close -- does it matter?
+ * All that matters is that something went - and now we know it.
+ *
+ */
+class IconvError: public std::runtime_error{
+public:
+	IconvError(std::string msg="") :
+		std::runtime_error(msg) {}
+};
+
+
+
+/* ********************************************************************** *
+		   CHARACTERSET INSTRUCTION DETECTION PARSER
+ * ********************************************************************** */
+
 
 /**Tries to find a document encoding declaration on the document.
  * 
@@ -118,6 +110,88 @@ public:
             
 
 
+/* ********************************************************************** *
+				LIBICONV WRAPPER
+ * ********************************************************************** */
+
+/**Simple and bareboned wraper for libiconv facilities.
+ *
+ * On errors, IconvError is thrown.
+ *
+ * De default to-charset encoding is UTF-8.
+ */
+class IconvWrapper {
+private:
+	//!This class is non-copyable
+	IconvWrapper(const IconvWrapper&);
+
+	//!This class is non-copyable
+	IconvWrapper& operator=(const IconvWrapper&);
+
+	iconv_t cd;
+public:
+	IconvWrapper(const std::string from, const std::string to="UTF-8" )
+	{
+		std::string _from = from;
+		std::string _to = to;
+
+		// All iconv encoding names are uppercased.
+		_from = to_upper(_from);
+		_to = to_upper(_to);
+
+		cd = iconv_open(_to.c_str(), _from.c_str());
+		if (cd == iconv_t(-1) ) {
+			throw IconvError(
+				"While trying to create a iconv descriptor");
+		}
+	}
+
+	/**Converts input data using the wrapper's settings.
+	 *
+	 * @param input The data to pe converted.
+	 *
+	 * @return The data converted to the "to" encoding.
+	 *
+	 * @warning It's your responsabiliy to deallocate the memory created
+	 * to store the converted data!
+	 */
+	filebuf convert(const filebuf& input);
+
+
+	~IconvWrapper() { iconv_close(cd); }
+	
+};
+
+
+/* ********************************************************************** *
+			     MANAGED FILEBUFER REF
+ * ********************************************************************** */
+
+/**Another stupid wrapper to automatically free the memory pointed by a filebuf
+ *
+ * @warning It is non-copyable!
+ */
+class AutoFilebuf {
+	filebuf f;
+
+	//!This class has no default constructor!
+	AutoFilebuf();
+	//!This class is non-copyable
+	AutoFilebuf(const AutoFilebuf&);
+	//!This class is non-copyable
+	AutoFilebuf& operator=(const AutoFilebuf&);
+public:
+	AutoFilebuf(const filebuf f): f(f) {};
+	~AutoFilebuf(){ if (f.start) delete[] f.start;}
+
+	filebuf getFilebuf() { return f;}
+};
+
+
+/* ********************************************************************** *
+				 UNICODEBUGGER
+ * ********************************************************************** */
+
 
 /**Tries to convert (x)HTML-like content to UTF-8.
  * 
@@ -134,13 +208,32 @@ public:
  */
 class UnicodeBugger {
 protected:
-	filebuf data;
+	filebuf data; //! Our input data
+	filebuf converted_data; //!Our output, i.e., input converted do utf-8
 	std::list<std::string> suggested_encodings;
 	std::set<std::string> tried_encodings;
 	std::string encoding;
+	char* iconv_buffer;
+
+	bool findEncodingByParsing();
 public:
-	// We read up to MAX_META_POS characters in data to find an indicative
-	// character encoding (In XML header of in a HTML Meta Tag
+	typedef std::pair<std::string, std::string> enc_pair_t;
+	typedef std::list<enc_pair_t> enc_list_t;
+
+	//!@name UTF-X and XML detection patters
+	//! Used for BOM/XML charset recognition
+	//@{
+	//! XML in UTF-X marks (X >= 16)
+	static const enc_list_t XML_MARKS;
+	//!UTF Byte Order Marks
+	static const enc_list_t BOM_MARKS;
+	//!ALL_MARKS = XML_MARKS + BOM_MARKS
+	static const enc_list_t ALL_MARKS;
+	//@}
+
+	/**We read up to MAX_META_POS characters in data to find an indicative
+	 * character encoding (In XML header of in a HTML Meta Tag.
+	 */
 	static const int MAX_META_POS = 1024;
 
 	/**Constructor.
@@ -151,8 +244,7 @@ public:
 	UnicodeBugger(const filebuf& data,
 			std::list<std::string> suggested_encodings = std::list<std::string>())
 		: data(data), suggested_encodings(suggested_encodings),
-		tried_encodings(), encoding();
-	{}
+		tried_encodings(), encoding(), iconv_buffer(0) {}
 
 	/**Request data conversion o UTF-8.
 	 *
@@ -161,86 +253,34 @@ public:
 	 * @throw CannotFindSuitableEncodingException if, after trying
 	 * all possible endocings (found, suggested, guessed), it still cant
 	 * covert this shit to unicode.
+	 *
+	 * @warning It's your responsability to deallocate the data inside
+	 * 	    the filebuf!
 	 */
-	filebuf convert();	
+	filebuf convert();
+
+
+	/**Try a converting data from a given encoding.
+	 *
+	 * If successful, updates converted_data.
+	 *
+	 * @return true on successful convertions, false otherwise;
+	 */
+	bool UnicodeBugger::convertFrom(std::string encoding);
+
+
+	/**Uses XML and Unicode BOM heuristics to find charset.
+	 *
+	 * @return true if a suitable UTF-x charset was found,
+	 * 	   false otherwhise.
+	 */
+	bool detectUTFEncoding();
+
+	~UnicodeBugger() { delete iconv_buffer;}
+
+	std::string getEncoding() {return this->encoding; }
 
 };
-/*
-
-filebuf UnicodeBugger::convert()
-{
-	// auto_ptr, doubles the mem...
-        char *u = NULL
-        data = self.data
-        if isinstance(data,unicode):
-            # No need to do anything
-            return data
-
-        # Try the proposed encodings
-        for e in self.suggested_encodings:
-            u = self._convertFrom(e)
-            if u:
-                return u
-        
-        # Ok, try to find the BOM or XML header...
-        u = self._detectEncoding()
-        if u:
-            return u
-
-        # Damn! Does this thing has a XML header or HTML Meta tag w/ encoding?
-        max_pos = self.MAX_META_POS
-        if len(data) < max_pos:
-            max_pos = len(data)
-        # latin1 is a good guess anyway, and won"t complain in most cases
-        # about bad char. conversions
-        e = FindEncParser(unicode(data[:max_pos],"latin1","ignore"))
-        try:
-            e.parse()
-        except Exception:
-            pass
-        if e.getEnc():
-            u = self._convertFrom(e.getEnc())
-            if u:
-                return u
-
-        # we are out options here! Last options: utf-8 and latin1
-        for e in ["utf-8", "latin1"]:
-            u = self._convertFrom(e)
-            if u:
-                return u
-
-        raise CannotFindSuitableEncodingException("Giving up")
-}
-
-
-    def _convertFrom(self,encoding):
-        u = None
-        # Why bother trying all over again?
-        if encoding not in self.tried_encodings:
-            try:
-                self.tried_encodings.add(encoding)
-                u = unicode(self.data,encoding)
-                self.encoding = encoding
-            except UnicodeDecodeError:
-                pass
-        return u
-
-    def _detectEncoding(self):
-        """Uses XML and Unicode BOM heuristics to find charset."""
-        length = len(self.data)
-        u = None
-        for enc, mark in ALL_MARKS:
-            if length > len(mark) and self.data.startswith(mark):
-                u = self._convertFrom(enc)
-                if u:
-                    break
-        return u
-
-        
-
-
-*/
-
 
 #endif // __UNICODEBUGGER_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
