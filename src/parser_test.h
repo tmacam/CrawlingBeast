@@ -49,6 +49,18 @@ public:
 
 		TS_ASSERT_EQUALS(res, "123");
 	}
+
+	void testeStartswith()
+	{
+		const char teste[] = "This is a test string";
+		const char start[] = "This i";
+		const char mismatch[] = "akjdak";
+
+		filebuf data(teste, sizeof(teste));
+
+		TS_ASSERT( startswith(data, start));
+		TS_ASSERT( not startswith(data, mismatch));
+	}
 };
 
 // Stupid class just to test our methods

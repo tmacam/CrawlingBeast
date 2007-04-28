@@ -71,6 +71,10 @@ template<class C> bool is_in(typename C::value_type v, const C& c)
 }
 
 
+//! u.startswith(start)
+bool startswith(const filebuf& u, const std::string& start );
+
+
 /* **********************************************************************
  *      			    SYMBOLS
  * ********************************************************************** */

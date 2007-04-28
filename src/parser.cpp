@@ -22,6 +22,18 @@ std::string& to_upper(std::string& s)
 }
 
 
+bool startswith(const filebuf& u, const std::string& start )
+{
+	filebuf data(u);
+
+	// Sanity check
+	if (start.size() > data.len()) { return false; }
+
+	return std::equal(start.begin(), start.end(),data.current);
+	
+}
+
+
 std::string strip(const std::string _s)
 {
 	std::string::size_type start;
