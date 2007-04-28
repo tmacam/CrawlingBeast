@@ -5,7 +5,7 @@ CC=g++
 CXXFLAGS = -ggdb -O0 -Wall -pthread
 
 
-all: $(TARGETS) test tags
+all: $(TARGETS) tags test
 
 foo: test.o filebuf.o parser.o htmlparser.o
 
@@ -14,7 +14,7 @@ test.o: test.cpp parser.h
 runner.cpp: *test.h *.h
 	cxxtest/cxxtestgen.pl --error-printer -o runner.cpp *test.h
 
-runner: runner.cpp filebuf.o parser.o htmlparser.o urltools.o explode.o
+runner: runner.cpp filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o
 	g++ $(CXXFLAGS) -I . -o runner $^
 
 tags: *.cpp *.h
