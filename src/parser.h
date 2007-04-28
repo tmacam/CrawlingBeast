@@ -28,8 +28,24 @@
  *			     STRING TRANFORMATIONS
  * ********************************************************************** */
 
-/**In place*/
+/**Coverts a string to lowercase.
+ *
+ * @warning The string is modified in-place!
+ *
+ * @param s[in,out] String to be converted to lowercase.
+ * @return A reference to s, already converted to lowercase.
+ */
 std::string& to_lower(std::string& s);
+
+/**Coverts a string to uppercase.
+ *
+ * @warning The string is modified in-place!
+ *
+ * @param s[in,out] String to be converted to uppercase.
+ * @return A reference to s, already converted to uppercase.
+ */
+std::string& to_upper(std::string& s);
+
 
 /**Remove whitespace from the start and from the end of a string.
  *

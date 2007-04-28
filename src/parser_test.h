@@ -8,18 +8,28 @@
 class StringTransformsTestSuite : public CxxTest::TestSuite {
 	std::string mixed_case;
 	std::string lower_case;
+	std::string upper_case;
 public:
 
 	void setUp()
 	{
 		mixed_case = "-AbCdeFg123";
 		lower_case = "-abcdefg123";
+		upper_case = "-ABCDEFG123";
 	}
 
 	void test_to_lower(void) {
 		std::string tmp = mixed_case;
 		TS_ASSERT_EQUALS(to_lower(tmp), lower_case);
 		TS_ASSERT_DIFFERS(mixed_case, lower_case);
+	}
+
+	void test_to_upper()
+	{
+		std::string tmp = mixed_case;
+
+		TS_ASSERT_EQUALS(to_upper(tmp), upper_case);
+		TS_ASSERT_DIFFERS(mixed_case, upper_case);
 	}
 
 	void test_is_in(void)
