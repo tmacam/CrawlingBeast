@@ -14,7 +14,7 @@ test.o: test.cpp parser.h
 runner.cpp: *test.h *.h
 	cxxtest/cxxtestgen.pl --error-printer -o runner.cpp *test.h
 
-runner: runner.cpp filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o
+runner: runner.cpp filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o
 	g++ $(CXXFLAGS) -I . -o runner $^
 
 tags: *.cpp *.h
@@ -23,7 +23,7 @@ tags: *.cpp *.h
 .PHONY: clean test
 
 clean:
-	rm -fv *.o $(TARGETS)
+	rm -fv *.o runner.cpp $(TARGETS)
 
 test: runner
 	./runner

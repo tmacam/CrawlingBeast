@@ -30,6 +30,15 @@ public:
 		TS_ASSERT( is_in(' ',WHITESPACE) );
 		TS_ASSERT( !is_in('a',WHITESPACE) );
 	}
+
+	void testStrip()
+	{
+		std::string original = "   123			\n\n";
+
+		std::string res = strip(original);
+
+		TS_ASSERT_EQUALS(res, "123");
+	}
 };
 
 // Stupid class just to test our methods

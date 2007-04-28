@@ -31,6 +31,18 @@
 /**In place*/
 std::string& to_lower(std::string& s);
 
+/**Remove whitespace from the start and from the end of a string.
+ *
+ * Works just like perl's strip and python's strip.
+ *
+ * @param[in,out] s The string to be trimmed/striped.
+ * @return A copy of s with trailing and leading whitespace removed.
+ *
+ * @warning the original string IS MODIFIED
+ */
+std::string strip(const std::string s);
+
+
 
 inline bool is_in(unsigned char c, const std::string& where)
 {

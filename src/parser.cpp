@@ -15,6 +15,36 @@ std::string& to_lower(std::string& s)
 	return s;
 }
 
+std::string strip(const std::string _s)
+{
+	std::string::size_type start;
+	std::string::size_type end;
+
+	std::string s = _s; // STFU!
+
+	// take spaces out of the start...
+	start = s.find_first_not_of(WHITESPACE);
+	if (start == std::string::npos) {
+		// String made of spaces...
+		s.clear();
+		return s;
+	}
+	s = s.substr(start);
+
+	// take space out of the end of the string
+	end = s.find_last_not_of(WHITESPACE);
+	if (end == std::string::npos) {
+		// Segurança morreu de seguro...
+		// WE SHOULD NOT BE HERE but...
+		// String made of spaces...
+		s.clear();
+		return s;
+	}
+	s = s.substr(0,end +1);
+	return s;
+}
+
+
 
 /* **********************************************************************
  *				 GENERIC PARSER
