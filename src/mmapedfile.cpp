@@ -8,7 +8,7 @@ ManagedFilePtr::ManagedFilePtr(const char* filename)
 	// Open the file
 	if ( (fh = fopen(filename, "rb")) == NULL ) {
 		// Open failed
-		 throw MMapedFileException("ManagedFilePtr constructor:");
+		throw MMapedFileException("ManagedFilePtr constructor");
 	}
 }
 

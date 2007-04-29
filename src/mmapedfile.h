@@ -31,9 +31,14 @@ public:
 		const int max_strerror_msg = 256;
 		char errno_msg[max_strerror_msg];
 
-		strerror_r(errno, errno_msg, max_strerror_msg);
-
-		return std::string(errno_msg, max_strerror_msg);
+		// FUCKING GNU INCOMPATIBLE AND BADLY DOCUMENTED
+		// EXTENSION!!!
+		//
+		// Let's assume they know what they are doing and hope
+		// for the best!
+		char * _strerror_msg = 0;
+		_strerror_msg=strerror_r(errno, errno_msg, max_strerror_msg);
+		return std::string(_strerror_msg);
 	}
 
 	ErrnoSysException(std::string msg="")
