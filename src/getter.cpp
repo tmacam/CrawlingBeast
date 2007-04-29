@@ -49,6 +49,10 @@ int main(int argc, char* argv[])
 		test_PageDownloader(std::string(argv[i]));
 	}
 
+	std::string enter;
+	std::cout << "Done\n";
+	std::cin >> enter;
+
 	
 }
 
