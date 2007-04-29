@@ -5,6 +5,7 @@
 #include "urltools.h"
 
 #include <sstream>
+#include <set>
 
 class URLTests : public CxxTest::TestSuite {
 public:
@@ -358,6 +359,19 @@ public:
 		for(i=normalized_urls.begin();i != normalized_urls.end(); ++i){
 			TS_ASSERT_EQUALS(BaseURLParser(*i).str(), *i);
 		}
+	}
+
+	void testAddingToSet()
+	{
+		std::set<BaseURLParser> links;
+
+		links.insert(BaseURLParser("http://www.a.net"));
+		links.insert(BaseURLParser("http://www.b.net/index.html"));
+		links.insert(BaseURLParser("http://www.c.com"));
+		links.insert(BaseURLParser("http://www.d.org"));
+
+		TS_ASSERT_EQUALS(links.size(), 4);
+
 	}
 
 

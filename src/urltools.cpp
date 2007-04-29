@@ -41,6 +41,20 @@ BaseURLParser::BaseURLParser(const BaseURLParser& other):
 	fragment(other.fragment)
 {} // Nothing to read, URL already parsed!
 
+BaseURLParser& BaseURLParser::operator=(const BaseURLParser& other)
+{
+	this->scheme = other.scheme ; 
+	this->userinfo = other.userinfo ; 
+	this->host = other.host ; 
+	this->port = other.port ; 
+	this->path = other.path ; 
+	this->query = other.query ; 
+	this->fragment = other.fragment;
+
+	return *this;
+
+}
+
 
 bool BaseURLParser::operator==(const BaseURLParser& other) const
 {
@@ -51,6 +65,18 @@ bool BaseURLParser::operator==(const BaseURLParser& other) const
 		this->path == other.path && 
 		this->query == other.query && 
 		this->fragment == other.fragment;
+
+}
+
+bool BaseURLParser::operator<(const BaseURLParser& other) const
+{
+	return this->scheme < other.scheme || 
+		this->userinfo < other.userinfo || 
+		this->host < other.host || 
+		this->port < other.port || 
+		this->path < other.path || 
+		this->query < other.query || 
+		this->fragment < other.fragment;
 
 }
 
@@ -100,7 +126,7 @@ void BaseURLParser::parse()
 }
 
 
-BaseURLParser BaseURLParser::operator+(const BaseURLParser& R)
+BaseURLParser BaseURLParser::operator+(const BaseURLParser& R) const
 {
 	BaseURLParser T = BaseURLParser();
 	const BaseURLParser& Base = *this;

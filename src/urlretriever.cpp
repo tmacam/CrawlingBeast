@@ -107,11 +107,15 @@ size_t URLRetriever::writeCallback(void* ptr, size_t realsize)
 
 size_t URLRetriever::headerCallback(void* data, size_t realsize)
 {
-	std::vector<std::string> res = split(
-		std::string((const char*)data,realsize), "=", 1);
+	
+	std::string header_line = std::string((const char*)data,realsize);
+	std::vector<std::string> res = split(header_line , ":", 1);
 
 	if (res.size() == 2) {
-		headers[ strip(res[0]) ] = strip(res[1]);
+		std::string key = strip(res[0]);
+		headers[ to_lower(key) ] = strip(res[1]);
+	} else {
+		headers[ strip(res[0]) ] = strip(header_line);
 	}
 
 	return realsize;
@@ -139,6 +143,17 @@ void URLRetriever::go()
 		throw UndeterminedURLRetrieverException("code");
 	}
 	this->statuscode = _code;
+}
+
+std::string URLRetriever::getLocation()
+{
+	if (headers.count("location")) {
+		// There was a redirection
+		return headers["location"];
+	} else {
+		// No redirection
+		return original_url;
+	}
 }
 
 

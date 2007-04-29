@@ -174,17 +174,46 @@ public:
 class AutoFilebuf {
 	filebuf f;
 
-	//!This class has no default constructor!
-	AutoFilebuf();
 	//!This class is non-copyable
 	AutoFilebuf(const AutoFilebuf&);
 	//!This class is non-copyable
 	AutoFilebuf& operator=(const AutoFilebuf&);
 public:
+	//!This class has default constructor is harmless - I hope.
+	AutoFilebuf() : f() {}
 	AutoFilebuf(const filebuf f): f(f) {};
 	~AutoFilebuf(){ if (f.start) delete[] f.start;}
 
 	filebuf getFilebuf() { return f;}
+
+	/**Forcibly deletes the managed object.
+	 *  @param  p  new filebuf to manage
+	 *
+	 *  This object now @e owns the object pointed to by @a p.  The
+	 *  previous object has been deleted.
+	 */
+	void reset(filebuf p)
+	{
+		if (f.start && p.start != f.start) delete[] f.start;
+		f = p;
+	}
+
+	/**Deletes the old managed object and copy the
+	 * contents of anoher filebuf.
+	 */
+	void copy(const filebuf original)
+	{
+		// allocate space for copy
+		int length = original.len();
+		char* new_data = new char[length];
+
+		//copy data
+		memcpy(new_data, original.current,length);
+
+		// Delete old and stablish ownsership
+		// of the new filebuf
+		reset(filebuf(new_data, length));
+	}
 };
 
 

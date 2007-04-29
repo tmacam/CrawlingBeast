@@ -69,6 +69,13 @@ public:
 
 	filebuf getData() {return filebuf(this->mem.memory, this->mem.size); }
 
+	/**Get the final URL of this request.
+	 *
+	 * It may be the same as the request URL or something different if
+	 * there was any redirection
+	 */
+	std::string getLocation();
+
 };
 
 

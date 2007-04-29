@@ -401,6 +401,8 @@ public:
 	 */
 	BaseURLParser(const BaseURLParser& other);
 
+	BaseURLParser& operator=(const BaseURLParser& other);
+
 	
 	/**Parses the URL.
 	 *
@@ -412,13 +414,18 @@ public:
 
 	bool operator==(const BaseURLParser& other) const;
 
+	bool operator!=(const BaseURLParser& other) const
+	{ return ! (*this == other);}
+
 
 	/**Return reference URL R converted into a target URL T using this
 	 * instance as base URL.
 	 * 
 	 * We follow RFC 3986, Section 5.2.2 procedures.
 	 */
-	BaseURLParser operator+(const BaseURLParser& R);
+	BaseURLParser operator+(const BaseURLParser& R) const;
+
+	bool operator<(const BaseURLParser& R) const;
 
 	std::string getScheme() const {return this->scheme;}
 	std::string getPath() const {return this->path;}
@@ -433,6 +440,7 @@ public:
 	 */
 	std::string str() const;
 
+};
 
 /* **********************************************************************
 
@@ -476,7 +484,6 @@ public:
  * ********************************************************************** */
 
  
-};
 
 #endif // __URLTOOLS_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

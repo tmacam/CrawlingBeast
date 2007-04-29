@@ -6,5 +6,9 @@
 
 #include <sys/types.h>
 
+//#include <iostream>
+//
+//#define BEEN_HERE do{ std::cout << "BEEN HERE\n" }while(0)
+
 #endif // __COMMOM_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
