@@ -6,7 +6,7 @@
 
 #include <stdexcept>
 #include <curl/curl.h>
-#include <list>
+#include <map>
 
 #include "filebuf.h"
 
@@ -39,14 +39,18 @@ public:
 };
 
 class URLRetriever {
+	typedef std::map<std::string, std::string> _headers_t;
+
 	CURL* _handle;
 	std::string original_url;
 	MemoryStruct mem;
-	std::list<std::string> headers;
+	_headers_t headers;
 	int statuscode;
 	std::string content_type;
 
 public:
+	typedef _headers_t headers_t;
+
 	static const std::string USER_AGENT;
 
 	URLRetriever(std::string url);
@@ -59,7 +63,7 @@ public:
 	void go();
 
 
-	std::list<std::string>& getHeaders() {return this->headers; }
+	headers_t& getHeaders() {return this->headers; }
 	std::string getContentType() {return this->content_type; }
 	int getStatusCode() {return this->statuscode; }
 

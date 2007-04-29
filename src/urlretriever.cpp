@@ -3,8 +3,7 @@
 #include <curl/types.h>
 #include <curl/easy.h>
 
-
-
+#include "explode.h"
 #include "parser.h"
 
 
@@ -108,7 +107,13 @@ size_t URLRetriever::writeCallback(void* ptr, size_t realsize)
 
 size_t URLRetriever::headerCallback(void* data, size_t realsize)
 {
-	headers.push_back(std::string((const char*)data,realsize));
+	std::vector<std::string> res = split(
+		std::string((const char*)data,realsize), "=", 1);
+
+	if (res.size() == 2) {
+		headers[ strip(res[0]) ] = strip(res[1]);
+	}
+
 	return realsize;
 }
 
