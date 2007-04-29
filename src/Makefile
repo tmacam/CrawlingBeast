@@ -4,7 +4,7 @@ TARGETS = foo runner
 CC=g++
 CXXFLAGS = -ggdb -O0 -Wall -pthread `curl-config --cflags`
 LDFLAGS = `curl-config --libs`
-OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o
+OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o
 
 
 all: $(TARGETS) tags test
@@ -20,6 +20,7 @@ runner: runner.cpp $(OBJFILES)
 	g++ $(CXXFLAGS) -I . -o runner $^
 
 unicodebugger_ex: $(OBJFILES) unicodebugger_ex.o
+
 getter: getter.o $(OBJFILES)
 
 tags: *.cpp *.h
