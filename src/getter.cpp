@@ -2,10 +2,10 @@
 #include "urlretriever.h"
 #include "pagedownloader.h"
 
-void test_URLRetriever()
+void test_URLRetriever(std::string url)
 {
 	URLRetriever::headers_t::const_iterator h;
-	URLRetriever ret("http://www.dcc.ufmg.br/~tmacam");
+	URLRetriever ret(url);
 	ret.go();
 	std::cout << ret.getContentType() << " " << ret.getStatusCode() << std::endl;
 
@@ -44,9 +44,10 @@ int main(int argc, char* argv[])
 	curl_global_init(CURL_GLOBAL_NOTHING);
 	std::string url = "http://www.dcc.ufmg.br/~tmacam";
 	
-//	test_URLRetriever();
 	for(int i = 1; i < argc; ++i) {
-		test_PageDownloader(std::string(argv[i]));
+		std::string url(argv[i]);
+		test_URLRetriever(url);
+		test_PageDownloader(url);
 	}
 
 	std::string enter;

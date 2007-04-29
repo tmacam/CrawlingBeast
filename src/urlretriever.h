@@ -50,6 +50,7 @@ class URLRetriever {
 
 public:
 	typedef _headers_t headers_t;
+	static const int STATUS_OK = 200;
 
 	static const std::string USER_AGENT;
 

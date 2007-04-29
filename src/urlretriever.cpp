@@ -143,6 +143,14 @@ void URLRetriever::go()
 		throw UndeterminedURLRetrieverException("code");
 	}
 	this->statuscode = _code;
+
+	if( this->statuscode != STATUS_OK){
+		// We can't couple we errors...
+		std::ostringstream out;
+		out << "Invalid error code ";
+		out << statuscode;
+		throw UndeterminedURLRetrieverException( out.str() );
+	}
 }
 
 std::string URLRetriever::getLocation()
