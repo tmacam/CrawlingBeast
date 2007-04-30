@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "explode.h"
 
 
 const int DeepThought::MINIMUM_INTERVAL = 30;
@@ -82,8 +83,14 @@ Domain* DeepThought::addNewDomain(const std::string& domain_name, const URLSet& 
 
 bool DeepThought::pageExists(docid_t docid)
 {
-	struct stat _statbuf;
 	std::string filename = getDocIdPath(docid) + "/data";
+	
+	return pathExists(filename);
+}
+
+bool DeepThought::pathExists(const std::string& filename)
+{
+	struct stat _statbuf;
 
 	if (stat(filename.c_str(),&_statbuf) == 0) {
 		return true;
@@ -216,6 +223,26 @@ docid_t DeepThought::registerURL(std::string new_url)
 	store << new_id << "\t" << new_url << std::endl;
 
 	return new_id;
+}
+
+
+void DeepThought::makedirs(std::string path)
+{
+	std::vector<std::string>::iterator i;
+	std::string fullpath;
+
+	std::vector<std::string> segments = split(path,"/");
+
+	for(i = segments.begin(); i != segments.end(); ++i) {
+		// We may have to keep going even after an EEXIST,
+		// since the path may contain ".."s; and when there
+		// is an EEXIST failure the system may return some other
+		// error number.
+		fullpath.append(*i);
+		fullpath.append("/");
+		mkdir(fullpath.c_str(), S_IRWXU | S_IRWXG | S_IROTH | S_IXOTH);
+	}
+
 }
 
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

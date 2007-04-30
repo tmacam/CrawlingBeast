@@ -100,12 +100,12 @@ class DeepThought : public AbstractHyperDimentionalCrawlerDeity {
 	
 	docid_t last_docid;
 
-	bool running;
 
 	docid_t download_counter;
 
 
 public:
+	bool running;
 	
 	static const int MINIMUM_INTERVAL;
 
@@ -114,7 +114,8 @@ public:
          * @param store_dir The directory where we save our files
 	 */
 	DeepThought(std::string store_dir="/tmp/")
-	: store_dir(store_dir),
+	: AbstractHyperDimentionalCrawlerDeity(),
+	  store_dir(store_dir),
 	  store_filename(store_dir + "/docids.dat"),
 	  store(store_filename.c_str(), std::ios::app),
 	  errlog_filename(store_dir + "/err.txt"),
@@ -122,8 +123,8 @@ public:
 	  known_domains(),
 	  domain_queue(),
 	  last_docid(0),
-	  running(true),
-	  download_counter(0)
+	  download_counter(0),
+	  running(true)
 	{
 		// Turn store exceptions on
 		store.exceptions( std::ios_base::badbit|std::ios_base::failbit);
@@ -168,6 +169,13 @@ public:
 	 * the path corresponding to a DocIdPath.
 	 */
 	bool pageExists(docid_t docid);
+
+
+	/**Verifies if a given path exists
+	 *
+	 * It doesn't matter if it is a directory or a file.
+	 */
+	bool pathExists(const std::string& filename);
 
 	std::string getDocIdPath(docid_t docid);
 
@@ -224,51 +232,19 @@ public:
 	 */
 	docid_t registerURL(std::string new_url);
 
+	/**Super-mkdir.
+	 *
+	 * create a leaf directory and all intermediate ones.
+	 * Works like mkdir, except that any intermediate path segment (not
+	 * just the rightmost) will be created if it does not exist.
+	 *
+	 * It ignore errors. Any problems will eventually be reported when
+	 * we create the file.
+	 */
+	static void makedirs(std::string path);
+
 };
 /*
-
-
-
-
-
-class OfficeBoy(Thread):
-	def __init__(self,manager):
-		self.manager = manager
-		super(OfficeBoy,self).__init__()
-
-	def run(self):
-		manager = self.manager
-		while manager.running:
-			// Homenagem ao DJ ATB: Don't Stop, 'till i come
-			page = manager.popPage()
-			if page:	// cuz we can return None...
-				try:
-					d = PageDownloader(page.url)
-					d.get()
-					if d.follow :
-						manager.addPages(d.links)
-					// FIXME we are ignoring index/noindex
-					doc_path = manager.getDocIdPath(page.docid)
-					try:
-						os.makedirs(doc_path)
-					except OSError:
-						pass
-					meta = open(doc_path + "/meta", 'w',0)
-					d.writeMeta(meta)
-					meta.close()
-					data = open(doc_path + "/data",'w',0)
-					data.write(d.contents)
-					data.close()
-					// print "DOWN", currentThread(), page.url #DEBUG
-					manager.incDownloaded()
-				except NotSupportedSchemeException:
-					// Seems like we got redirected to a not-supported URL
-					manager.reportBadCrawling(page.docid, page.url,
-								"BAD REDIRECT " +unicode(d.errstr))
-				except Exception, e:
-					manager.reportBadCrawling(page.docid, page.url,e)
-		print currentThread(), "exiting..."
-
 
 class StatsPrinter(Thread):
 	def __init__(self,manager, log_filename):

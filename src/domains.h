@@ -12,61 +12,19 @@
  */
 
 #include <string>
-#include <ext/hash_set>
-#include <deque>
+#include <deque> // FIXME
 #include "time.h"
 
 #include "threadingutils.h"
 #include "urltools.h"
-
+#include "pagedownloader.h"
 
 
 /* ********************************************************************** *
 				    TYPEDEFS
  * ********************************************************************** */
 
-struct eqstr
-{
-  bool operator()(const std::string& s1, const std::string& s2) const
-  {
-    return s1 == s2;
-  }
-};
-
-
-struct str_hash
-{
-  __gnu_cxx::hash<const char*> H;
-  size_t operator()(const std::string& s1) const
-  {
-    return H(s1.c_str());
-  }
-};
-
-struct url_path_hash
-{
-  __gnu_cxx::hash<const char*> H;
-  size_t operator()(const BaseURLParser& s1) const
-  {
-    return H(s1.path.c_str());
-  }
-};
-
-struct equrl
-{
-  bool operator()(const BaseURLParser& s1, const BaseURLParser& s2) const
-  {
-    return s1 == s2;
-  }
-};
-
-
-typedef __gnu_cxx::hash_set<std::string,str_hash,eqstr> StrSet;
-
-typedef __gnu_cxx::hash_set<BaseURLParser,url_path_hash,equrl> URLSet;
-
-//!A simple struct-like class just to store information about a page.
-typedef std::pair<std::string, docid_t> PageRef;
+//typedef __gnu_cxx::hash_set<std::string,str_hash,eqstr> StrSet; // FIXME UNUSED
 
 
 

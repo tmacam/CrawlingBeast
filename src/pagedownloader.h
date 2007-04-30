@@ -15,6 +15,55 @@
 #include "urlretriever.h"
 
 #include <iostream>
+#include <ext/hash_set>
+
+/* ********************************************************************** *
+				    TYPEDEFS
+ * ********************************************************************** */
+
+struct eqstr
+{
+  bool operator()(const std::string& s1, const std::string& s2) const
+  {
+    return s1 == s2;
+  }
+};
+
+
+struct str_hash
+{
+  __gnu_cxx::hash<const char*> H;
+  size_t operator()(const std::string& s1) const
+  {
+    return H(s1.c_str());
+  }
+};
+
+struct url_path_hash
+{
+  __gnu_cxx::hash<const char*> H;
+  size_t operator()(const BaseURLParser& s1) const
+  {
+    return H(s1.path.c_str());
+  }
+};
+
+struct equrl
+{
+  bool operator()(const BaseURLParser& s1, const BaseURLParser& s2) const
+  {
+    return s1 == s2;
+  }
+};
+
+
+typedef __gnu_cxx::hash_set<BaseURLParser,url_path_hash,equrl> URLSet;
+
+
+/* ********************************************************************** *
+				 PAGEDOWNLOADER
+ * ********************************************************************** */
+
 
 //!Simple downloader for a page/URL
 class PageDownloader {
@@ -38,7 +87,7 @@ public:
 	bool index;
 
         //!To what pages/URLs it points to.
-	std::set<BaseURLParser> links;
+	URLSet links;
 
         /**This page encoding. 
 	 * Defaults to utf-8, since it's stricter and

@@ -1,13 +1,21 @@
 
 
-TARGETS = foo runner
-CC=g++
-CXXFLAGS = -I . -ggdb -O0 -Wall -pthread `curl-config --cflags`
-LDFLAGS = `curl-config --libs`
-OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o
+TARGETS	 = foo runner
+CC	 = g++
+CXXFLAGS = -I. -ggdb -O0 -Wall -pthread `curl-config --cflags`
+LDFLAGS	 = `curl-config --libs` -L. -lgzstream -lz
+AR	 = ar cr
+OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a
 
 
-all: $(TARGETS) tags test threadingutils_teste
+all: $(TARGETS) tags test
+
+gzstream.o:gzstream.C gzstream.h
+	$(CXX) $(CXXFLAGS) -c -o gzstream.o gzstream.C
+
+libgzstream.a : gzstream.o
+	${AR} libgzstream.a gzstream.o
+
 
 foo: test.o filebuf.o parser.o htmlparser.o
 
@@ -27,10 +35,11 @@ threadingutils_teste: threadingutils_teste.cpp threadingutils.h $(OBJFILES)
 tags: *.cpp *.h
 	ctags *.cpp *.h
 
+
 .PHONY: clean test
 
 clean:
-	rm -fv *.o runner.cpp $(TARGETS)
+	rm -fv *.o libgzstream.a runner.cpp $(TARGETS)
 
 test: runner
 	./runner

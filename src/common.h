@@ -6,13 +6,24 @@
 
 #include <sys/types.h>
 #include <set>
+#include <utility>
 
 typedef u_int64_t docid_t;
 
+//!A simple struct-like class just to store information about a page.
+typedef std::pair<std::string, docid_t> PageRef;
+
+
+/**It has been said that (s)he is the one that controlls the crawlers.
+ *
+ * @see DeepThought
+ */
 struct AbstractHyperDimentionalCrawlerDeity{
 	virtual docid_t registerURL(std::string new_url) = 0;
 
 	virtual ~AbstractHyperDimentionalCrawlerDeity(){}
+
+	virtual PageRef popPage() = 0;
 };
 
 
