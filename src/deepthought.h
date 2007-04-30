@@ -247,57 +247,11 @@ public:
 	inline docid_t getDownloadCount() { return this->download_counter; }
 	inline docid_t getLastDocId() { return this->last_docid; }
 
+	void stopPlease() { this->running = false;}
+
 };
 
 			
-/*
-				
-def main():
-	N_OF_WORKERS = 20
-
-	print "Starting things up..."
-	boss = Laracna('/tmp/down/')
-	stats = StatsPrinter(boss, boss.store_dir + "/stats")
-
-	print "Loading data from previous invocations and from seeds"
-	boss.unserialize()
-	boss.addPages(['http://www.uol.com.br'])
-
-	workers = [OfficeBoy(boss) for i in range(N_OF_WORKERS)]
-
-	print "Dispaching officeboys"
-	for w in workers:
-		w.start()
-
-	stats.start()
-	
-	// Stop asa soon as the user press any key
-	raw_input()
-	raw_input()
-	boss.running = False
-	boss.running = False
-	boss.running = False
-	print "Exiting. Waiting for threads"
-
-	for w in workers:
-		w.join()
-
-
-if __name__ == '__main__':
-//    import sys
-//    if len(sys.argv) > 1 and sys.argv[1] != '-v':
-//        pass
-//    else:
-//        if not _test():
-    main()
-
-
-
-*/
-
-
-
-
 
 #endif // __DEEPTHOUGHT_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
