@@ -61,6 +61,15 @@ public:
 		TS_ASSERT( startswith(data, start));
 		TS_ASSERT( not startswith(data, mismatch));
 	}
+
+	void test_endswith()
+	{
+		std::string domainbr("www.uol.com.br");
+		std::string domainorg("www.slashdot.org");
+
+		TS_ASSERT( endswith(domainbr, ".br"));
+		TS_ASSERT( not endswith(domainorg, ".br"));
+	}
 };
 
 // Stupid class just to test our methods

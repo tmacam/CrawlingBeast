@@ -82,6 +82,7 @@ URLRetriever::URLRetriever(std::string url):
 
 	// Misc
 	curl_easy_setopt(_handle, CURLOPT_TCP_NODELAY, 1);
+	curl_easy_setopt(_handle, CURLOPT_TIMEOUT, 60);
 
 }
 
