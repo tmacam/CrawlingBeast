@@ -5,7 +5,7 @@ CC	 = g++
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread `curl-config --cflags`
 LDFLAGS	 = `curl-config --libs` -L. -lgzstream -lz
 AR	 = ar cr
-OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a
+OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o
 
 
 all: $(TARGETS) tags test

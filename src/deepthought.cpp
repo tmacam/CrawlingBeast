@@ -245,4 +245,11 @@ void DeepThought::makedirs(std::string path)
 
 }
 
+
+
+
+
+
+
+
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

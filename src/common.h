@@ -24,6 +24,7 @@ struct AbstractHyperDimentionalCrawlerDeity{
 	virtual ~AbstractHyperDimentionalCrawlerDeity(){}
 
 	virtual PageRef popPage() = 0;
+	virtual bool isRunning() = 0;
 };
 
 

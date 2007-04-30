@@ -243,30 +243,14 @@ public:
 	 */
 	static void makedirs(std::string path);
 
+	inline bool isRunning(){ return this->running; }
+	inline docid_t getDownloadCount() { return this->download_counter; }
+	inline docid_t getLastDocId() { return this->last_docid; }
+
 };
-/*
 
-class StatsPrinter(Thread):
-	def __init__(self,manager, log_filename):
-		Thread.__init__(self)
-		self.manager = manager
-		self.log = open(log_filename,'w',0)
-
-	def run(self):
-		manager = self.manager
-		down = 0
-		found = 0
-		while manager.running:
-			old_down = down
-			old_found = found
-			down = manager.stats_down
-			found = manager.docId
-			msg =  "STATS : %10i downloaded, %10i found\n" % ( \
-					down - old_down, found - old_found )
-			self.log.write(msg)
-			print msg.strip()
-			time.sleep(10)
 			
+/*
 				
 def main():
 	N_OF_WORKERS = 20
