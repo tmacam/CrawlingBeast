@@ -10,13 +10,16 @@
 #include "paranoidandroid.h"
 #include "sauron.h"
 
-const int N_OF_WORKERS = 20;
+const int N_OF_WORKERS = 50;
 
 int main(int argc, char* argv[])
 {
 	URLSet seeds;
 	ParanoidAndroid* looser = 0;
 	std::list<ParanoidAndroid* > ArmyOfMarvins;
+
+	// Just plain HTTP, please.
+        curl_global_init(CURL_GLOBAL_NOTHING);
 
 
 	seeds.insert(BaseURLParser("http://www.uol.com.br/"));
@@ -26,12 +29,13 @@ int main(int argc, char* argv[])
 
 	DeepThought boss(store_dir);
 	Sauron MordorTuristGuide(boss, store_dir + "/stats");
-	MordorTuristGuide.start();
 
-	std::cout << "Loading data from previous invocations and from seeds...";
+	std::cout << "Loading data from previous invocations and from seeds..." << std::endl;
 	boss.unserialize();
 	boss.addPages(seeds);
-	std::cout << " done." << std::endl;
+	std::cout << "\tdone." << std::endl;
+
+	MordorTuristGuide.start();
 
 	std::cout << "Starting paranoid crawling androids" << std::endl;
 	for(int i = 0; i < N_OF_WORKERS; ++i){

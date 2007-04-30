@@ -8,16 +8,14 @@ void do_your_thing(std::string filename)
 	UnicodeBugger unicode(file.getBuf());
 	AutoFilebuf data(unicode.convert());
 
-	//std::cout << filename << " : " << unicode.getEncoding() << std::endl;
+	std::cout << filename << " : " << unicode.getEncoding() << std::endl;
 }
 
 int main(int argc, char* argv[])
 {
 	
-	for(int loop = 0; loop < 1000; ++loop) {
-		for(int i = 1; i < argc; ++i){
-			do_your_thing(argv[i]);
-		}
+	for(int i = 1; i < argc; ++i){
+		do_your_thing(argv[i]);
 	}
 
 	std::cout << "Done.";

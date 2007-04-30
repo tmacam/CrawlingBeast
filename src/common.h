@@ -28,9 +28,9 @@ struct AbstractHyperDimentionalCrawlerDeity{
 };
 
 
-//#include <iostream>
-//
-//#define BEEN_HERE do{ std::cout << "BEEN HERE\n" }while(0)
+#include <iostream>
+
+#define BEEN_HERE do{ std::cout << "BEEN HERE " << __FILE__ << " " << __LINE__ << std::endl ;}while(0)
 
 #endif // __COMMOM_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

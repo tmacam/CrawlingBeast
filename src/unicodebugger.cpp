@@ -9,34 +9,34 @@ typedef UnicodeBugger::enc_pair_t enc_pair_t;
 
 static const int __XML_MARKS_LEN = 4;
 static const UnicodeBugger::enc_pair_t __XML_MARKS[__XML_MARKS_LEN] = {
-    enc_pair_t("UTF-32LE","\x3c\x00\x00\x00"),
-    enc_pair_t("UTF-32BE","\x00\x00\x00\x3c"),
-    enc_pair_t("UTF-16LE","\x3c\x00\x3f\x00"),
-    enc_pair_t("UTF-16BE","\x00\x3c\x00\x3f"),
+    enc_pair_t("UTF-32LE",std::string("\x3c\x00\x00\x00",4)),
+    enc_pair_t("UTF-32BE",std::string("\x00\x00\x00\x3c",4)),
+    enc_pair_t("UTF-16LE",std::string("\x3c\x00\x3f\x00",4)),
+    enc_pair_t("UTF-16BE",std::string("\x00\x3c\x00\x3f",4)),
 };
 
 static const int __BOM_MARKS_LEN = 5;
 static const UnicodeBugger::enc_pair_t __BOM_MARKS[__BOM_MARKS_LEN] = { 
-    enc_pair_t("UTF-8"   ,"\xef\xbb\xbf"),
-    enc_pair_t("UTF-32LE","\xff\xfe\x00\x00"),
-    enc_pair_t("UTF-32BE","\x00\x00\xfe\xff"),
-    enc_pair_t("UTF-16LE","\xff\xfe"),
-    enc_pair_t("UTF-16BE","\xfe\xff"),
+    enc_pair_t("UTF-8"   ,std::string("\xef\xbb\xbf",3)),
+    enc_pair_t("UTF-32LE",std::string("\xff\xfe\x00\x00",4)),
+    enc_pair_t("UTF-32BE",std::string("\x00\x00\xfe\xff",4)),
+    enc_pair_t("UTF-16LE",std::string("\xff\xfe",2)),
+    enc_pair_t("UTF-16BE",std::string("\xfe\xff",2)),
 };
 
 static const int __ALL_MARKS_LEN = __XML_MARKS_LEN + __BOM_MARKS_LEN;
 static const UnicodeBugger::enc_pair_t __ALL_MARKS[__ALL_MARKS_LEN] = { 
     //XML
-    enc_pair_t("UTF-32LE","\x3c\x00\x00\x00"),
-    enc_pair_t("UTF-32BE","\x00\x00\x00\x3c"),
-    enc_pair_t("UTF-16LE","\x3c\x00\x3f\x00"),
-    enc_pair_t("UTF-16BE","\x00\x3c\x00\x3f"),
+    enc_pair_t("UTF-32LE",std::string("\x3c\x00\x00\x00",4)),
+    enc_pair_t("UTF-32BE",std::string("\x00\x00\x00\x3c",4)),
+    enc_pair_t("UTF-16LE",std::string("\x3c\x00\x3f\x00",4)),
+    enc_pair_t("UTF-16BE",std::string("\x00\x3c\x00\x3f",4)),
     //BOM
-    enc_pair_t("UTF-8"   ,"\xef\xbb\xbf"),
-    enc_pair_t("UTF-32LE","\xff\xfe\x00\x00"),
-    enc_pair_t("UTF-32BE","\x00\x00\xfe\xff"),
-    enc_pair_t("UTF-16LE","\xff\xfe"),
-    enc_pair_t("UTF-16BE","\xfe\xff"),
+    enc_pair_t("UTF-8"   ,std::string("\xef\xbb\xbf",3)),
+    enc_pair_t("UTF-32LE",std::string("\xff\xfe\x00\x00",4)),
+    enc_pair_t("UTF-32BE",std::string("\x00\x00\xfe\xff",4)),
+    enc_pair_t("UTF-16LE",std::string("\xff\xfe",2)),
+    enc_pair_t("UTF-16BE",std::string("\xfe\xff",2)),
 };
 
 

@@ -73,7 +73,9 @@ void DeepThought::addPages(const URLSet& urls, bool unserializing)
 //@synchronized(DOMAIN_LOCK)
 Domain* DeepThought::addNewDomain(const std::string& domain_name, const URLSet& pages, bool unserializing)
 {
-	AutoLock synchronized(DOMAIN_LOCK);
+	//XXX This function is only called by addPages,
+	//XXX that already holds DOMAIN_LOCK
+	//XXX AutoLock synchronized(DOMAIN_LOCK);
 	
 	Domain* dom = new Domain(domain_name, pages, *this, unserializing);
 	known_domains[domain_name] = dom;
@@ -119,7 +121,9 @@ std::string DeepThought::getDocIdPath(docid_t docid)
 //@synchronized(DOMAIN_LOCK)
 void DeepThought::enqueueDomain(Domain* dom)
 {
-	AutoLock synchronized(DOMAIN_LOCK);
+	//XXX This function is only called by addPages, and addNewDomain
+	//XXX that already holds DOMAIN_LOCK
+	//XXX AutoLock synchronized(DOMAIN_LOCK);
 
 	bool was_empty = false;
 	if (domain_queue.empty()) {
@@ -145,6 +149,15 @@ docid_t DeepThought::getNewDocId()
 	return ++last_docid;
 }
 
+//@synchronized(DOCID_LOCK)
+docid_t DeepThought::getLastDocId()
+{
+	AutoLock synchronized(DOCID_LOCK);
+
+	return this->last_docid;
+}
+
+
 //@synchronized(ERRLOG_LOCK)
 void DeepThought::reportBadCrawling(docid_t id, const std::string& url,
 				    const std::string& msg)
@@ -160,6 +173,15 @@ void DeepThought::incDownloaded()
 	AutoLock synchronized(STATS_LOCK);
 
 	++download_counter;
+}
+
+
+//@synchronized(STATS_LOCK)
+docid_t DeepThought::getDownloadCount()
+{
+	AutoLock synchronized(STATS_LOCK);
+
+	return this->download_counter; 
 }
 
 
@@ -214,11 +236,8 @@ void DeepThought::waitUntillSafeToDownload()
 	}
 }
 
-//@synchronized(DOCID_LOCK)
 docid_t DeepThought::registerURL(std::string new_url)
 {
-	AutoLock synchronized(DOCID_LOCK);
-
 	docid_t new_id = getNewDocId();
 	store << new_id << "\t" << new_url << std::endl;
 

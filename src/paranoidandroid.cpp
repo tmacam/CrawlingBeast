@@ -7,7 +7,6 @@ void ParanoidAndroid::setupOfstream(std::ostream& stream)
 {
 	// Turn store exceptions on
 	stream.exceptions( std::ios_base::badbit|std::ios_base::failbit);                // FIXME set store unbuffered
-	stream.rdbuf()->pubsetbuf(0,0);
 }
 
 void ParanoidAndroid::safePageAndMetadata(docid_t docid, PageDownloader& d)
@@ -15,7 +14,7 @@ void ParanoidAndroid::safePageAndMetadata(docid_t docid, PageDownloader& d)
 	// Prepare to safe files.
 	std::string doc_path = manager.getDocIdPath(docid);
 	std::string meta_filename = doc_path + "/meta";
-	std::string data_filename = doc_path = "/data.gz";
+	std::string data_filename = doc_path + "/data.gz";
 
 	// Setup ifstreams
 	std::ofstream meta;

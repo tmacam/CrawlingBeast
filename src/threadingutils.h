@@ -8,6 +8,7 @@
  * Classe defined here habe a close resemblance with the ones in 
  * Python's threading module.
  */
+#include "common.h"
 #include <pthread.h>
 #include "mmapedfile.h" // For ErrnoSysException
 
@@ -135,7 +136,7 @@ public:
 			     THREADING ABSTRACTIONS
  * ********************************************************************** */
 
-static void* thread_start_callback(void* _t_ptr);
+void* thread_start_callback(void* _t_ptr);
 
 struct BaseThread {
 	static int thread_count;
@@ -161,14 +162,6 @@ struct BaseThread {
 	}
 
 };
-
-static void* thread_start_callback(void* _t_ptr)
-{
-	BaseThread* t = (BaseThread*)_t_ptr;
-	return t->run();
-
-}
-
 
 
 #endif // __THREADINGUTILS_H

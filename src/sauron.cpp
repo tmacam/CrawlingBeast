@@ -17,12 +17,20 @@ void* Sauron::run()
 		old_found = found;
 		down = manager.getDownloadCount();
 		found = manager.getLastDocId();
-		log << "Stats : " << std::dec << std::setw(10) << std::setfill('0') <<
-			(down - old_found) << " downloaded, " <<
-			(found - old_found) << "found" << std::endl;
-		std::cout << "Stats : " << std::dec << std::setw(10) << std::setfill('0') <<
-			(down - old_found) << " downloaded, " <<
-			(found - old_found) << "found" << std::endl;
+		std::cout << old_found << " " << found << " " <<
+			old_down << " " << down << std::endl;
+		log <<
+			"Stats : " << 
+			std::dec << std::setw(10) << std::setfill('0') <<
+			(down - old_down) << " downloaded, " <<
+			std::dec << std::setw(10) << std::setfill('0') <<
+			(found - old_found) << " found" << std::endl;
+		std::cout <<
+			"Stats : " << 
+			std::dec << std::setw(10) << std::setfill('0') <<
+			(down - old_down) << " downloaded, " <<
+			std::dec << std::setw(10) << std::setfill('0') <<
+			(found - old_found) << " found" << std::endl;
 
 		sleep(SLEEP_TIME);
 	}

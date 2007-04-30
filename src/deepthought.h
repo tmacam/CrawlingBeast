@@ -186,13 +186,6 @@ public:
 	 */
 	void enqueueDomain(Domain* dom);
 
-	/**Get a new docID.
-	 *
-	 * @synchronized(DOCID_LOCK)
-	 */
-	docid_t getNewDocId();
-
-
 	//@synchronized(ERRLOG_LOCK)
 	void reportBadCrawling(docid_t id, const std::string& url,
 				const std::string& msg);
@@ -226,11 +219,19 @@ public:
 	 *
 	 * Registration happens by adding this URL to a file.
 	 *
-	 * @returns the docId assigned to the URL.
+	 * @return the docId assigned to the URL.
+	 *
+	 * @see getNewDocId
+	 * 
+	 * @note it was synchronized(DOCID_LOCK) but now only getNewDocId is.
+	 */
+	docid_t registerURL(std::string new_url);
+
+	/**Get a new docID.
 	 *
 	 * @synchronized(DOCID_LOCK)
 	 */
-	docid_t registerURL(std::string new_url);
+	docid_t getNewDocId();
 
 	/**Super-mkdir.
 	 *
@@ -244,8 +245,12 @@ public:
 	static void makedirs(std::string path);
 
 	inline bool isRunning(){ return this->running; }
-	inline docid_t getDownloadCount() { return this->download_counter; }
-	inline docid_t getLastDocId() { return this->last_docid; }
+
+	//!@synchronized(STATS_LOCK)
+	docid_t getDownloadCount();
+
+	//!@synchronized(DOCID_LOCK)
+	docid_t getLastDocId();
 
 	void stopPlease() { this->running = false;}
 

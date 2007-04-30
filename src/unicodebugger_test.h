@@ -44,7 +44,7 @@ public:
 		UnicodeBugger unicodeforgodsake(file.getBuf());
 		AutoFilebuf data (unicodeforgodsake.convert());
 		
-		TS_ASSERT_EQUALS(unicodeforgodsake.getEncoding(), "UTF-16BE" );
+		TS_ASSERT_EQUALS(unicodeforgodsake.getEncoding(), "UTF-16LE" );
 
 	};
 
