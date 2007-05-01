@@ -188,6 +188,12 @@ public:
 		std::string sample = "a::b::c:::";
 		TS_ASSERT_EQUALS(splitNjoin(sample,"::"), sample);
 	}
+
+	void test_emptyAgain()
+	{
+		std::vector< std::string > res;
+		TS_ASSERT_EQUALS(join("/",res), "");
+	}
 };
 
 #endif // __EXPLODE_TEST_H

@@ -10,7 +10,7 @@
 #include "paranoidandroid.h"
 #include "sauron.h"
 
-const int N_OF_WORKERS = 50;
+const int N_OF_WORKERS = 100;
 
 int main(int argc, char* argv[])
 {
@@ -43,6 +43,8 @@ int main(int argc, char* argv[])
 		looser->start();
 		ArmyOfMarvins.push_back( looser );
 	}
+
+	std::cout << "Done. Let's hope for the best" << std::endl;
 
 	
 	// Stop asa soon as the user press any key

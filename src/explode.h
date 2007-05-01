@@ -112,13 +112,16 @@ std::string join( const typename C::value_type& delimiter,
 
 	typename C::const_iterator i = values.begin();
 
-	if (i != values.end() ){
-		out << *i;
-	}
-	++i;
+	if (not values.empty() ) {
 
-	for(; i != values.end(); ++i){
-		out << delimiter << *i;
+		if (i != values.end() ){
+			out << *i;
+			++i;
+		}
+
+		for(; i != values.end(); ++i){
+			out << delimiter << *i;
+		}
 	}
 
 	return out.str();

@@ -1,11 +1,16 @@
 
 
+CURL_CFLAGS = 
+CURL_LDFLAGS = #`priv_curl/bin/curl-config --libs` 
+#CURL_CFLAGS = `curl-config --cflags`
+#CURL_LDFLAGS = `curl-config --libs`
+
 TARGETS	 = runner crawlingbeast
 CC	 = g++
-CXXFLAGS = -I. -ggdb -O0 -Wall -pthread `curl-config --cflags`
-LDFLAGS	 = `curl-config --libs` -L. -lgzstream -lz -pthread
+CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS)
+LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
 AR	 = ar cr
-OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o
+OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a
 
 
 all: $(TARGETS) tags test crawlingbeast
@@ -29,6 +34,8 @@ runner: runner.cpp $(OBJFILES)
 unicodebugger_ex: $(OBJFILES) unicodebugger_ex.o
 
 getter: getter.o $(OBJFILES)
+
+__testa_parser: __testa_parser.o $(OBJFILES)
 
 threadingutils_teste: threadingutils_teste.cpp threadingutils.h $(OBJFILES)
 

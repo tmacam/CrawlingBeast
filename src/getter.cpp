@@ -47,7 +47,7 @@ int main(int argc, char* argv[])
 	for(int i = 1; i < argc; ++i) {
 		std::string url(argv[i]);
 		test_URLRetriever(url);
-		test_PageDownloader(url);
+		//test_PageDownloader(url);
 	}
 
 	std::string enter;

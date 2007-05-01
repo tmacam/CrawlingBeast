@@ -18,7 +18,8 @@ void ParanoidAndroid::safePageAndMetadata(docid_t docid, PageDownloader& d)
 
 	// Setup ifstreams
 	std::ofstream meta;
-	ogzstream data;
+	//FIXME ogzstream data;
+	std::ofstream data;
 	setupOfstream(meta);
 	setupOfstream(data);
 
@@ -37,9 +38,12 @@ void ParanoidAndroid::safePageAndMetadata(docid_t docid, PageDownloader& d)
 
 void* ParanoidAndroid::run()
 {
+#define TRACE std::cout << t_id << " "; BEEN_HERE
+
 	while (manager.running) {
 		// Homenagem ao DJ ATB: Don't Stop, 'till i come
 		PageRef page = manager.popPage();
+		//TRACE;
 
 		std::string& url = page.first;
 		docid_t& docid = page.second;

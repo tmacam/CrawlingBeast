@@ -94,7 +94,9 @@ URLRetriever::~URLRetriever()
 
 size_t URLRetriever::writeCallback(void* ptr, size_t realsize)
 {
+
 	mem.memory = (char *)myrealloc(mem.memory, mem.size + realsize + 1);
+
 	if (mem.memory) {
 		memcpy(&(mem.memory[mem.size]), ptr, realsize);
 		mem.size += realsize;
@@ -109,6 +111,7 @@ size_t URLRetriever::writeCallback(void* ptr, size_t realsize)
 size_t URLRetriever::headerCallback(void* data, size_t realsize)
 {
 	
+
 	std::string header_line = std::string((const char*)data,realsize);
 	std::vector<std::string> res = split(header_line , ":", 1);
 
@@ -136,7 +139,7 @@ void URLRetriever::go()
 	{
 		throw UndeterminedURLRetrieverException("content-type");
 	}
-	this->content_type = _ct;
+	if (_ct) this->content_type = _ct;
 
 	if ( CURLE_OK != curl_easy_getinfo(_handle,
 		CURLINFO_RESPONSE_CODE, &_code) )

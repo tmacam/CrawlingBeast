@@ -97,7 +97,7 @@ public:
 
 	AutoFilebuf contents;
 
-	typedef std::set<BaseURLParser> url_set_t;
+	typedef URLSet url_set_t;
 	static const std::string DEFAULT_ENCODING;
 
 	/**Constructs the PageDownloader.

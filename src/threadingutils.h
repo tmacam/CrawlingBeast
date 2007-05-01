@@ -125,7 +125,7 @@ public:
 	 *
 	 * @throw ErrnoSysException
 	 */
-	inline ~AutoLock()
+	~AutoLock()
 	{
 		_lock.release();
 	}
