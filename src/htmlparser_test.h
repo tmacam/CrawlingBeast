@@ -326,6 +326,30 @@ public:
 		TS_ASSERT_EQUALS( p.index, false);
 	}
 
+	void testRobotsAll()
+	{
+		std::string meta_follow = html_start + 
+			"<meta name='robots' content='nofollow,noindex,all'>" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.index, true);
+		TS_ASSERT_EQUALS( p.follow, true);
+	}
+
+	void testRobotsNone()
+	{
+		std::string meta_follow = html_start + 
+		      "<meta name='robots' content=' follow , index , none '>" +
+			html_end;
+		filebuf f = filebuf(meta_follow.c_str(), meta_follow.size());
+		LinkExtractor p(f);
+		p.parse();
+		TS_ASSERT_EQUALS( p.index, false);
+		TS_ASSERT_EQUALS( p.follow, false);
+	}
+
 	void testBase()
 	{
 		std::string meta_follow = html_start + 

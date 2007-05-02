@@ -1,4 +1,5 @@
 #include "htmlparser.h"
+#include "explode.h"
 
 #include <sstream>
 
@@ -440,22 +441,43 @@ attr_list_t& attrs)
 	std::string content;
 
 	attr_list_t::const_iterator name_attr = attrs.find("name");
+	
 
 	if (name_attr != attrs.end()){
 		value = name_attr->second.str();
 		to_lower(value);
 		if (value == "robots"){
-			content = attrs["content"].str();
-			to_lower(content);
-			if (content.find("nofollow") != content.npos){
-				this->follow = false;
-			}
-
-			if (content.find("noindex") != content.npos){
-				this->index = false;
+			if ( attrs.count("content") ) {
+				content = attrs["content"].str();
+				handleRobotsMetaContent(content);
 			}
 		}
 	}
+}
+
+void LinkExtractor::handleRobotsMetaContent(std::string content)
+{
+	std::vector<std::string> diretives;
+	std::vector<std::string>::iterator dir;
+
+	to_lower(content);
+	diretives = split(content,",");
+	for(dir = diretives.begin(); dir != diretives.end(); ++dir ) {
+		*dir = strip(*dir);
+
+		if	  (*dir == "follow")  { this->follow = true;
+		} else if (*dir == "nofollow"){ this->follow = false;
+		} else if (*dir == "index")   { this->index = true;
+		} else if (*dir == "noindex") { this->index = false;
+		} else if (*dir == "all"){
+			this->index = true;
+			this->follow = true;
+		} else if (*dir == "none"){
+			this->index = false;
+			this->follow = false;
+		}
+	}
+
 }
 
 

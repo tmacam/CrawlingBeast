@@ -301,7 +301,7 @@ public:
  *
 */
 class LinkExtractor : public SloppyHTMLParser {
-
+	void handleRobotsMetaContent(std::string content);
 public:
 	typedef BaseHTMLParser::attr_list_t attr_list_t;
 	
