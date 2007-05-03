@@ -1,6 +1,7 @@
 #include "paranoidandroid.h"
 
 #include "gzstream.h"
+#include "assert.h"
 
 
 void ParanoidAndroid::setupOfstream(std::ostream& stream)
