@@ -593,6 +593,15 @@ std::string BaseURLParser::str() const
 	return result;
 }
 
+BaseURLParser& BaseURLParser::strip()
+{
+	this->userinfo.clear();
+	this->query.clear();
+	this->fragment.clear();
+
+	return *this;
+}
+
 
 
 

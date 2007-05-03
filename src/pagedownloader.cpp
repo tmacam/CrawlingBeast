@@ -75,9 +75,9 @@ PageDownloader&  PageDownloader::parse()
 			BaseURLParser l(*li);
 			// FIXME this is where dynamic and fragments should be removed
 			if (l.isRelative()){
-				links.insert(base_url + l);
+				links.insert( (base_url + l).strip() );
 			} else {
-				links.insert(l);
+				links.insert(l.strip());
 			}
 		} catch (NotSupportedSchemeException) {
 			// We just blindly ignore unsupported and invalid URLs

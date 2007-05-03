@@ -25,7 +25,9 @@
  *  FIXME Percent-encoding RFC 3986, Section 2.1
  *  FIXME URL Normalization, RFC 3986, Sections 6.2.2 and 6.2.3
  *
- * 
+ *  FIXME userinfo content is not being validated according to the rules
+ *  	  stated in section 3.2.1
+ *
  */
 
 #include "common.h"
@@ -439,6 +441,14 @@ public:
 	 * We follow the algorithm from RFC 3986, Section 5.3
 	 */
 	std::string str() const;
+
+	/**Remove userinfo, query and fragment components from a URL.
+	 * 
+	 * Return a reference of the URL, with the above fragments
+	 * stripped.
+	 */
+	BaseURLParser& strip();
+
 
 };
 

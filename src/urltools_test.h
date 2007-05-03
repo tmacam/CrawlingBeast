@@ -374,6 +374,13 @@ public:
 
 	}
 
+	void testStrip()
+	{
+		BaseURLParser u("http:// www.tanttron@tanttron.com.br/?query=none#frag");
+		
+		TS_ASSERT_EQUALS(u.strip().str(), "http://tanttron.com.br/");
+	}
+
 
 };
 

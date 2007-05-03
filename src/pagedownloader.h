@@ -6,7 +6,7 @@
  * FIXME dynamic pages should NOT be index or retrieved, but normalized
  *
  * FIXME PageDownloader::parse -> this is where dynamic and fragments
- *	 should be removed
+ *	 should be removed and the (base) URL should be striped.
  */
 
 #include "unicodebugger.h"
