@@ -9,17 +9,17 @@ void ParanoidAndroid::setupOfstream(std::ostream& stream)
 	stream.exceptions( std::ios_base::badbit|std::ios_base::failbit);                // FIXME set store unbuffered
 }
 
-void ParanoidAndroid::safePageAndMetadata(docid_t docid, PageDownloader& d)
+void ParanoidAndroid::savePageAndMetadata(docid_t docid, PageDownloader& d)
 {
 	// Prepare to safe files.
 	std::string doc_path = manager.getDocIdPath(docid);
 	std::string meta_filename = doc_path + "/meta";
-	std::string data_filename = doc_path + "/data.gz";
+	std::string data_filename = doc_path + PAGE_DATA_PREFIX;
 
 	// Setup ifstreams
 	std::ofstream meta;
-	//FIXME ogzstream data;
-	std::ofstream data;
+	ogzstream data;
+	// XXX for uuncompressed std::ofstream data;
 	setupOfstream(meta);
 	setupOfstream(data);
 
@@ -36,31 +36,80 @@ void ParanoidAndroid::safePageAndMetadata(docid_t docid, PageDownloader& d)
 	data.close();
 }
 
+bool ParanoidAndroid::downloadRobots(const std::string& url, Domain* dom)
+{
+	assert(dom);
+
+	URLRetriever ret(url, false);
+	try {
+		ret.go();
+		filebuf robots_data = ret.getData();
+		// Our robot-speak speking robot
+		RobotsParser r2d2(robots_data);
+		r2d2.parse();
+		dom->setRobotsRules(r2d2.getRules());
+	} catch(UndeterminedURLRetrieverException) {
+		// Well, we did our best to get the robots
+		// file. Let's just pretend we couldn't find one.
+		dom->setRobotsRules(robots_rules_t());
+		throw;
+	}
+
+
+	return true;
+}
+
+bool ParanoidAndroid::downloadPage(const std::string& url, docid_t docid)
+{
+	PageDownloader d(url);
+	d.get();
+	if (d.follow) {
+		manager.addPages(d.links);
+	}
+	// FIXME we are ignoring index/noindex
+	savePageAndMetadata(docid, d);
+	// print "DOWN", currentThread(), page.url #DEBUG
+	return true;
+}
+
 void* ParanoidAndroid::run()
 {
+	bool successfuly_parsed;
+	bool is_a_robot_txt;
+	PageRef page;
+	Domain* dom;
 #define TRACE std::cout << t_id << " "; BEEN_HERE
 
 	while (manager.running) {
-		// Homenagem ao DJ ATB: Don't Stop, 'till i come
-		PageRef page = manager.popPage();
+		// Set defaults for this iteration
+		successfuly_parsed = false;
+		is_a_robot_txt = false;
+		dom = NULL;
+
+		try {
+			page = manager.popPage();
+		} catch (GetRobotsForMePlzException& e) {
+			is_a_robot_txt = true;
+			page = e.page;
+			dom = e.domain;
+		}
 		//TRACE;
 
 		std::string& url = page.first;
 		docid_t& docid = page.second;
 
-		if ( docid ) {	// cuz we can return None...
+		if ( docid ) {	// cuz He can return None...
 			try {
-				PageDownloader d(url);
-				d.get();
-				if (d.follow) {
-					manager.addPages(d.links);
+				if (is_a_robot_txt) {
+					successfuly_parsed=downloadRobots(url,
+							dom);
+				} else {
+					successfuly_parsed = downloadPage(url,
+							docid);
 				}
-				// FIXME we are ignoring index/noindex
-				safePageAndMetadata(docid, d);
-				// print "DOWN", currentThread(), page.url #DEBUG
-				manager.incDownloaded();
 			} catch (NotSupportedSchemeException) {
-				// Seems like we got redirected to a not-supported URL
+				// Seems like we got redirected to a
+				// not-supported URL
 				manager.reportBadCrawling(docid, url,
 							"BAD REDIRECT ");
 				// FIXME We used to grab urlib2 errors...
@@ -68,8 +117,12 @@ void* ParanoidAndroid::run()
 			} catch (std::runtime_error& e) {
 				manager.reportBadCrawling(docid, url,e.what());
 			} catch (...) {
-				manager.reportBadCrawling(docid, url,"UNKNOWN EXCEPTION");
+				manager.reportBadCrawling(docid, url,
+							"UNKNOWN EXCEPTION");
 			}
+
+			// Report the we crawled this page
+			manager.incCrawled(successfuly_parsed, docid, url);
 		}
 	}
 	return (void*)this;

@@ -332,7 +332,10 @@ public:
 	void safeHandleStartTag(const std::string& tag_name,
 			attr_list_t& attrs, bool empty_element_tag=false);
 
-	//!Handles meta tag with ROBOTS.txt information
+	/**Handles meta tag with ROBOTS.txt information.
+	 *
+	 * @see http://www.robotstxt.org/wc/meta-user.html
+	 */
 	void handleMetaTag(const std::string& tag_name, attr_list_t& attrs);
 };
 

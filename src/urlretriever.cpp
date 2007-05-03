@@ -50,9 +50,10 @@ size_t URLRetriever_static_headercallback( void *ptr, size_t size, size_t nmemb,
 }
 
 
-URLRetriever::URLRetriever(std::string url):
+URLRetriever::URLRetriever(std::string url, bool only_html):
 	_handle(0), original_url(url), mem(), headers(),
-	statuscode(400), content_type()
+	statuscode(400), content_type(), extra_headers(NULL),
+	only_html(only_html)
 {
 	if(( _handle = curl_easy_init()) == NULL) {
 		throw UndeterminedURLRetrieverException("init");
@@ -76,6 +77,14 @@ URLRetriever::URLRetriever(std::string url):
 	 * a user-agent field, so we provide one */
 	curl_easy_setopt(_handle, CURLOPT_USERAGENT,USER_AGENT.c_str());
 
+	// Try to limit content-type only to HTML and XML
+	if (only_html) {
+		extra_headers = NULL;
+		extra_headers = curl_slist_append(extra_headers,
+			 "Accept: text/html, application/xhtml+xml, application/xml, text/xml");
+		curl_easy_setopt(_handle, CURLOPT_HTTPHEADER, extra_headers);
+	}
+
 	// Thread-safety
 	curl_easy_setopt(_handle, CURLOPT_DNS_USE_GLOBAL_CACHE, 0);
 	curl_easy_setopt(_handle, CURLOPT_NOSIGNAL, 1);
@@ -84,10 +93,14 @@ URLRetriever::URLRetriever(std::string url):
 	curl_easy_setopt(_handle, CURLOPT_TCP_NODELAY, 1);
 	curl_easy_setopt(_handle, CURLOPT_TIMEOUT, 60);
 
+	// Error handling
+	curl_easy_setopt(_handle, CURLOPT_ERRORBUFFER, this->curlerrbuf);
+
 }
 
 URLRetriever::~URLRetriever()
 {
+	if (extra_headers){ curl_slist_free_all(extra_headers);}
 	if (_handle){curl_easy_cleanup(_handle);}
 	if (mem.memory){ free(mem.memory); }
 }
@@ -131,7 +144,9 @@ void URLRetriever::go()
 	long _code;
 
 	if ( CURLE_OK != curl_easy_perform(_handle) ) {
-		throw UndeterminedURLRetrieverException("perform");
+		std::string reason = "perform: ";
+		reason += curlerrbuf;
+		throw UndeterminedURLRetrieverException(reason);
 	}
 
 	if ( CURLE_OK != curl_easy_getinfo( _handle,

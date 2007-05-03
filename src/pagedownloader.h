@@ -61,6 +61,18 @@ typedef __gnu_cxx::hash_set<BaseURLParser,url_path_hash,equrl> URLSet;
 
 
 /* ********************************************************************** *
+				   EXCEPTIONS
+ * ********************************************************************** */
+
+class NotHTMLException : public std::runtime_error {
+public:
+	NotHTMLException(std::string msg="Document is not HTML.") :
+	std::runtime_error(msg) {}
+};
+
+
+
+/* ********************************************************************** *
 				 PAGEDOWNLOADER
  * ********************************************************************** */
 
@@ -70,6 +82,12 @@ class PageDownloader {
 	
 	//! The origina URL
 	BaseURLParser url; 
+
+	/**Check if content type served is (x)HTML or XML.
+	 *
+	 * @throw NotHTMLException If any other type of content is served.
+	 */
+	void verifyContentType(std::string ct);
 
 public:
 	/**Document base URL.

@@ -37,6 +37,9 @@ PageDownloader&  PageDownloader::download()
 	URLRetriever::headers_t& headers = page.getHeaders();
 	if ( headers.count("content-type") ){
 		ct = headers["content-type"];
+		// Verify if this is HTML or XML
+		verifyContentType(ct);
+		// Get encoding
 		encoding = FindEncParser::get_charset_from_content_type(ct);
 		if ( encoding.empty() ) {
 			encoding = DEFAULT_ENCODING;
@@ -95,6 +98,17 @@ void PageDownloader::writeMeta(std::ostream& fh)
 	fh << "encoding: "<< this->encoding << "\nrobots: " <<
 		follow << "," << index << std::endl;
 
+}
+
+void PageDownloader::verifyContentType(std::string ct)
+{
+	to_lower(ct);
+
+	if ( (ct.find("html") == ct.npos) and (ct.find("xml") == ct.npos) ){
+		// This is neither HTML nor XML
+		throw NotHTMLException();
+	}
+	
 }
 
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

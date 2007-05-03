@@ -50,7 +50,7 @@ public:
 		TS_ASSERT_EQUALS(res, "123");
 	}
 
-	void testeStartswith()
+	void testeStartswithFilebuf()
 	{
 		const char teste[] = "This is a test string";
 		const char start[] = "This i";
@@ -60,6 +60,24 @@ public:
 
 		TS_ASSERT( startswith(data, start));
 		TS_ASSERT( not startswith(data, mismatch));
+	}
+
+	void testeStartswithString()
+	{
+		std::string data = "This is a test string";
+		std::string start = "This i";
+		std::string mismatch = "akjdak";
+
+		TS_ASSERT( startswith(data, start));
+		TS_ASSERT( not startswith(data, mismatch));
+		TS_ASSERT( startswith("/teste/file.html", "/teste"));
+		TS_ASSERT( not startswith("/teste/file.html", "/tmp"));
+	}
+
+	void testeStartswithEmptyString()
+	{
+		TS_ASSERT( startswith("/teste/file.html", ""));
+		TS_ASSERT( startswith("/teste/file.html", ""));
 	}
 
 	void test_endswith()

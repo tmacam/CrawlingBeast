@@ -48,13 +48,25 @@ class URLRetriever {
 	int statuscode;
 	std::string content_type;
 
+	char curlerrbuf[CURL_ERROR_SIZE];
+	struct curl_slist* extra_headers;
+
+	bool only_html;
+
 public:
 	typedef _headers_t headers_t;
 	static const int STATUS_OK = 200;
 
 	static const std::string USER_AGENT;
 
-	URLRetriever(std::string url);
+	/**Constructor.
+	 *
+	 * @param url The URL to be fetched.
+	 * @param only_html Should we include a Accept header
+	 * 		    to limit responces to HTML/XML?
+	 */
+	URLRetriever(std::string url, bool only_html=true);
+
 	~URLRetriever();
 
 	size_t writeCallback(void* ptr, size_t realsize);

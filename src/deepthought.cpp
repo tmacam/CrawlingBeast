@@ -13,6 +13,7 @@
 const int DeepThought::MINIMUM_INTERVAL = 30;
 
 
+
 void DeepThought::unserialize()
 {
 	URLSet retrieved;
@@ -78,6 +79,7 @@ Domain* DeepThought::addNewDomain(const std::string& domain_name, const URLSet& 
 	//XXX AutoLock synchronized(DOMAIN_LOCK);
 	
 	Domain* dom = new Domain(domain_name, pages, *this, unserializing);
+	dom->timestamp = makeNextValidTimestamp();
 	known_domains[domain_name] = dom;
 	enqueueDomain(dom);
 	return dom;
@@ -85,7 +87,7 @@ Domain* DeepThought::addNewDomain(const std::string& domain_name, const URLSet& 
 
 bool DeepThought::pageExists(docid_t docid)
 {
-	std::string filename = getDocIdPath(docid) + "/data";
+	std::string filename = getDocIdPath(docid) + PAGE_DATA_PREFIX;
 	
 	return pathExists(filename);
 }
@@ -167,21 +169,42 @@ void DeepThought::reportBadCrawling(docid_t id, const std::string& url,
 	errlog << id << "\t" << url << "\t" << msg << std::endl;
 }
 
-//@synchronized(STATS_LOCK)
-void DeepThought::incDownloaded()
+/**Increment the crawled (and downloaded) pages counter(s)
+ *
+ * @param downloaded Pass true to report successful download and parsing
+ * 		     of a page.
+ *
+ * @synchronized(STATS_LOCK)
+ */
+void DeepThought::incCrawled(bool downloaded, docid_t id, const std::string& url)
 {
 	AutoLock synchronized(STATS_LOCK);
 
-	++download_counter;
+	++crawled_counter;
+
+	if (downloaded) {
+		++download_counter;
+		crawllog << now() << " DOWN\t" << id << "\t"<< url << std::endl;
+	} else {
+		crawllog << now() << " CRAW\t" << id << "\t"<< url << std::endl;
+	}
 }
 
 
 //@synchronized(STATS_LOCK)
-docid_t DeepThought::getDownloadCount()
+crawl_stat_t DeepThought::getCrawlingStats()
 {
 	AutoLock synchronized(STATS_LOCK);
 
-	return this->download_counter; 
+	// FIXME we probably should be helding DOMAIN_LOCK here...
+	time_t next_ts = 0;
+	if (not domain_queue.empty()) {
+		next_ts = domain_queue.top()->timestamp;
+	}
+
+	return crawl_stat_t(  getLastDocId(), crawled_counter, download_counter,
+				known_domains.size(), domain_queue.size(),
+				next_ts);
 }
 
 
@@ -203,10 +226,20 @@ PageRef DeepThought::popPage()
 		domain_queue.pop();
 
 		dom->timestamp = makeNextValidTimestamp();
-		page = dom->popPage();
+
+		try{
+			page = dom->popPage();
+		} catch(GetRobotsForMePlzException) {
+			// Ok, I got it, we will ask
+			// someone else to get the robots.txt
+			// for you. Just rest for now.
+			domain_queue.push(dom);
+			throw;
+		}
 
 		// Deal with empty domains
 		if ( dom->empty() ) {
+			//std::cerr << "DEBUG DeepThought popPage removed domain " << dom->name << std::endl;
 			dom->in_queue = false;
 		} else {
 			// non-empty domains should be added back to the queue

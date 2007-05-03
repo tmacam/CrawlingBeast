@@ -15,21 +15,23 @@ const int N_OF_WORKERS = 100;
 int main(int argc, char* argv[])
 {
 	URLSet seeds;
-	ParanoidAndroid* looser = 0;
+	ParanoidAndroid* looser = NULL;
 	std::list<ParanoidAndroid* > ArmyOfMarvins;
 
 	// Just plain HTTP, please.
         curl_global_init(CURL_GLOBAL_NOTHING);
 
-
 	seeds.insert(BaseURLParser("http://www.uol.com.br/"));
+	seeds.insert(BaseURLParser("http://www.ufmg.br/"));
+	seeds.insert(BaseURLParser("http://www.usp.br/"));
+	seeds.insert(BaseURLParser("http://www.unicamp.br/"));
+	
+
 	std::string store_dir = "/tmp/down/";
 
-	std::cout << "Starting things up...";
-
+	std::cout << "Starting things up..." << std::endl;
 	DeepThought boss(store_dir);
 	Sauron MordorTuristGuide(boss, store_dir + "/stats");
-
 	std::cout << "Loading data from previous invocations and from seeds..." << std::endl;
 	boss.unserialize();
 	boss.addPages(seeds);

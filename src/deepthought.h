@@ -7,12 +7,6 @@
  * manages the other spinders (crawlers), it also
  * manages the list of known and pending URLs.
  *
- * FIXME we still handle more than plain text/html - FIXME
- * FIXME we still handle more than plain text/html - FIXME
- * FIXME we still handle more than plain text/html - FIXME
- * FIXME we still handle more than plain text/html - FIXME
- * FIXME we still handle more than plain text/html - FIXME
- * FIXME we still handle more than plain text/html - FIXME
  */
 
 #include "common.h"
@@ -55,7 +49,22 @@ typedef __gnu_cxx::hash_map<std::string, Domain*,str_hash,eqstr> DomainMap;
 typedef std::priority_queue<Domain*,std::vector<Domain*>,DomainPtrSmallest> DomainQueue;
 typedef __gnu_cxx::hash_map<std::string, URLSet, str_hash, eqstr> DomainURLSetMap;
 
+struct crawl_stat_t {
+	docid_t seen;		//!< Number of URLs seen by the crawler
+	docid_t crawled;	//!< Number of crawled (visited) pages
+	docid_t downloaded; 	//!< Number of downloaded pages so far
+	docid_t n_domains;	//!< Number of known domains
+	docid_t queue_len;	//!< Lenght of the domain queue
+	time_t next_ts;	//!< timestamp of the first domain in domain_queue
 
+	crawl_stat_t( docid_t seen=0, docid_t crawled=0, docid_t downloaded=0,
+		      docid_t n_domains=0, docid_t queue_len=0,time_t next_ts=0)
+	: seen(seen), crawled(crawled), downloaded(downloaded),
+	n_domains(n_domains), queue_len(queue_len), next_ts(next_ts) {}
+};
+
+
+const std::string PAGE_DATA_PREFIX = "/data.gz";
 
 
 /* ********************************************************************** *
@@ -92,6 +101,10 @@ class DeepThought : public AbstractHyperDimentionalCrawlerDeity {
 	std::string errlog_filename;
 	std::ofstream errlog;
 
+	//!Crawlig log
+	std::string crawllog_filename;
+	std::ofstream crawllog;
+
 	//!@name Domain control
 	//@{
 	DomainMap known_domains;
@@ -102,6 +115,7 @@ class DeepThought : public AbstractHyperDimentionalCrawlerDeity {
 
 
 	docid_t download_counter;
+	docid_t crawled_counter;
 
 
 public:
@@ -120,10 +134,13 @@ public:
 	  store(store_filename.c_str(), std::ios::app),
 	  errlog_filename(store_dir + "/err.txt"),
 	  errlog(errlog_filename.c_str(), std::ios::app),
+	  crawllog_filename(store_dir + "/craw.log"),
+	  crawllog(crawllog_filename.c_str(), std::ios::app),
 	  known_domains(),
 	  domain_queue(),
 	  last_docid(0),
 	  download_counter(0),
+	  crawled_counter(0),
 	  running(true)
 	{
 		// Turn store exceptions on
@@ -192,7 +209,7 @@ public:
 
 
 	//@synchronized(STATS_LOCK)
-	void incDownloaded();
+	void incCrawled(bool downloaded, docid_t id, const std::string& url);
 
 	inline time_t now() {return time(NULL); }
 
@@ -246,8 +263,11 @@ public:
 
 	inline bool isRunning(){ return this->running; }
 
-	//!@synchronized(STATS_LOCK)
-	docid_t getDownloadCount();
+	/**Retrieve crawling statistics.
+	 *
+	 * @synchronized(STATS_LOCK)
+	 */
+	crawl_stat_t getCrawlingStats();
 
 	//!@synchronized(DOCID_LOCK)
 	docid_t getLastDocId();

@@ -7,31 +7,32 @@ const int Sauron::SLEEP_TIME = 10;
 
 void* Sauron::run()
 {
-	docid_t down = 0;
-	docid_t found = 0;
-	docid_t old_down = 0;
-	docid_t old_found = 0;
+	time_t now = 0;
+	time_t time_left=0;
+	crawl_stat_t stats;
+	crawl_stat_t old_stats;
 
 	while (manager.isRunning()) {
-		old_down = down;
-		old_found = found;
-		down = manager.getDownloadCount();
-		found = manager.getLastDocId();
-		std::cout << old_found << " " << found << " " <<
-			old_down << " " << down << std::endl;
-		log <<
-			"Stats : " << 
-			std::dec << std::setw(10) << std::setfill('0') <<
-			(down - old_down) << " downloaded, " <<
-			std::dec << std::setw(10) << std::setfill('0') <<
-			(found - old_found) << " found" << std::endl;
-		std::cout <<
-			"Stats : " << 
-			std::dec << std::setw(10) << std::setfill('0') <<
-			(down - old_down) << " downloaded, " <<
-			std::dec << std::setw(10) << std::setfill('0') <<
-			(found - old_found) << " found" << std::endl;
+		now = time(NULL);
 
+		old_stats = stats;
+		stats = manager.getCrawlingStats();
+
+		if (stats.next_ts < now) {
+			time_left = 0;
+		} else {
+			time_left = (stats.next_ts - now);
+		}
+
+		log << now << 
+			" s " << stats.seen - old_stats.seen << 
+				" / " << stats.seen <<
+			" c " << stats.crawled - old_stats.crawled <<
+				" / " << stats.crawled <<
+			" d " << stats.downloaded - old_stats.downloaded <<
+				" / " << stats.downloaded <<
+			" q " <<  stats.queue_len << " / " << stats.n_domains <<
+			" t " << time_left << std::endl;
 		sleep(SLEEP_TIME);
 	}
 	return (void*)this;

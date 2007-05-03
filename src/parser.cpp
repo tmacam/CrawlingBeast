@@ -33,6 +33,15 @@ bool startswith(const filebuf& u, const std::string& start )
 	
 }
 
+bool startswith(const std::string& data, const std::string& start )
+{
+	// Sanity check
+	if (start.size() > data.size()) { return false; }
+
+	return std::equal(start.begin(), start.end(),data.begin());
+	
+}
+
 bool endswith(const std::string& u, const std::string& end )
 {
 	// Sanity check

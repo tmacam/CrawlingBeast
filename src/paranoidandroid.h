@@ -24,8 +24,16 @@ class ParanoidAndroid: public BaseThread{
 
 	//!Turn on exceptions and disables buffering
 	void setupOfstream(std::ostream& stream);
-	void safePageAndMetadata(docid_t docid, PageDownloader& d);
+	void savePageAndMetadata(docid_t docid, PageDownloader& d);
 
+	bool downloadPage(const std::string& url, docid_t docid);
+
+	/**Try download a robots.txt file.
+	 *
+	 * We ignore UndeterminedURLRetrieverException: probably
+	 * there was no robots.txt to download, anyway...
+	 */
+	bool downloadRobots(const std::string& url, Domain* dom);
 public:
 
 	ParanoidAndroid(DeepThought& manager):
