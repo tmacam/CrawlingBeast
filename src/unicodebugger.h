@@ -295,7 +295,7 @@ public:
 	 *
 	 * @return true on successful convertions, false otherwise;
 	 */
-	bool UnicodeBugger::convertFrom(std::string encoding);
+	bool convertFrom(std::string encoding);
 
 
 	/**Uses XML and Unicode BOM heuristics to find charset.
