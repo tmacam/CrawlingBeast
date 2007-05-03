@@ -26,6 +26,12 @@ void DeepThought::unserialize()
 
 	while(docids_file >> id >> url_str ) {
 		BaseURLParser url(url_str);
+		/*FIXME We should not need to "strip" the URLS
+		 * 	because it's supposed that they were
+		 * 	striped upon registration anyway.
+		 * 	But...
+		 */
+		url.strip();
 		if (pageExists(id)) {
 			retrieved.insert(url);
 		} else {
