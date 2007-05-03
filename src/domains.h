@@ -43,10 +43,12 @@ typedef RobotsParser::robots_rules_t robots_rules_t;
  */
 class Domain{
 protected:
+	typedef std::pair<std::string, docid_t> PathRef;
+
 	CatholicShameMutex PAGES_LOCK;
 
-	URLSet known_pages;
-	std::deque<PageRef> pages_queue;
+	PathSet known_pages;
+	std::deque<PathRef> pages_queue;
 
 	AbstractHyperDimentionalCrawlerDeity& manager;
 
@@ -75,18 +77,9 @@ public:
 	 */
 	Domain(std::string name,const URLSet& pages,
 		AbstractHyperDimentionalCrawlerDeity& manager,
-		bool unserializing)
-	: known_pages(), pages_queue() , manager(manager),
-	  got_robots(false), robots_docid(0), rules(), name(name),
-	  in_queue(false), timestamp(0)
-	{
-		// FIXME if we had a url->docid map we could
-		// FIXME see if we already downloaded the robots.txt
-		// FIXME file...
+		bool unserializing);
 
-		// Add initial set of known pages
-		addPages(pages,unserializing);
-	}
+
 
 	/**Add pages for this domain.
 	 *
@@ -97,27 +90,8 @@ public:
 	 *
 	 * @synchronized(PAGES_LOCK)
 	 */
-	void addPages(const URLSet& pages, bool unserializing=false)
-	{
-		AutoLock synchronized(PAGES_LOCK);
+	void addPages(const URLSet& pages, bool unserializing=false);
 
-		URLSet::const_iterator p;
-
-		for(p = pages.begin(); p != pages.end(); ++p) {
-			// Unknown page?
-			if (known_pages.count(*p) == 0) {
-				known_pages.insert(*p);
-				if ( not unserializing ) {
-					// This page must be enqueued
-					std::string url_str = p->str();
-					docid_t id = manager.registerURL(
-								url_str);
-					pages_queue.push_back(
-							PageRef(url_str, id));
-				}
-			}
-		}
-	}
 
 	bool empty() { return pages_queue.empty(); }
 
@@ -129,30 +103,15 @@ public:
 	 *
 	 * @synchronized(PAGES_LOCK)
 	 */
-	PageRef popPage()
-	{
-		AutoLock synchronized(PAGES_LOCK);
+	PageRef popPage();
 
-		checkRobotsFile();
-
-		while (not pages_queue.empty()) {
-			PageRef p = pages_queue.front();
-			pages_queue.pop_front();
-			if ( allowedByRobotsTxt(p) ) {
-				return p;
-			}
-		}
-
-		// If we got here then no suitable page was found...
-		return PageRef();
-	}
 
 	/**Vefiries if a given URL is allowed by the domains
 	 * robots.txt file.
 	 *
 	 * We expect that checkRobotsFile was called before
 	 */
-	bool allowedByRobotsTxt(const PageRef& page);
+	bool allowedByRobotsTxt(const std::string& path);
 
 
 	/** Verifies we have downloaded the domains robots.txt .
@@ -169,16 +128,7 @@ public:
 	 *
 	 * @synchronized PAGES_LOCK
 	 */
-	void setRobotsRules(robots_rules_t newrules)
-	{
-		AutoLock synchronized(PAGES_LOCK);
-
-		if (not got_robots) {
-			// We may have called this method before...
-			this->rules = newrules;
-			got_robots = true;
-		}
-	}
+	void setRobotsRules(robots_rules_t newrules);
 
 	// FIXME We probably should've used a lock here
 	int queueLength() const { return pages_queue.size(); }

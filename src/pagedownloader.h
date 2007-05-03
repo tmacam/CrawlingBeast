@@ -59,6 +59,8 @@ struct equrl
 
 typedef __gnu_cxx::hash_set<BaseURLParser,url_path_hash,equrl> URLSet;
 
+typedef __gnu_cxx::hash_set<std::string,str_hash,eqstr> PathSet;
+
 
 /* ********************************************************************** *
 				   EXCEPTIONS

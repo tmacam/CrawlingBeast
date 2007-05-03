@@ -1,5 +1,83 @@
 #include "domains.h"
 
+Domain::Domain(std::string name,const URLSet& pages,
+	AbstractHyperDimentionalCrawlerDeity& manager,
+	bool unserializing)
+: known_pages(), pages_queue() , manager(manager),
+  got_robots(false), robots_docid(0), rules(), name(name),
+  in_queue(false), timestamp(0)
+{
+	// FIXME if we had a url->docid map we could
+	// FIXME see if we already downloaded the robots.txt
+	// FIXME file...
+
+	// Add initial set of known pages
+	addPages(pages,unserializing);
+}
+
+
+
+void Domain::addPages(const URLSet& pages, bool unserializing)
+{
+	AutoLock synchronized(PAGES_LOCK);
+
+	URLSet::const_iterator p;
+
+
+	for(p = pages.begin(); p != pages.end(); ++p) {
+		// We just add paths to our structures..
+		const std::string& path = p->path;
+		// Unknown page?
+		if (known_pages.count(path) == 0) {
+			known_pages.insert(path);
+			if ( not unserializing ) {
+				// This page must be enqueued
+				std::string url_str = p->str();
+				docid_t id = manager.registerURL(
+							url_str);
+				pages_queue.push_back( PathRef(path, id) );
+			}
+		}
+	}
+}
+
+
+PageRef Domain::popPage()
+{
+	AutoLock synchronized(PAGES_LOCK);
+
+	checkRobotsFile();
+
+	while (not pages_queue.empty()) {
+		// Get a page from the queue
+		PathRef p = pages_queue.front();
+
+		std::string& path = p.first;
+		docid_t& id = p.second;
+
+		pages_queue.pop_front();
+		if ( allowedByRobotsTxt(p.first) ) {
+			return PageRef( "http://" + this->name + path, id);
+		}
+	}
+
+	// If we got here then no suitable page was found...
+	return PageRef();
+}
+
+void Domain::setRobotsRules(robots_rules_t newrules)
+{
+	AutoLock synchronized(PAGES_LOCK);
+
+	if (not got_robots) {
+		// We may have called this method before...
+		this->rules = newrules;
+		got_robots = true;
+	}
+}
+
+
+
 void Domain::checkRobotsFile()
 {
 	if (got_robots){
@@ -11,7 +89,7 @@ void Domain::checkRobotsFile()
 	robots_url.append(name);
 	robots_url.append("/robots.txt");
 
-	known_pages.insert(robots_url);
+	known_pages.insert("/robots.txt");
 
 	if (robots_docid == 0) {
 		// Ok, first time in this function?
@@ -25,16 +103,16 @@ void Domain::checkRobotsFile()
 
 }
 
-bool Domain::allowedByRobotsTxt(const PageRef& page)
+bool Domain::allowedByRobotsTxt(const std::string& path)
 {
 	robots_rules_t::const_iterator i;
-	BaseURLParser url(page.first);
 
 	for(i = rules.begin(); i != rules.end(); ++i) {
-		if (startswith(url.path, i->first) ) {
-			std::cout << "DEBUG allowedByRobotsTxt " <<
-				page.first << "  match, res = " <<
-				i->second << std::endl;
+		if (startswith(path, i->first) ) {
+			//std::cout << "DEBUG allowedByRobotsTxt " <<
+			//	path << "  match, res = " <<
+			//	i->second << std::endl;
+
 			// Houston, we've got a match!
 			return i->second;
 		}

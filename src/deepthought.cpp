@@ -278,6 +278,7 @@ void DeepThought::waitUntillSafeToDownload()
 docid_t DeepThought::registerURL(std::string new_url)
 {
 	docid_t new_id = getNewDocId();
+	//FIXME shouldn't we have a lock just for this file?
 	store << new_id << "\t" << new_url << std::endl;
 
 	return new_id;
