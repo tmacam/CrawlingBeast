@@ -402,11 +402,11 @@ class BaseHTMLParser(AbstractHTMLParser, BaseParser):
             self.handleText( self._text[ previous_start : self._end +1])
         except InvalidCharError:
             # InvalidCharError found?
-            # Just turn everything we had from previous_start to _end into
-            # text content.
-            self.handleText( self._text[ previous_start : self._end +1])
             # Go past the offending character
             self._start += 1
+            # Just turn everything we had from previous_start to _start into
+            # text content.
+            self.handleText( self._text[ previous_start : self._start])
         
 
     def _readStartTag(self):
@@ -552,10 +552,11 @@ class TestParser(BaseHTMLParser):
 
     >>> TestParser("a<b style=b 1").parse().items
     [('TEXT', u'a'), ('TEXT', u'<b style=b 1')]
+
+    >>> TestParser('#<a&whatever duplas="x"'+" simples='what' html=antigo attrhtml />#").parse().items
+    [('TEXT', u'#'), ('TAG', u'a&whatever', {u'duplas': u'x', u'simples': u'what', u'html': u'antigo', u'attrhtml': None }), ('TEXT', u'#')]
     """
 
-    #>>> TestParser('#<a&whatever duplas="x"'+" simples='what' html=antigo attrhtml />#").parse().items
-    #[('TEXT', u'#'), ('TAG', u'a&whatever', {u'duplas': u'x', u'simples': u'what', u'html': u'antigo', u'attrhtml': None }), ('TEXT', u'#')]
     def __init__(self,text):
         # setup base class
         super(TestParser,self).__init__(text)

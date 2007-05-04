@@ -1,4 +1,6 @@
 
+Meta tags base - deve ser válida e uma url Absoluta!!!
+
 meta tags should only be read if in head 
 
 
