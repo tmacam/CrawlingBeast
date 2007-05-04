@@ -5,6 +5,7 @@
 
 \usepackage[brazil]{babel}
 \usepackage[utf8]{inputenc}
+\usepackage{times}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Header  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -36,7 +37,7 @@ poderão ser utilizadas mediante autorização dos professores.
 \subsection{Terminologia}
 
 No restante desse relatório serão utilizados alguns termos de uso
-não-comum. Afim de evitar possíveis problemas de entendimento,
+não-comum. Afim de evitar possíveis problemas de interpretação,
 disporemos seus significados aqui.
 
 \begin{description}
@@ -118,36 +119,149 @@ podem comprometer a capacidade do coletor ou até mesmo inviabilizar o
 resultado de sua coleta. 
 
 \subsubsection{Resolução de nomes de domínios}
-Uma vez de possa de uma lista de URLs a serem coletadas, cada coletor
-deve então resolver o nome do domínio existente nas URLs da sua lista
+Uma vez de posse de uma lista de URLs a serem coletadas, cada coletor
+deve então resolver cada nome do domínio existente nas URLs da sua lista
 para um endereço IP, para que ele possa então entrar em contato com o
 servidor da página desejada e solicitá-la. Dependendo da velocidade de
-coleta do \emph{crawler} e da dispersão dos nomes de domínios em sua
-lista de URLs, cada coletor passará um tempo considerável no processo de
+coleta do \emph{crawler} e da dispersão dos nomes de domínios em suas
+listas de URLs, cada coletor passará um tempo considerável no processo de
 resolução de nome.
 
 A utilização de \emph{caches} pode aliviar esse problema, mas é
 importante ter em mente que o sistema de resolução de nomes na Internet,
-o DNS, permite que nomes de domínio tenham uma valida tão infima quanto
+o DNS, permite que nomes de domínio tenham uma valida tão ínfima quanto
 o tempo de duração da própria requisição, o que de encontro com a
 utilização de \emph{caches}.
 
-\subsubsection{Mapas de caracteres e questões de internacionalização}
+\subsubsection{Normalização de mapas de caracteres}
 
+As diferentes línguas utilizadas pelo homem usam distintos conjuntos de
+símbolos para sua representação e, para vários desses conjunto de
+símbolos, mais de uma forma de representação binária existe. Esse fato
+torna complicado a troca e a interpretação de texto em línguas diferentes
+e mesmo para documentos escritos na mesma língua. Para a língua inglesa,
+por exemplo, que utiliza um conjunto de caracteres bem limitado, existem
+dois conjuntos de mapas de caracteres históricos diferentes e
+incompatíveis, ASCII e EBCDIC. Se contarmos os mapas de caracteres e
+formas de codificação diferentes existentes para as várias línguas
+humanas, esse problema torna-se bem mais complexo.
+Mesmo a existência de conjuntos ``universais'' como UTF-8, UTF-16 e
+UTF-32 não resolvem esse problema, pois nem todos os documentos na
+Internet se encontram codificados nesses mapas de caracteres.
+
+É salutar observar que a capacidade de interpretar corretamente
+documentos escritos em mapas de caracteres distintos e de recodificá-los
+para um mapa de caractere comum  repercute não somente na capacidade de
+realizar \emph{parsing} de documentos, mas também na capacidade de
+indexação e extração de \emph{links} do mesmo, uma vez a forma de
+representar caracteres não-ASCII irá afetar diretamente a capacidade de
+normalizar o vocabulário e de normalizar URLs.
+
+\subsubsection{Descoberta de mapa de caracteres}
+
+Associado ao problema de normalizar os documentos em um único mapa de
+caracteres está o problema de, dado um documento, descobrir em qual mapa
+de caracteres o mesmo se encontra para que se possa então realizar a
+tradução. Informações sobre o mapa de caractere usado por uma página web
+podem ser fornecidas de diversas formas:
 \begin{itemize}
-\item i18n, mapas de caracteres, formas de representar documentos.
-Repercute na capacidade de realizar parsing de documentos, na indexação
-e extração de \emph{links} do mesmo, uma vez a forma de representar
-caracteres não-ASCII irá afetar diretamente a capacidade de normalizar o
-vocabulário e de normalizar URLs.
-\item Normalização de URLs.
-\item Crawling de páginas dinâmicas. O que constituem páginas dinâmicas.
-Por que baixá-las ou evitá-las.
-\item Escalonamento de URLs e gerência de URLs visitadas
-\item Mecanismos indicativos e regulamentadores e boas-práticas para
-crawling de páginas \emph{Web}. 
-\item{parsing de páginas e well-formness}<++>
+\item por cabeçalhos da requisição HTTP~\cite{rfc2616},
+ o protocolo de aplicação utilizado na \emph{Web},
+\item pelo prólogo de um documento XML~\cite{bray2006xml},
+\item através de uma \emph{tag} \texttt{Meta} em um documento
+(x)HTML~\cite{html4tr}.
 \end{itemize}
+
+Entretanto, os padrões acima apresentam sobreposições, colocando o
+desenvolvedor em situações de impasse. Por exemplo, quando mais de um
+padrão fornece informações conflitantes, qual utilizar?  Quando nenhum
+mecanismo acima informa nada sobre o mapa de caracteres usado, qual
+padrão ou qual regra usar por omissão?
+
+%http://feedparser.org/docs/character-encoding.html
+%    COmo é feito no XML
+%        Mas ele tem UTF8 como default
+%        http://www.w3.org/TR/REC-xml/\#sec-guessing-no-ext-info
+%    HTTP defaults to ISO 8859-1 (Latin 1)
+%    O que a RFC 3023 diz? HTTP  Headers -> XML Dec. -> UTF-8
+%
+% Windows-1252 (http://en.wikipedia.org/wiki/ISO\_8859-1)
+
+Uma alternativa plausível é realizar o mesmo processo utilizado por
+navegadores \emph{Web}, que é uma extensão do modelo proposto pela RFC
+3023~\cite{rfc3023}. Esse processo consiste em seguir os passos abaixo,
+parando no primeiro que tenha suas restrições atendidas:
+\begin{enumerate}
+\item Usar as informações dos cabeçalhos HTTP, sempre que possível e
+sempre que estes estejam disponíveis.
+\item  Se os primeiros 2--4 bytes forem macadores de ordem de bytes
+(BOM, de \emph{Byte Order Mark}) XML ou UTF, a codificação
+correspondente será utilizada.
+\item Se o documento iniciar com um prólogo XML legível e que informe a
+codificação do documento, esse será utilizado.
+\item Se o documento conter a tag HTML \texttt{meta}, como em \texttt{<meta
+http-equiv="Content-Type" ...> }, o mapa de caracteres declarado nessa
+tag será usado.
+\item Finalmente, como última opção, existe a abordagem de detecção de
+mapas de caracteres por heurísticas compostas~\cite{mozillaiuc}
+\end{enumerate}
+
+\subsubsection{\emph{Parsing} de páginas}
+
+Apesar de ser um problema de relevância maior no processo de indexação
+de documentos, o \emph{parsing} de documentos HTML também é um problema
+a ser enfrentado por um extrator de \emph{links}.
+
+Os documentos HTML existentes na \emph{Web} atual não totalmente válidos
+e/ou bem formados se confrontados com os padrões existentes e publicados
+pela W3C para HTML e XHTML~\cite{html4tr, bray2006xml}, sendo comumente
+uma mistura dos dois padrões. Uma busca por URLs de maneira simples como
+através do uso de expressões regulares, se eficiente, mostra-se ingênua
+quando deparada com documentos HTMLs mais complexos. Não somente uma
+abordagem dessas pode ignorar seções como comentários HTML/XML, mas
+também ignorar \emph{tags} espciais do HTML tais como a \texttt{SCRIPT},
+\texttt{TEXTAREA} e \texttt{STYLE}, que, se presentes, podem conter
+conteúdo que não é HTML e que não deve ser recuperado por um extrator de
+URLS.
+
+\subsubsection{Normalização de URLs}
+
+Outro aspecto importante de um \emph{crawler} é a sua capacidade de
+normalizar URLs. A normalização a vários propósitos mas, sobretudo, para
+evitar a duplicação de esforços na obtenção de páginas que são
+essencialmente a mesma. Existem várias técnicas que podem ser utilizadas
+para o processo de normalização de URLs, cada uma delas se aplicando a
+cada um dos 5 componentes distindos de uma URL: esquema, autoridade,
+\emph{path}, \emph{query} e fragmento. Várias dessas técnicas são
+tratadas na RFC 3986~\cite{rfc3986}.
+
+%\subsubsection{Obtenção de páginas com conteúdo dinâmico}
+%Crawling de páginas dinâmicas. O que constituem páginas dinâmicas.
+%Por que baixá-las ou evitá-las.
+
+\subsubsection{Boas-práticas para \emph{crawling} de páginas}
+
+A atividade de coleta de um sítio por um \emph{crawler} não pode ser por
+demais onerosa ao primeiro. Caso contrário, a coleta poderá inviabilizar
+o funcionamento normal de um sítio e haverá motivos para que os
+administradores desse sítio bloqueiem acessos futuros dos coletores a
+ele. Em outra situações, os administradores de um sítio podem determinar
+que eles não desejam ter parte ou todo o seu sítio indexado ou visitado
+pelo \emph{crawler}.
+
+Para solucionar esse problema de maneira ``cordial'', foram
+desenvolvidos dois mecanismos que indicam aos coletores de páginas quais
+restrições os administradores de um domínio aplicam às suas páginas. O
+primeiro e mais antigo consiste em colocar um arquivo, entitulado
+\texttt{robots.txt} na raiz dos dominínios indicando quais páginas podem
+ou não ser coletadas~\cite{robotstxt}. O segundo consistem em colocar
+uma \emph{tag} \texttt{meta} especial no cabeçalho do arquivo HTML que
+informa se aquela página pode ou não ser indexada e se pode ou não ser
+seguida, ou seja, se os links contidos naquela página podem ser
+acrescentados à lista de \emph{links} de um
+\emph{crawler}~\cite{robotsmeta}.
+
+%\subsubsection{Escalonamento de URLs e gerência de URLs visitadas}
 
 
 \section{O projeto do nosso crawler}
@@ -261,48 +375,6 @@ BOM, UTF-8
 
 \subsubsection{Problemas na decodificação de textos na Web}
 
-Em algumas situações não teremos informações sobre charset: o HTTP não
-informou, não existe informação no documento. Assumiremos utf-8 e, em
-último caso, Latin1 caso.
-
-    (This is harder than it sounds, because standards can overlap. If
-    you fetch an XML document over HTTP, you need to support both
-    standards and figure out which one wins if they give you conflicting
-    information.)
-    
-    Sometimes you receive text with verifiably inaccurate encoding information.
-    
-    [chardet.feedparser.org]
-
-
-http://feedparser.org/docs/character-encoding.html
-
-    COmo é feito no XML
-        Mas ele tem UTF8 como default
-        http://www.w3.org/TR/REC-xml/\#sec-guessing-no-ext-info
-
-    HTTP defaults to ISO 8859-1 (Latin 1)
-
-    O que a RFC 3023 diz? HTTP  Headers -> XML Dec. -> UTF-8
-
-
-Windows-1252 (http://en.wikipedia.org/wiki/ISO\_8859-1)
-
-How browsers do?
-
-\begin{enumerate}
-\item The HTTP headers, where available, always take precedence over other information.
-\item  If the first 2-4 bytes are an XML Byte Order Mark (BOM), this is used.
-\item  If the document starts with an XML declaration <?xml .... ?>, this determines encoding by XML rules.
- \item If the document contains the HTML hack <meta http-equiv="Content-Type" ...>, any charset declared here is used.
-\end{enumerate}
-
-Finally, As a last resort, detection.
-
-A composite approach to language/encoding detection,
-    http://www.mozilla.org/projects/intl/UniversalCharsetDetection.html
-    http://www.unicode.org/iuc/iuc19/program.html
-
 \subsubsection{Solução encontrada}
 
 KISS.
@@ -351,7 +423,14 @@ Uso mais agressivo de identificadores numéricos para os arquivos. Isso será
 útil não somente para a contenção dos gastos com memória mas também quando
 estivermos realiando a indexação dos documentos.
 
-Melhorias na listas de prioridades. Os algoritmos e estruturas disponíveis na
+Melhorias na listas de prioridades.
+
+duas listas de prioridade: uma para dominios que não podem ser baixados
+ainda (timestamp muito recente) e outra para domínios disponíveis. Nessa
+última a lista de prioridade usaria o tamanho da fila pendente, o que,
+segundo Baesa-Yattes, resulta em um bom crawling\ldots
+
+ Os algoritmos e estruturas disponíveis na
 STL para lidar com listas de prioridades e heaps não possuem métodos para
 decrementar ou incrementar um o valode atribuído a um ítem interno à heap.
 Dessa forma, torna-se inviável a construção de mecanismos que implementem
