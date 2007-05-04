@@ -70,7 +70,7 @@ Durante o processo de coleta de páginas, os \emph{crawlers} vão
 descobrindo novas URLs que serão enviadas a um gerente e futuramente
 escalonadas para obtenção.
 
-\subsection{Componentes de um crawler}
+\subsection{Componentes de um crawler}\label{sec:components}
 
 De forma resumida, um \emph{crawler} para a \emph{Web} possui os
 seguintes componentes:
@@ -118,7 +118,11 @@ WWW apresenta alguns desafios particulares que, se não forem tratados,
 podem comprometer a capacidade do coletor ou até mesmo inviabilizar o
 resultado de sua coleta. 
 
-\subsubsection{Resolução de nomes de domínios}
+Nessa seção comentaremos sobre alguns desses problemas. Na
+seção~\ref{sec:implementation} comentaremos como lidamos com esses
+problemas na nossa implementação.
+
+\subsubsection{Resolução de nomes de domínios}\label{prob:dns}
 Uma vez de posse de uma lista de URLs a serem coletadas, cada coletor
 deve então resolver cada nome do domínio existente nas URLs da sua lista
 para um endereço IP, para que ele possa então entrar em contato com o
@@ -133,7 +137,8 @@ o DNS, permite que nomes de domínio tenham uma valida tão ínfima quanto
 o tempo de duração da própria requisição, o que de encontro com a
 utilização de \emph{caches}.
 
-\subsubsection{Normalização de mapas de caracteres}
+\subsubsection{Normalização de mapas de
+caracteres}\label{prob:charmapnorm}
 
 As diferentes línguas utilizadas pelo homem usam distintos conjuntos de
 símbolos para sua representação e, para vários desses conjunto de
@@ -157,7 +162,8 @@ indexação e extração de \emph{links} do mesmo, uma vez a forma de
 representar caracteres não-ASCII irá afetar diretamente a capacidade de
 normalizar o vocabulário e de normalizar URLs.
 
-\subsubsection{Descoberta de mapa de caracteres}
+\subsubsection{Descoberta de mapa de
+caracteres}\label{prob:charmapdetection}
 
 Associado ao problema de normalizar os documentos em um único mapa de
 caracteres está o problema de, dado um documento, descobrir em qual mapa
@@ -224,7 +230,7 @@ também ignorar \emph{tags} espciais do HTML tais como a \texttt{SCRIPT},
 conteúdo que não é HTML e que não deve ser recuperado por um extrator de
 URLS.
 
-\subsubsection{Normalização de URLs}
+\subsubsection{Normalização de URLs}\label{prob:urlnorm}
 
 Outro aspecto importante de um \emph{crawler} é a sua capacidade de
 normalizar URLs. A normalização a vários propósitos mas, sobretudo, para
@@ -239,7 +245,8 @@ tratadas na RFC 3986~\cite{rfc3986}.
 %Crawling de páginas dinâmicas. O que constituem páginas dinâmicas.
 %Por que baixá-las ou evitá-las.
 
-\subsubsection{Boas-práticas para \emph{crawling} de páginas}
+\subsubsection{Boas-práticas para \emph{crawling} de
+páginas}\label{prob:robots}
 
 A atividade de coleta de um sítio por um \emph{crawler} não pode ser por
 demais onerosa ao primeiro. Caso contrário, a coleta poderá inviabilizar
@@ -261,36 +268,183 @@ seguida, ou seja, se os links contidos naquela página podem ser
 acrescentados à lista de \emph{links} de um
 \emph{crawler}~\cite{robotsmeta}.
 
+Além disso, um dos requisitos desse trabalho era que nenhuma requisição
+a um dado servidor fosse realizada em um intervalo inferior a 30 segundos.
+
 %\subsubsection{Escalonamento de URLs e gerência de URLs visitadas}
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROJETO %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{O projeto do nosso crawler}
+\section{O projeto do \emph{CrawlerBeast}}
 
-\subsection{Estruturas de dados}
-\subsection{Premissas e decisções iniciais de projetos}
+Realizamos o projeto de nosso \emph{crawler} tendo em mente os desafios
+mencionados na seção anterior. Algumas decisões de projeto tiveram que
+ser tomadas tanto para contornar tais problemas como para ser capaz de
+completar o trabalho no prazo estipulado.
+
+\subsection{Premissas e decisões iniciais de projetos}
+
+Uma das primeira decisões de projeto foi a forma como lidaríamos com o
+requisito de intervalo mínimo de 30 segundos. Optamos por considerar que
+cada \textbf{\emph{hostname} distinto representa um domínio distinto}.
+Desta forma, os domínios \texttt{www.dcc.ufmg.br} e \texttt{www.ufmg.br}
+serão considerados domínios distintos mesmo que os mesmos sejam
+controlados pelo menos servidor. Vários foram os motivos que nos levaram
+a essa decisão. O primeiro, é que ele é o mesmo modelo adotado pelo
+mecanismo \texttt{robots.txt}~\cite{robotstxt}. Depois, se para alguns
+servidores compartilhados esse mecanismo aparentar ser muito agressivo,
+para domínios servidos por CDNs essa decisão será por demais suave.
+
+O conteúdo coletado será limitado apenas a conteúdo HTML. Verificações
+por essa condição serão realizadas quando do envio da requisição HTTP ao
+servidor e logo após a recepção do conteúdo da página. Qualquer outro
+conteúdo, mesmo que seja HTML, se informado incorretamente pelo
+servidor, será ignorado.
+
+Outra decisão adotada diz respeito a forma com que lidamos com erros. Em
+nossa implementação, qualquer problema que ocorra durante a requisição
+de uma página, desde um erro de ``página inexistente'' até uma
+solicitação de DNS que estourou o seu limite de tempo, será tratado
+como erros fatal, ou seja, nenhuma nova tentativa de obter novamente
+aquele recurso será realizada.
+
+Respeitaremos tanto o padrão \texttt{robots.txt} quanto as
+\emph{tags} \texttt{meta}. A solicitação do arquivo \texttt{robots.txt}
+ocorrerá antes da requisição da primeira página de um domínio e
+respeitará os 30 segundos de intervalo entre requisições, como comentado
+na sub-seção~\ref{prob:robots}.
+
+Finalmente, tendo em vista os pontos discutidos nas
+sub-seções~\ref{prob:charmapnorm} e \ref{prob:urlnorm}, decidimos que
+todo o conteúdo de páginas HTML coletado será covertido para UTF-8 antes
+de que se realize o \emph{parsing} do mesmo.
+
+
 \subsection{Componentes}
 
-\section{Implementação}
+Os componentes da no nosso \emph{crawler} são bastante similares aos
+componentes descritos na seção~\ref{sec:components}, a saber:
+\begin{description}
+\item[LinkExtractor:] um extrator de \emph{links} de páginas HTML;
+\item[ParanoidAndroid:] a nossa implementação de um coletor de páginas
+Web;
+\item[DeepThought:] o nosso escalonador de requisições.
+\end{description}
+
+Nossa implementação utiliza o próprio sistema de arquivos para realizar
+as funções do ``Armazém de Páginas''.
+
+Além desses componentes clássicos, mais alguns componentes de nossa
+implementação merecem menção:
+\begin{description}
+\item[Sauron:] nosso coletor de estatísticas;
+\item[UnicodeBugger:] nosso detector e conversor de mapas de caracteres;
+\item[BaseURLParser:] nosso \emph{parser} e normalizador de URLs.
+\end{description}
+
+Maiores detalhes sobre a implementação deles serão fornecidos na seção
+seguinte.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% IMPLEMENTAÇÃO %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Implementação}\label{sec:implementation}
+
 \subsection{Decisões de implementações}
-\subsection{Prototipação}
 
-Por que prototipar?
+Nosso \emph{crawler}, denominado de ``CrawlingBeast'' foi escrito em C++
+e utiliza a biblioteca de gabaritos padrões (STL) dessa
+linguagem~\cite{stroustrup97}. Para aumentar a sua escalabilidade, ele
+utiliza uma abordagem \emph{multi-threading} para a coleta e
+processamento de páginas.
 
-Por que python?
+Foram utilizadas as seguintes bibliotecas extras:
+\begin{itemize}
+\item libcurl, para realização de requisições HTTP;
+\item zlib, para armazenamento de páginas compactadas no sistema de
+arquivo;
+\item gzstream, uma interface C++ para utilização da zlib;
+\item libiconv, para conversão de páginas entre mapas de caracteres;
+\item pthreads, para suporte a escrita aplicações com vária
+\emph{threads}.
+\end{itemize}
 
-resultados? vantagens, desvantages, herança do código do protótipo.
+É importante observar que, excetuando-se a \emph{gzstream} e a
+\emph{pthreads}, todas as outra bibliotecas já são dependências da
+\emph{libcurl}.
 
-vantagens:
+Além disso, nosso código faz uso extensivo de uma técnica para controle
+de recursos (como memória, \emph{locks} etc)  muito comum em C++,
+denominada RAII (\emph{Resource Acquisition Is Initialization}).
+Além disso, como comentaremos mais a frente, diversas partes de nosso
+ccódigo possuem código de teste (\emph{Unit Testing}).
 
-facilidade de se integrar código, comentário e código para teste (unit testing).
+\subsection{Prototipação e \emph{Unit Testing}}
 
-Devido a essa facilidade e ao cojunto substancial de testes criados para os
-parsers de HTML e de URLs, acabamos optando por também realizar unit testings
-em C++
+Antes do inicio da implementação em C++ foi implementado um protótipo em
+Python do \emph{crawler}. Python é uma linguagem dinâmica (ou
+interpretada), orientada a objetos, com tipagem dinâmica, tipos de dados
+dinâmicas de alto nível, com suporte a exceções e com uma excelente
+biblioteca de classes auxiliares~\cite{pythonlang}.
 
-Unit Tests
+Devido às características dessa linguagem, foi possível implementar em
+um curto espaço de tempo todas as principais funcionalidades do
+\emph{crawler}, em especial o \emph{parser} e extrator de \emph{links},
+o \emph{parser} e normalizador de URLs, e toda a arquitetura relacionada
+ao escalonador de URLs.
 
-\subsection{Parser}
+O objetivo da prototipação era de poder experimentar e testar, de
+maneira rápida e em uma ambiente mais flexível do que o oferecido pelo
+C++, as nossas soluções propostas para os desafios encontrados no
+desenvolvimento de um crawler.
+
+Além disso, diversas características da linguagem encorajam o
+desenvolvimento de código modular, documentado e com código de testes
+integrado, tudo isso em um modelo de orientação a objetos
+similar ao do C++. Devido a isso, várias das boas práticas de
+programação encorajadas pelo ambiente de prototipação foram herdadas no
+código em C++. Uma dessas heranças foi um conjunto substancial de \emph{unit
+tests} criados para os
+\emph{parsers} de HTML e de URLs, que checam um conjunto extensivo de
+erros de mal-formidade para esses dois padrões. No código em C++ a
+solução de \emph{unit testing} adotada foi o CxxTest~\cite{cxxtest}.
+
+Tanto o código do protótipo quanto o código das Unit Teste geradas para
+ambos os códigos encontra-se anexado a esse documento.
+
+\subsection{Estruturas de dados}
+
+Nossa implementação usa as seguintes estruturas de dados para gerenciar
+o escalonamento de URLs~\cite{cormen-algorithms}:
+
+\begin{itemize}
+\item Uma \emph{hashtable} de domínios conhecidos. Busca e inserção
+nessa estrutura possui uma complexidade de tempo médio de \(O\left(1 
+\right)\).
+\item Uma lista de prioridades de domínios pendentes, implementada como
+uma \emph{head}. Inserção, e remoção nessa estrutura possuem
+complexidades de tempo no pior caso de \(O\left(\log n\right)\). A
+localização do elemento de maior prioridade leva tempo constante.
+\end{itemize}
+
+Cada domínio, por sua vez, apresenta estruturas similares:
+\begin{itemize}
+\item Um conjunto de \emph{paths} conhecidos dentro daquele domínio,
+implementado como um \emph{hashset} e possuindo as mesmas complexidades
+de uma \emph{hashtable}.
+\item Uma fila FIFO de \emph{paths} pendentes nesse domínio, ou seja de
+\emph{paths} que precisam ser coletados. Essa lista é implementada como
+uma lista duplamente-encadead e possui tempo constante para remoção do
+primeiro elemento e parar acréscimo ao fim de um novo elemento.
+\end{itemize}
+
+
+\subsection{Componentes}
+
+Nesta seção discutiremos decisões de implementação, problemas e soluções
+encontradas no desenvolvimento de cada um dos componentes da nossa
+solução.
+
+\subsubsection{Parser}
 
 O parser deveria ser mais do que um simples extrator de URL de tags 'a'.
 
@@ -356,7 +510,7 @@ avançar forçosamente o texto para o local onde a tag de fechamento está,
 ignorando assim seu conteúdo e protegendo o próprio parser, ou se ela é uma tag
 Empty, o que não torna necessário nenhuma intervenção do usuário.
 
-\subsection{URL}
+\subsubsection{URL}
 
 RFC 3986
 
@@ -368,7 +522,7 @@ http://en.wikipedia.org/wiki/Percent-encoding
 % vim:fileencoding=utf-8:syn=tex:ai:tw=72:smartindent:
 % vim:spell:spelllang=pt:
 
-\subsection{Detecção de Mapas de Caracteres}
+\subsubsection{Detecção de Mapas de Caracteres}
 
 \subsubsection{Mapas de Caracteres, Unicode e Codificação de Texto}
 BOM, UTF-8
@@ -387,13 +541,15 @@ rel=``nofollow'' http://googleblog.blogspot.com/2005/01/preventing-comment-spam.
 
 
 
-\subsection{Limitando o conteúdo baixado}
+\subsubsection{Limitando o conteúdo baixado}
 
 Apenas HTML 
 
 w3c - xhtml, seção 5.
 RFC 3236
 http://www.w3.org/TR/2002/NOTE-xhtml-media-types-20020801/
+
+\subsection{Dificuldades}
 
 \subsection{Considerações sobre Gerência de Memória de Regiões críticas}
 
