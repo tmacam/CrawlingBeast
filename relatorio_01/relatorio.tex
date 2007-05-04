@@ -1,0 +1,351 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage{graphicx,url}
+\usepackage{subfigure}
+
+\usepackage[brazil]{babel}
+\usepackage[utf8]{inputenc}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Header  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Trabalho prático 1}
+\author{Tiago Alves Macambira \\ \texttt{tmacam@dcc.ufmgbr}}
+\date{4 de maio de 2007}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  Body  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\maketitle
+
+\section{Introdução}
+
+O primeiro trabalho prático da disciplina de Recuperação de Informação
+consiste na elaboração de um \emph{crawler} industrial para paginas Web.
+Esse \emph{crawler} deveria atender vários requisitos, como disposto no
+enunciado do trabalho~\cite{tp1}, dentre os quais podemos citar:
+\begin{itemize}
+\item O sistema deveria ser capaz de coletar 1~milhão de URLs por dia
+utilizando um servidor padrão,
+\item O coletor deve respeitar as ``regras de etiqueta para
+\emph{crawling} de páginas \emph{Web}''.
+\item A velocidade de coleta de deve se manter constante
+\item O coletor deve ser escrito em C/C++. Bibliotecas extras somente
+poderão ser utilizadas mediante autorização dos professores.
+\end{itemize}
+
+\subsection{Terminologia}
+
+No restante desse relatório serão utilizados alguns termos de uso
+não-comum. Afim de evitar possíveis problemas de entendimento,
+disporemos seus significados aqui.
+
+\begin{description}
+\item[URL pendente:] Uma URL que foi descoberta mas não foi requisitada aos seu
+servidor.
+\item[Domínio:] Um domínio nada mais é do que um nome de domínio
+(DNS \emph{domainname}) atrelado a um
+endereço IP. Essa mesma terminologia é costumeiramente utilizada quando
+tratamos de DNS~\cite{rfc1034}.
+\item[Parsing:] Leitura de uma página em que é realizada a interpretação do
+conteúdo nela presente, geralmente consistindo de marcação de conteúdo HTML e,
+no caso de arquivos \texttt{robots.txt}, de conteúdo com sintaxe de arquivos
+\texttt{robots.txt}.
+\item[Sítio:] Uma localidade na internet, geralmente representada um um domínio
+e um conjunto de sub-domínios. Apesar de ter o mesmo significado do termo
+inglês \emph{site}, preferimos utilizar o nome em português. É importante
+salientar que um sítio pode ser composto por mais de um domínio.
+\item[Tag] Elemento de marcação utilizado em documentos HTML e XML.
+\end{description}
+
+\section{\emph{Crawling} de páginas web}
+
+\emph{Web crawlers}, também conhecidos como \emph{Web spinders} ou
+\emph{Web robots} são programas ou sistemas automatizados que percorrem
+a \emph{Web} de maneira automatizada. Esses programas estão geralmente
+associados a sistemas de máquinas de busca e, nesse contexto, têm como
+objetivo coletar páginas da WWW para serem posteriormente indexadas.
+
+Durante o processo de coleta de páginas, os \emph{crawlers} vão
+descobrindo novas URLs que serão enviadas a um gerente e futuramente
+escalonadas para obtenção.
+
+\subsection{Componentes de um crawler}
+
+De forma resumida, um \emph{crawler} para a \emph{Web} possui os
+seguintes componentes:
+
+\begin{description}
+
+\item[Coletores de páginas:] São os elementos que efetivamente realizam
+a coleta de página. Sistemas de \emph{crawling} para a \emph{Web}
+geralmente empregam vários coletores em paralelo para aumentar a sua
+capacidade de coleta de páginas. Esses coletores podem ser responsáveis
+apenas pela realização das requisições HTTP como podem ser também
+responsáveis pela realização de algum tipo de pre-processamento das
+páginas.
+
+\item[Extrator de links:] É o elemento que realiza o \emph{parsing} dos
+documentos coletados, extraindo \emph{links} destes. Esse componente
+também é responsável por normalizar as URLs encontradas no documento bem
+como por resolver URLs relativas presentes no mesmo. Apesar de ter um
+papel definido, esse elemento pode se encontrar contido ou associado a
+elementos coletores de páginas.
+
+\item[Escalonador de Requisições:] As URLs extraídas pelo elemento
+anterior são reportadas a esse componente. É papel do
+escalonador gerenciar e distribuir URLs a serem vasculhadas pelos
+coletores. Esse processo de seleção deve garantir que os sítios
+visitados não sejam soterrados por requisições, que essas requisições
+respeitam as politicas indicativas para coleta dispostas nos sítio e que
+a coleção de paginas baixadas tenha uma amostra relevante das páginas na
+internet.
+
+\item[Armazém de Páginas] As páginas coletadas podem não sofrer toda a
+análise necessária para os propósitos de uma máquina de busca. Assim
+sendo, será necessário guardar essas páginas para posterior
+processamento. Esse componente de um sistema de \emph{web crawling} é o
+que fica responsável por essa tarefa. Observe que a existência desse
+componente não é estritamente necessário para um \emph{crawler} mas é
+fundamental para uma máquina de busca, uma vez que a indexação pode
+ocorrer desassociada da extração de links.
+
+\end{description}
+
+\subsection{Problemas e desafios}
+
+\begin{itemize}
+\item DNS
+\item i18n, mapas de caracteres, formas de representar documentos.
+Repercute na capacidade de realizar parsing de documentos, na indexação
+e extração de \emph{links} do mesmo, uma vez a forma de representar
+caracteres não-ASCII irá afetar diretamente a capacidade de normalizar o
+vocabulário e de normalizar URLs.
+\item Normalização de URLs.
+\item Crawling de páginas dinâmicas. O que constituem páginas dinâmicas.
+Por que baixá-las ou evitá-las.
+\item Escalonamento de URLs e gerência de URLs visitadas
+\item Mecanismos indicativos e regulamentadores e boas-práticas para
+crawling de páginas \emph{Web}. 
+\end{itemize}
+
+
+\section{O projeto do nosso crawler}
+
+\subsection{Estruturas de dados}
+\subsection{Premissas e decisções iniciais de projetos}
+\subsection{Componentes}
+
+\section{Implementação}
+\subsection{Decisões de implementações}
+\subsection{Prototipação}
+
+Por que prototipar?
+
+Por que python?
+
+resultados? vantagens, desvantages, herança do código do protótipo.
+
+vantagens:
+
+facilidade de se integrar código, comentário e código para teste (unit testing).
+
+Devido a essa facilidade e ao cojunto substancial de testes criados para os
+parsers de HTML e de URLs, acabamos optando por também realizar unit testings
+em C++
+
+Unit Tests
+
+\subsection{Parser}
+
+O parser deveria ser mais do que um simples extrator de URL de tags 'a'.
+
+Como não era possível usar um parser HTML pronto nem depender de expressões
+regulares, acaba sendo necessário então escrever um pequeno parser \emph{push}
+para HTML.
+
+Toda a infra-estrutura criada para esse parar será futuramente re-utilizada
+para o indexador. Dessa forma, preferimos no extender um pouco mais na sua
+criação, garantindo assim ganho de tempo na versao do indexador e, ao mesmo
+tempo, garantindo que o nosso parser seja mais do que capaz de lidar com a
+tarefa que lhe é solicitada no momento.
+
+Observer os documentos HTML existentes na Web atual não totalmente válidos e/ou
+bem formado se confrontados com os padroes existentes e publicados pela W3C
+para html. Mais Do que isso, os documentos da web atual são uma mistura de
+documentos HTML e XML e nem todos eles são documentos bem formados. Dessa forma
+
+\begin{itemize}
+
+\item Devido a essa mescla de XML e HTML, o parser deveria ser capaz de lidar
+com a maioria das construções de XML e HTML e ser capaz de lidar com documentos
+de se situam no interim desses dois padrões, mesmo em se tratando de erros.
+
+\item Mais do que isso, o parser deve ser capaz de lidar dom
+
+\item o parser deveria ser bem toleante a erros e tolerar documentos
+mal-formados da mesma forma com que os navegadores toleram. 
+
+Oscilar entre os padrões.... Tags de fechamento, de abertura, atributos sem
+valor, com seu conteudo não delimitado por \" ou \'. Tentamos conciliar o
+compromisso de pegar todo o texto que um navegador fosse capaz de interpretar
+mas lidar com erros corretamente.
+
+\end{itemize}
+
+Dessa forma, para que o parser cumprisse sua função de extrair o máximo de
+informação útil possível de páginas, de maneira similar ao navegadores. Para
+isso, tentamos garantir que ele se comporta-se tão próximo dos modelos de
+fererência quanto possível (Firefox, BeautifulSoup). Entretanto, isso nos levou
+a algumas escolhas quanto á forma de lidar com erro que vão de encontro até
+mesmo com a especificação de XML e HTML.
+
+No fragmento abaixo, de acordo com as especificaçõe de XML, não existe nenhuma tag:
+%\texttt{ a#whatever duplas="x" simples='what' html=antigo attrhtml / }
+
+Isso deve-se pela especificação do que pode ser o nome (\emph{Name}) de uma
+tag, e o caractere \& não faz parte dele. Entretanto, para esse exemplo, o
+firefox reconhece a existência de uma tag 'a\&whatever', enquanto o
+BeautifulSoup reconhece a existência de uma tag 'a'.
+
+Nossa queremos seguir o firefox tanto quanto possível.
+
+\subsubsection{Tags Especiais}
+
+Script, Style, textarea e blocos XML CDATA não devem ter seu conteúdo
+processados pelo parser.
+
+Tags empty (que fecham sozinhas). Por isso, nosso parser difere de outros por
+já sinalizar que uma tag é auto-closing. Isso permite ao programador
+diferenciar se essa é uma Start Tag normal, o que torna possívevl ao usuário
+avançar forçosamente o texto para o local onde a tag de fechamento está,
+ignorando assim seu conteúdo e protegendo o próprio parser, ou se ela é uma tag
+Empty, o que não torna necessário nenhuma intervenção do usuário.
+
+\subsection{URL}
+
+RFC 3986
+
+http://en.wikipedia.org/wiki/URL\_normalization
+http://en.wikipedia.org/wiki/Percent-encoding
+
+
+
+% vim:fileencoding=utf-8:syn=tex:ai:tw=72:smartindent:
+% vim:spell:spelllang=pt:
+
+\subsection{Detecção de Mapas de Caracteres}
+
+\subsubsection{Mapas de Caracteres, Unicode e Codificação de Texto}
+BOM, UTF-8
+
+\subsubsection{Problemas na decodificação de textos na Web}
+
+Em algumas situações não teremos informações sobre charset: o HTTP não
+informou, não existe informação no documento. Assumiremos utf-8 e, em
+último caso, Latin1 caso.
+
+    (This is harder than it sounds, because standards can overlap. If
+    you fetch an XML document over HTTP, you need to support both
+    standards and figure out which one wins if they give you conflicting
+    information.)
+    
+    Sometimes you receive text with verifiably inaccurate encoding information.
+    
+    [chardet.feedparser.org]
+
+
+http://feedparser.org/docs/character-encoding.html
+
+    COmo é feito no XML
+        Mas ele tem UTF8 como default
+        http://www.w3.org/TR/REC-xml/\#sec-guessing-no-ext-info
+
+    HTTP defaults to ISO 8859-1 (Latin 1)
+
+    O que a RFC 3023 diz? HTTP  Headers -> XML Dec. -> UTF-8
+
+
+Windows-1252 (http://en.wikipedia.org/wiki/ISO\_8859-1)
+
+How browsers do?
+
+\begin{enumerate}
+\item The HTTP headers, where available, always take precedence over other information.
+\item  If the first 2-4 bytes are an XML Byte Order Mark (BOM), this is used.
+\item  If the document starts with an XML declaration <?xml .... ?>, this determines encoding by XML rules.
+ \item If the document contains the HTML hack <meta http-equiv="Content-Type" ...>, any charset declared here is used.
+\end{enumerate}
+
+Finally, As a last resort, detection.
+
+A composite approach to language/encoding detection,
+    http://www.mozilla.org/projects/intl/UniversalCharsetDetection.html
+    http://www.unicode.org/iuc/iuc19/program.html
+
+\subsubsection{Solução encontrada}
+
+KISS.
+
+Tentaremos seguir a RFC 3023.
+\subsection{Políticas de blah para robôs}
+http://www.robotstxt.org/wc/meta-user.html
+
+rel=``nofollow'' http://googleblog.blogspot.com/2005/01/preventing-comment-spam.html  
+
+
+
+\subsection{Limitando o conteúdo baixado}
+
+Apenas HTML 
+
+w3c - xhtml, seção 5.
+RFC 3236
+http://www.w3.org/TR/2002/NOTE-xhtml-media-types-20020801/
+
+\subsection{Considerações sobre Gerência de Memória de Regiões críticas}
+
+Resource Aquisition Is Initialization.
+
+\subsection{Problemas encontrados e Melhorias futuras}
+
+Buracos negros - nossa abordagem de escalonamento foi baseada em domínios. Isso
+permitia não somente controlar o tempo mínimo de intervalo entre acessos
+consecutívos a um mesmo domínio, limitar o uso de memória (já que nao era mais
+necesári armazenar o nome de domínio em cada URL pertencente a ele) e armazenar
+a lista de URLs pendentes. Todavia, para a nossa implementação, sítios que
+fazem uso extensivo de sub-domínios para sua organização são torna um problema.
+Isso deve-se ao fato de que, custumeiramente, a obtenção e \emph{parsing} de
+uma unica página de um sítio destes acarreta na ``descoberta'' de vários
+sub-domínos desse sítio, o que por sua vez acarreta no acréscimo de cada um
+destes na lista de domínios conhecidos e de domínios pendentes. Além desses
+domínios serem costumeriramente rasos, ou seja, sem muitos links para
+documentos internos, a sua adição limitará a capacidade do crawler de baixar
+páginas de conteúdo, uma vez que, antes de que qualquer conteúdo possa ser
+obtido desses domínios, os arquivos \texttt{robots.txt} dele terá de ser
+obtido.
+
+Libcurl e HTTPS.
+
+Uso mais agressivo de identificadores numéricos para os arquivos. Isso será
+útil não somente para a contenção dos gastos com memória mas também quando
+estivermos realiando a indexação dos documentos.
+
+Melhorias na listas de prioridades. Os algoritmos e estruturas disponíveis na
+STL para lidar com listas de prioridades e heaps não possuem métodos para
+decrementar ou incrementar um o valode atribuído a um ítem interno à heap.
+Dessa forma, torna-se inviável a construção de mecanismos que implementem
+políticas de priorização de domínios ou de páginas baseados na quantidade de
+links que apontam para os mesmos. Esse mecanismo, que pode ser interpretado
+como uma versão consideravelemnte ingênua das idéias por trás de algorítmos
+como o PageRank, poderiam contorar de maneira elegantes os buracos negros de
+domínio
+
+% Bibliografia
+\nocite{stroustrup97}
+\bibliographystyle {plain}
+\bibliography{relatorio}
+
+
+\end{document}
+
+% vim:tw=72 fileencoding=utf-8 spelllang=pt spell syn=tex:
