@@ -108,13 +108,33 @@ que fica responsável por essa tarefa. Observe que a existência desse
 componente não é estritamente necessário para um \emph{crawler} mas é
 fundamental para uma máquina de busca, uma vez que a indexação pode
 ocorrer desassociada da extração de links.
-
 \end{description}
 
 \subsection{Problemas e desafios}
 
+Apesar da aparente simplicidade, a realização de coleta de páginas na
+WWW apresenta alguns desafios particulares que, se não forem tratados,
+podem comprometer a capacidade do coletor ou até mesmo inviabilizar o
+resultado de sua coleta. 
+
+\subsubsection{Resolução de nomes de domínios}
+Uma vez de possa de uma lista de URLs a serem coletadas, cada coletor
+deve então resolver o nome do domínio existente nas URLs da sua lista
+para um endereço IP, para que ele possa então entrar em contato com o
+servidor da página desejada e solicitá-la. Dependendo da velocidade de
+coleta do \emph{crawler} e da dispersão dos nomes de domínios em sua
+lista de URLs, cada coletor passará um tempo considerável no processo de
+resolução de nome.
+
+A utilização de \emph{caches} pode aliviar esse problema, mas é
+importante ter em mente que o sistema de resolução de nomes na Internet,
+o DNS, permite que nomes de domínio tenham uma valida tão infima quanto
+o tempo de duração da própria requisição, o que de encontro com a
+utilização de \emph{caches}.
+
+\subsubsection{Mapas de caracteres e questões de internacionalização}
+
 \begin{itemize}
-\item DNS
 \item i18n, mapas de caracteres, formas de representar documentos.
 Repercute na capacidade de realizar parsing de documentos, na indexação
 e extração de \emph{links} do mesmo, uma vez a forma de representar
@@ -126,6 +146,7 @@ Por que baixá-las ou evitá-las.
 \item Escalonamento de URLs e gerência de URLs visitadas
 \item Mecanismos indicativos e regulamentadores e boas-práticas para
 crawling de páginas \emph{Web}. 
+\item{parsing de páginas e well-formness}<++>
 \end{itemize}
 
 
