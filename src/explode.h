@@ -30,7 +30,6 @@
  * $Id$
  *
  * @author Tiago Alves Macambira
- * @namespace macambira
  *
  *
  */

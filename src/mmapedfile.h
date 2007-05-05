@@ -52,7 +52,7 @@ public:
 		:ErrnoSysException(msg){}
 };
 
-/**RIIA-like file resource.
+/**RAII-like file resource.
  *
  * This is almost a clone of Stroustrup example (Sec. 14.4 )
  *
