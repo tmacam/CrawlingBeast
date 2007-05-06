@@ -20,6 +20,7 @@
 #include <ext/hash_set>
 #include <ext/hash_map>
 #include <queue>
+#include <list>
 
 
 
@@ -46,7 +47,9 @@ struct eqdomptr
 
 
 typedef __gnu_cxx::hash_map<std::string, Domain*,str_hash,eqstr> DomainMap;
-typedef std::priority_queue<Domain*,std::vector<Domain*>,DomainPtrSmallest> DomainQueue;
+//typedef std::priority_queue<Domain*,std::vector<Domain*>,DomainPtrSmallest> DomainQueue;
+typedef std::list<Domain*> OldestDomainQueue;
+typedef std::priority_queue<Domain*,std::vector<Domain*>,DomainPtrLargerSitesFirst> LargestDomainQueue;
 typedef __gnu_cxx::hash_map<std::string, URLSet, str_hash, eqstr> DomainURLSetMap;
 
 struct crawl_stat_t {
@@ -54,13 +57,16 @@ struct crawl_stat_t {
 	docid_t crawled;	//!< Number of crawled (visited) pages
 	docid_t downloaded; 	//!< Number of downloaded pages so far
 	docid_t n_domains;	//!< Number of known domains
-	docid_t queue_len;	//!< Lenght of the domain queue
+	docid_t n_active;	//!< Lenght of the active domain queue
+	docid_t n_idle;		//!< Lenght of the idle domain queue
 	time_t next_ts;	//!< timestamp of the first domain in domain_queue
 
 	crawl_stat_t( docid_t seen=0, docid_t crawled=0, docid_t downloaded=0,
-		      docid_t n_domains=0, docid_t queue_len=0,time_t next_ts=0)
-	: seen(seen), crawled(crawled), downloaded(downloaded),
-	n_domains(n_domains), queue_len(queue_len), next_ts(next_ts) {}
+		      docid_t n_domains=0, docid_t n_active=0,
+		      docid_t n_idle=0, time_t next_ts=0)
+	: seen(seen), crawled(crawled), downloaded(downloaded)
+	, n_domains(n_domains), n_active(n_active), n_idle(n_idle)
+	, next_ts(next_ts) {}
 };
 
 
@@ -82,7 +88,7 @@ class DeepThought : public AbstractHyperDimentionalCrawlerDeity {
 	CatholicShameMutex ERRLOG_LOCK;
 	//!DocID generator lock
 	CatholicShameMutex DOCID_LOCK;
-	//! controls access to known_domains and domain_queue
+	//! controls access to known_domains, active_domain_queue and idle_domain_queue
 	BigBangBabyConditional DOMAIN_LOCK; 
 	//! Statistics variables' lock
 	CatholicShameMutex STATS_LOCK;
@@ -106,9 +112,11 @@ class DeepThought : public AbstractHyperDimentionalCrawlerDeity {
 	std::ofstream crawllog;
 
 	//!@name Domain control
+	//!Access to these structures must be done helding DOMAIN_LOCK.
 	//@{
 	DomainMap known_domains;
-	DomainQueue domain_queue;
+	LargestDomainQueue active_domain_queue;
+	OldestDomainQueue idle_domain_queue;
 	//@}
 	
 	docid_t last_docid;
@@ -137,7 +145,8 @@ public:
 	  crawllog_filename(store_dir + "/craw.log"),
 	  crawllog(crawllog_filename.c_str(), std::ios::app),
 	  known_domains(),
-	  domain_queue(),
+	  active_domain_queue(),
+	  idle_domain_queue(),
 	  last_docid(0),
 	  download_counter(0),
 	  crawled_counter(0),
@@ -202,6 +211,13 @@ public:
 	 * @synchronized(DOMAIN_LOCK)
 	 */
 	void enqueueDomain(Domain* dom);
+
+	//!Are both domain queues empty?
+	inline bool domainQueuesEmpty()
+	{
+		return active_domain_queue.empty() &&
+			idle_domain_queue.empty();
+	}
 
 	//@synchronized(ERRLOG_LOCK)
 	void reportBadCrawling(docid_t id, const std::string& url,
@@ -273,6 +289,19 @@ public:
 	docid_t getLastDocId();
 
 	void stopPlease() { this->running = false;}
+
+protected:
+	
+	/**Take elegible domains from idle_domain_queue into
+	 * active_domain_queue.
+	 *
+	 * It also takes care of updating  the domain's
+	 * previous_queue_length.
+	 *
+	 * @warning This function must be called by a thread
+	 * holding DOMAIN_LOCK.
+	 */
+	void refreshActiveDomainQueue();
 
 };
 

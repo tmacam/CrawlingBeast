@@ -134,7 +134,7 @@ void DeepThought::enqueueDomain(Domain* dom)
 	//XXX AutoLock synchronized(DOMAIN_LOCK);
 
 	bool was_empty = false;
-	if (domain_queue.empty()) {
+	if (domainQueuesEmpty()) {
 		was_empty = true;
 	}
 	// should this domain really be enqueued?
@@ -142,7 +142,7 @@ void DeepThought::enqueueDomain(Domain* dom)
 		dom->in_queue = true;
 		// our hopes and expectations
 		// black holes and revelations
-		domain_queue.push(dom);
+		idle_domain_queue.push_back(dom);
 	}
 	// If the list of domains in queue was empty,  there may be threads
 	// waiting to be notified
@@ -172,7 +172,7 @@ void DeepThought::reportBadCrawling(docid_t id, const std::string& url,
 {
 	AutoLock synchronized(ERRLOG_LOCK);
 
-	errlog << id << "\t" << url << "\t" << msg << std::endl;
+	errlog << now() << " " << id << "\t" << url << "\t" << msg << std::endl;
 }
 
 /**Increment the crawled (and downloaded) pages counter(s)
@@ -204,13 +204,13 @@ crawl_stat_t DeepThought::getCrawlingStats()
 
 	// FIXME we probably should be helding DOMAIN_LOCK here...
 	time_t next_ts = 0;
-	if (not domain_queue.empty()) {
-		next_ts = domain_queue.top()->timestamp;
+	if (not idle_domain_queue.empty()) {
+		next_ts = idle_domain_queue.front()->timestamp;
 	}
 
 	return crawl_stat_t(  getLastDocId(), crawled_counter, download_counter,
-				known_domains.size(), domain_queue.size(),
-				next_ts);
+				known_domains.size(),active_domain_queue.size(),
+				idle_domain_queue.size(), next_ts);
 }
 
 
@@ -223,13 +223,29 @@ PageRef DeepThought::popPage()
 	Domain* dom = 0;
 
 	// print currentThread(), "popPage", "WAIT" # DEBUG
-	while (domain_queue.empty()) {
+	while (domainQueuesEmpty()) {
 		DOMAIN_LOCK.wait(); 
 	}
-	if ( not domain_queue.empty() ) {
-		waitUntillSafeToDownload();
-		dom = domain_queue.top();
-		domain_queue.pop();
+	if ( not domainQueuesEmpty() ) {
+		// Queue management...
+		/* Move elegible domains from the idle queue
+		 * This first refresh MUST be done despite the loop
+		 * bellow because there may be "better" and elegible domains
+		 * in the idle queue that otherwise would not be crawled until
+		 * the active queue was empty.
+		 */
+		refreshActiveDomainQueue();
+		while(active_domain_queue.empty()) {
+			/* To avoid sleep/timing issues, we will do this
+			 * inside a loop
+			 */
+			waitUntillSafeToDownload();
+			refreshActiveDomainQueue();
+		}
+		assert( not active_domain_queue.empty());
+
+		dom = active_domain_queue.top();
+		active_domain_queue.pop();
 
 		dom->timestamp = makeNextValidTimestamp();
 
@@ -239,7 +255,7 @@ PageRef DeepThought::popPage()
 			// Ok, I got it, we will ask
 			// someone else to get the robots.txt
 			// for you. Just rest for now.
-			domain_queue.push(dom);
+			idle_domain_queue.push_back(dom);
 			throw;
 		}
 
@@ -249,7 +265,7 @@ PageRef DeepThought::popPage()
 			dom->in_queue = false;
 		} else {
 			// non-empty domains should be added back to the queue
-			domain_queue.push(dom);
+			idle_domain_queue.push_back(dom);
 		}
 	}
 
@@ -261,18 +277,19 @@ void DeepThought::waitUntillSafeToDownload()
 	int time_left = 0;
 	Domain* dom = 0;
 
-	if (not domain_queue.empty() ) {
-		// domain_queue is a heap whose smallest element is in pos. 0
-		dom = domain_queue.top();
+	if (active_domain_queue.empty()) {
+		// Sanity check - there must be idle domains....
+		if ( idle_domain_queue.empty()) {
+			throw std::runtime_error("No domains left to crawl!");
+		}
+
+		dom = idle_domain_queue.front();
 
 		time_left = dom->timestamp - now();
-		// print currentThread(), "popPage", "WAITING", self.domain_queue[0].timestamp, time_left # DEBUG
-		if (time_left <= 0) {
-			return;
-		} else {
-			sleep(time_left);
+		if (time_left > 0) {
+			sleep(time_left + 1); // +1 just to avoid timing issues
 		}
-	}
+	} // else, there is no reason to wait here...
 }
 
 docid_t DeepThought::registerURL(std::string new_url)
@@ -306,7 +323,21 @@ void DeepThought::makedirs(std::string path)
 
 
 
+void DeepThought::refreshActiveDomainQueue()
+{
+	Domain* dom = NULL;
+	time_t eligible_ts = now();
 
+	while( not idle_domain_queue.empty() and 
+		idle_domain_queue.front()->timestamp <= eligible_ts)
+	{
+		dom = idle_domain_queue.front();
+		dom->previous_queue_length = dom->queueLength();
+		// Move the domain from the idle into the active queue
+		idle_domain_queue.pop_front();
+		active_domain_queue.push(dom);
+	}
+}
 
 
 

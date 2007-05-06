@@ -167,7 +167,10 @@ public:
 			     MANAGED FILEBUFER REF
  * ********************************************************************** */
 
-/**Another stupid wrapper to automatically free the memory pointed by a filebuf
+/**A RAII-like wrapper to automatically free the memory pointed by a filebuf.
+ *
+ * @warning It assumes memory was allocated with new[], so do not make it
+ * control a filebuf whose memory was malloc'ed!
  *
  * @warning It is non-copyable!
  */
@@ -181,7 +184,16 @@ class AutoFilebuf {
 public:
 	//!This class has default constructor is harmless - I hope.
 	AutoFilebuf() : f() {}
+
+	/**Constructs from another filebuf, acquiring its memory.
+	 *
+	 * After calling this constructor, this AutoFilebuf will take the
+	 * responsability of "delete[]"ing the memory pointed by the
+	 * suplied filebuf.
+	 *
+	 */
 	AutoFilebuf(const filebuf f): f(f) {};
+
 	~AutoFilebuf(){ if (f.start) delete[] f.start;}
 
 	filebuf getFilebuf() { return f;}
@@ -200,6 +212,13 @@ public:
 
 	/**Deletes the old managed object and copy the
 	 * contents of anoher filebuf.
+	 *
+	 * Calling this function will make this AutoFilebuf deallocate
+	 * any memory it was responsable for.
+	 *
+	 * It will alocate and copy the contents of another filebuf.
+	 * It will not take responsability for the memory of the copied
+	 * filebuf.
 	 */
 	void copy(const filebuf original)
 	{

@@ -56,11 +56,11 @@ PageDownloader&  PageDownloader::parse()
 	std::set<std::string>::const_iterator li;
 	// Converting to unicode
 	UnicodeBugger unicoder(contents.getFilebuf());
-	AutoFilebuf data(unicoder.convert());
+	unicode_contents.reset(unicoder.convert());
 	encoding = unicoder.getEncoding();
 
 	// extracting link and meta information
-	LinkExtractor parser(data.getFilebuf());
+	LinkExtractor parser(unicode_contents.getFilebuf());
 	parser.parse();
 	if (not parser.base.empty()) {
 		base = BaseURLParser(parser.base);

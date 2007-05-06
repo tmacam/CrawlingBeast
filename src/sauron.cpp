@@ -7,6 +7,7 @@ const int Sauron::SLEEP_TIME = 10;
 
 void* Sauron::run()
 {
+	int queue_len = 0;
 	time_t now = 0;
 	time_t time_left=0;
 	crawl_stat_t stats;
@@ -24,6 +25,7 @@ void* Sauron::run()
 			time_left = (stats.next_ts - now);
 		}
 
+		queue_len = stats.n_active + stats.n_idle;
 		log << now << 
 			" s " << stats.seen - old_stats.seen << 
 				" / " << stats.seen <<
@@ -31,8 +33,11 @@ void* Sauron::run()
 				" / " << stats.crawled <<
 			" d " << stats.downloaded - old_stats.downloaded <<
 				" / " << stats.downloaded <<
-			" q " <<  stats.queue_len << " / " << stats.n_domains <<
-			" t " << time_left << std::endl;
+			" q " <<  queue_len << " / " << stats.n_domains <<
+			" t " << time_left <<
+			" i " << stats.n_idle <<
+			" a " << stats.n_active <<
+			std::endl;
 		sleep(SLEEP_TIME);
 	}
 	return (void*)this;

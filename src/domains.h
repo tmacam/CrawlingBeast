@@ -67,6 +67,13 @@ public:
 	//!The last time this domain was crawled.
 	time_t timestamp;
 
+	/**The queue length this domain had when it left the idle_domains queue.
+	 *
+	 * This is used by our AbstractHyperDimentionalCrawlerDeity for
+	 * bookkeeping
+	 */
+	int previous_queue_length;
+
 	/**Constructor.
 	 *
 	 * @param name The name of this domain.
@@ -140,6 +147,8 @@ public:
  * Notice: priority queues are designed to find the element with the
  * "HIGHEST priority". In our case, this is the Domain with the
  * SMALLEST timestamp.
+ *
+ * @deprecated This is not a stable comparison functor for queues.
  */
 struct DomainPtrSmallest {
 	inline bool operator()(const Domain* a, const Domain* b) const
@@ -154,6 +163,45 @@ struct DomainPtrSmallest {
 		}
 	}
 };
+
+/**used in "get oldest" priority queue.
+ * 
+ * Notice: priority queues are designed to find the element with the
+ * "HIGHEST priority". In our case, this is the domain with the
+ * SMALLEST timestamp.
+ */
+struct DomainPtrOldest {
+	inline bool operator()(const Domain* a, const Domain* b) const
+	{
+		return a->timestamp > b->timestamp;
+	}
+};
+
+/**Used in "larger-sites-first" priority queue.
+ *
+ * 
+ * Notice: priority queues are designed to find the element with the
+ * "HIGHEST priority". In our case, this is the Domain with the
+ * BIGGEST queue.
+ *
+ * For domains with same size, the one with the smallest timestamp
+ * takes preference.
+ */
+struct DomainPtrLargerSitesFirst {
+	DomainPtrOldest oldest;
+	inline bool operator()(const Domain* a, const Domain* b) const
+	{
+		// For domains with same queue length
+		if ( a->previous_queue_length == b->previous_queue_length ) {
+			// the oldest takes prefence
+			return oldest(a,b);
+		}
+
+		// The preffered one is the one with the biggest queue
+		return a->previous_queue_length < b->previous_queue_length;
+	}
+};
+
 
 /* ********************************************************************** *
 				   EXCEPTIONS

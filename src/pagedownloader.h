@@ -117,6 +117,8 @@ public:
 
 	AutoFilebuf contents;
 
+	AutoFilebuf unicode_contents;
+
 	typedef URLSet url_set_t;
 	static const std::string DEFAULT_ENCODING;
 
@@ -130,7 +132,7 @@ public:
 		url(_url), base(url),
 		follow(true), index(true),
 		links(), encoding(DEFAULT_ENCODING),
-		contents()
+		contents(), unicode_contents()
 	{ }
 
 	/**Retrieve and process this page.
@@ -168,32 +170,6 @@ public:
 	void writeMeta(std::ostream& fh);
 
 };
-
-/*
-def get_page(url):
-	p = PageDownloader(url)
-	p.get()
-	return (p.base, p.parser.links, p.links, p.encoding)
-
-if __name__ == '__main__':
-    import sys
-    if len(sys.argv) > 1 and sys.argv[1] != '-v':
-        for url in sys.argv[1:] :
-            (base, links, norm_links, encoding) = get_page(url)
-            print "URL:",url
-            print "\tBASE:",base
-            print "\tencoding:", encoding
-            print "\tlinks (não normalizados):"
-            for l in links: print "\t    ", l
-            print "\tlinks normalizados:"
-            for l in norm_links: print "\t    ", l
-            print "\n\n"
-    else:
-        _test()
-        print "Done."
-
-*/
-
 
 
 

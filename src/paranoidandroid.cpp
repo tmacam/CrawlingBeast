@@ -31,7 +31,7 @@ void ParanoidAndroid::savePageAndMetadata(docid_t docid, PageDownloader& d)
 	d.writeMeta(meta);
 	// Write crawling contents
 	data.open(data_filename.c_str());
-	filebuf contents = d.contents.getFilebuf();
+	filebuf contents = d.unicode_contents.getFilebuf();
 	data.write(contents.start, contents.len());
 	meta.close();
 	data.close();

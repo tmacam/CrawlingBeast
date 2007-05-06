@@ -5,7 +5,7 @@ Domain::Domain(std::string name,const URLSet& pages,
 	bool unserializing)
 : known_pages(), pages_queue() , manager(manager),
   got_robots(false), robots_docid(0), rules(), name(name),
-  in_queue(false), timestamp(0)
+  in_queue(false), timestamp(0), previous_queue_length(0)
 {
 	// FIXME if we had a url->docid map we could
 	// FIXME see if we already downloaded the robots.txt

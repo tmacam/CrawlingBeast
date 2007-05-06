@@ -1,7 +1,7 @@
 #ifndef __SAURON_H
 #define __SAURON_H
 /**@file sauron.h
- * @brief O cara do olhão
+ * @brief The eye without lids, lord of the evil and statistics
  *
  * Statistics class.
  */
@@ -9,6 +9,10 @@
 #include "deepthought.h"
 #include "threadingutils.h"
 
+/**@brief The eye without lids, lord of the evil and statistics.
+ *
+ * This is our "statistics gathering and reporting" class.
+ */
 class Sauron : public BaseThread {
 	
 	DeepThought& manager;
