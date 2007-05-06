@@ -20,7 +20,6 @@
 #include <ext/hash_set>
 #include <ext/hash_map>
 #include <queue>
-#include <list>
 
 
 
@@ -48,7 +47,7 @@ struct eqdomptr
 
 typedef __gnu_cxx::hash_map<std::string, Domain*,str_hash,eqstr> DomainMap;
 //typedef std::priority_queue<Domain*,std::vector<Domain*>,DomainPtrSmallest> DomainQueue;
-typedef std::list<Domain*> OldestDomainQueue;
+typedef std::deque<Domain*> OldestDomainQueue;
 typedef std::priority_queue<Domain*,std::vector<Domain*>,DomainPtrLargerSitesFirst> LargestDomainQueue;
 typedef __gnu_cxx::hash_map<std::string, URLSet, str_hash, eqstr> DomainURLSetMap;
 
