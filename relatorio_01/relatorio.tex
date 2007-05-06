@@ -21,7 +21,7 @@
 \section{Introdução}
 
 O primeiro trabalho prático da disciplina de Recuperação de Informação
-consiste na elaboração de um \emph{crawler} industrial para paginas Web.
+consiste na elaboração de um \emph{crawler} industrial para páginas Web.
 Esse \emph{crawler} deveria atender vários requisitos, como disposto no
 enunciado do trabalho~\cite{tp1}, dentre os quais podemos citar:
 \begin{itemize}
@@ -43,7 +43,7 @@ disporemos seus significados aqui.
 \begin{description}
 \item[URL pendente:] Uma URL que foi descoberta mas não foi requisitada aos seu
 servidor.
-\item[Domínio:] Um domínio nada mais é do que um nome de domínio
+\item[Domínio:] Um domínio nada mais é do que um nome de domínio DNS
 (DNS \emph{domainname}) atrelado a um
 endereço IP. Essa mesma terminologia é costumeiramente utilizada quando
 tratamos de DNS~\cite{rfc1034}.
@@ -51,7 +51,7 @@ tratamos de DNS~\cite{rfc1034}.
 conteúdo nela presente, geralmente consistindo de marcação de conteúdo HTML e,
 no caso de arquivos \texttt{robots.txt}, de conteúdo com sintaxe de arquivos
 \texttt{robots.txt}.
-\item[Sítio:] Uma localidade na internet, geralmente representada um um domínio
+\item[Sítio:] Uma localidade na Internet, geralmente representada um um domínio
 e um conjunto de sub-domínios. Apesar de ter o mesmo significado do termo
 inglês \emph{site}, preferimos utilizar o nome em português. É importante
 salientar que um sítio pode ser composto por mais de um domínio.
@@ -98,10 +98,11 @@ escalonador gerenciar e distribuir URLs a serem vasculhadas pelos
 coletores. Esse processo de seleção deve garantir que os sítios
 visitados não sejam soterrados por requisições, que essas requisições
 respeitam as politicas indicativas para coleta dispostas nos sítio e que
-a coleção de paginas baixadas tenha uma amostra relevante das páginas na
-internet.
+a coleção de páginas baixadas tenha uma amostra relevante das páginas na
+Internet.
 
-\item[Armazém de Páginas] As páginas coletadas podem não sofrer toda a
+\item[Armazém de Páginas] As páginas coletadas podem não sofrer 
+de imediato toda a
 análise necessária para os propósitos de uma máquina de busca. Assim
 sendo, será necessário guardar essas páginas para posterior
 processamento. Esse componente de um sistema de \emph{web crawling} é o
@@ -134,7 +135,7 @@ resolução de nome.
 A utilização de \emph{caches} pode aliviar esse problema, mas é
 importante ter em mente que o sistema de resolução de nomes na Internet,
 o DNS, permite que nomes de domínio tenham uma valida tão ínfima quanto
-o tempo de duração da própria requisição, o que de encontro com a
+o tempo de duração da própria requisição, o que vai de encontro com a
 utilização de \emph{caches}.
 
 \subsubsection{Normalização de mapas de
@@ -159,7 +160,7 @@ documentos escritos em mapas de caracteres distintos e de recodificá-los
 para um mapa de caractere comum  repercute não somente na capacidade de
 realizar \emph{parsing} de documentos, mas também na capacidade de
 indexação e extração de \emph{links} do mesmo, uma vez a forma de
-representar caracteres não-ASCII irá afetar diretamente a capacidade de
+representar caracteres irá afetar diretamente a capacidade de
 normalizar o vocabulário e de normalizar URLs.
 
 \subsubsection{Descoberta de mapa de
@@ -209,7 +210,7 @@ codificação do documento, esse será utilizado.
 http-equiv="Content-Type" ...> }, o mapa de caracteres declarado nessa
 tag será usado.
 \item Finalmente, como última opção, existe a abordagem de detecção de
-mapas de caracteres por heurísticas compostas~\cite{mozillaiuc}
+mapas de caracteres por heurísticas compostas~\cite{mozillaiuc}.
 \end{enumerate}
 
 \subsubsection{\emph{Parsing} de páginas}
@@ -218,7 +219,8 @@ Apesar de ser um problema de relevância maior no processo de indexação
 de documentos, o \emph{parsing} de documentos HTML também é um problema
 a ser enfrentado por um extrator de \emph{links}.
 
-Os documentos HTML existentes na \emph{Web} atual não totalmente válidos
+Os documentos HTML existentes na \emph{Web} atual geralmente não são
+considerados válidos
 e/ou bem formados se confrontados com os padrões existentes e publicados
 pela W3C para HTML e XHTML~\cite{html4tr, bray2006xml}, sendo comumente
 uma mistura dos dois padrões. Uma busca por URLs de maneira simples como
@@ -233,7 +235,7 @@ URLS.
 \subsubsection{Normalização de URLs}\label{prob:urlnorm}
 
 Outro aspecto importante de um \emph{crawler} é a sua capacidade de
-normalizar URLs. A normalização a vários propósitos mas, sobretudo, para
+normalizar URLs. A normalização serve a vários propósitos mas, sobretudo, para
 evitar a duplicação de esforços na obtenção de páginas que são
 essencialmente a mesma. Existem várias técnicas que podem ser utilizadas
 para o processo de normalização de URLs, cada uma delas se aplicando a
@@ -295,28 +297,41 @@ mecanismo \texttt{robots.txt}~\cite{robotstxt}. Depois, se para alguns
 servidores compartilhados esse mecanismo aparentar ser muito agressivo,
 para domínios servidos por CDNs essa decisão será por demais suave.
 
-O conteúdo coletado será limitado apenas a conteúdo HTML. Verificações
-por essa condição serão realizadas quando do envio da requisição HTTP ao
-servidor e logo após a recepção do conteúdo da página. Qualquer outro
-conteúdo, mesmo que seja HTML, se informado incorretamente pelo
+O conteúdo \textbf{coletado será limitado apenas a conteúdo HTML}.
+Verificações por essa condição serão realizadas quando do envio da
+requisição HTTP ao
+servidor, pelo envio de um cabeçalho \texttt{Accept}, e logo após a
+recepção do conteúdo da página, pela verificação do conteúdo do
+cabeçalho \texttt{Content-Type}. A segunda
+verificação é necessária pois nem todos os servidores respeitam a
+condição imposta pelo cabeçalho \texttt{Accept} enviado na requisição da
+página. Qualquer outro
+conteúdo ou mesmo conteúdo HTML, caso este seja informado incorretamente pelo
 servidor, será ignorado.
 
 Outra decisão adotada diz respeito a forma com que lidamos com erros. Em
-nossa implementação, qualquer problema que ocorra durante a requisição
-de uma página, desde um erro de ``página inexistente'' até uma
-solicitação de DNS que estourou o seu limite de tempo, será tratado
-como erros fatal, ou seja, nenhuma nova tentativa de obter novamente
+nossa implementação, \textbf{qualquer problema que ocorra durante a requisição
+de uma página}, desde um erro de ``página inexistente'' até uma
+solicitação de DNS que estourou o seu limite de tempo, \textbf{será tratado
+como erros fatal}, ou seja, nenhuma nova tentativa de obter novamente
 aquele recurso será realizada.
 
 Respeitaremos tanto o padrão \texttt{robots.txt} quanto as
-\emph{tags} \texttt{meta}. A solicitação do arquivo \texttt{robots.txt}
+\emph{tags} \texttt{meta}, quando este estiverem disponíveis nos sítios
+e nas páginas visitadas. A solicitação do arquivo \texttt{robots.txt}
 ocorrerá antes da requisição da primeira página de um domínio e
 respeitará os 30 segundos de intervalo entre requisições, como comentado
 na sub-seção~\ref{prob:robots}.
 
+\textbf{Páginas dinâmicas serão visitadas com o conteúdo do componente
+\emph{query} das sua URLs removidos.} Esta pode não ser a melhor maneira
+de lidar com \emph{crawling} de conteúdo dinâmico na \emph{Web} mas é
+apresenta-se como uma boa solução de compromisso.
+
 Finalmente, tendo em vista os pontos discutidos nas
 sub-seções~\ref{prob:charmapnorm} e \ref{prob:urlnorm}, decidimos que
-todo o conteúdo de páginas HTML coletado será covertido para UTF-8 antes
+\textbf{todo o conteúdo de páginas HTML coletado será covertido para
+UTF-8} antes
 de que se realize o \emph{parsing} do mesmo.
 
 
@@ -403,30 +418,77 @@ integrado, tudo isso em um modelo de orientação a objetos
 similar ao do C++. Devido a isso, várias das boas práticas de
 programação encorajadas pelo ambiente de prototipação foram herdadas no
 código em C++. Uma dessas heranças foi um conjunto substancial de \emph{unit
-tests} criados para os
+tests}, que em C++ totalizam 105 conjuntos testes distintos,
+ criados sobretudo para os
 \emph{parsers} de HTML e de URLs, que checam um conjunto extensivo de
 erros de mal-formidade para esses dois padrões. No código em C++ a
 solução de \emph{unit testing} adotada foi o CxxTest~\cite{cxxtest}.
 
-Tanto o código do protótipo quanto o código das Unit Teste geradas para
-ambos os códigos encontra-se anexado a esse documento.
+Tanto o código do protótipo quanto o código dos \emph{unit tests} gerados para
+ambos os códigos encontram-se anexados a esse documento.
+
+\subsection{Políticas de escalonamento}
+
+Durante a elaboração e testes da nossa implementação, realizamos testes
+com duas política de escalonamento de URLs distintas:
+\begin{description}
+\item[Depth-First (FD):] As páginas e os domínios são vizitados na ordem que
+são encontrados no processo de \emph{crawling};
+\item[Largest Site First (LSF):] Os domínios são visitados de modo a priorizar
+aqueles que possuem a maior lista de URLs pendentes até aquele momento.
+\end{description}
+
+Em seu artigo à WWW de 2005, Beaze-Yates discute as vantagens e
+desvantages desses e de outros mecanismos de
+escalonamento~\cite{baezayates2005crawling}.
+
+
 
 \subsection{Estruturas de dados}
 
-Nossa implementação usa as seguintes estruturas de dados para gerenciar
-o escalonamento de URLs~\cite{cormen-algorithms}:
+Para a política DF, nossa implementação usa as seguintes estruturas de
+dados para gerenciar o escalonamento de URLs~\cite{cormen-algorithms}:
 
 \begin{itemize}
 \item Uma \emph{hashtable} de domínios conhecidos. Busca e inserção
 nessa estrutura possui uma complexidade de tempo médio de \(O\left(1 
 \right)\).
-\item Uma lista de prioridades de domínios pendentes, implementada como
-uma \emph{head}. Inserção, e remoção nessa estrutura possuem
+\item Uma fila de prioridades de domínios pendentes, implementada como
+uma \emph{heap} ordenada pelo tempo da última visita ao domínio.
+Inserção, e remoção nessa estrutura possuem
 complexidades de tempo no pior caso de \(O\left(\log n\right)\). A
 localização do elemento de maior prioridade leva tempo constante.
 \end{itemize}
 
-Cada domínio, por sua vez, apresenta estruturas similares:
+Para a política LSF, nossa implementação usa as seguintes estruturas de
+dados para gerenciar o escalonamento de URLs:
+
+\begin{itemize}
+
+\item Uma \emph{hashtable} de domínios conhecidos. Busca e inserção
+nessa estrutura possui uma complexidade de tempo médio de \(O\left(1 
+\right)\).
+
+\item Uma fila de domínios inativos. Essa fila contêm domínios que
+anda não podem ser coletados pois o intervalo mínimo de tempo entre
+visitas consecutivas para eles ainda não foi atingido. Essa fila foi
+implementada como uma fila com terminação dupla (DEQue, ou \emph{Double
+Ended Queue}), e a inserção e remoção de nós nessa lista leva tempo
+constante. Por construção, ela possui uma lista de domínios ordenados
+pelo tempo da última visita de maneira crescente.
+
+\item Uma fila de prioridades de domínios ativos. Essa estrutura contém
+uma lista de todos os domínios que podem ser visitados naquele instante
+e é implementada como uma \emph{heap} ordenada pelo tamanho da fila de
+URLs pendentes de cada domínio. Inserção, e remoção nessa estrutura
+possuem complexidades de tempo no pior caso de \(O\left(\log n\right)\).
+A localização do elemento de maior prioridade leva tempo constante.
+
+\end{itemize}
+
+
+Cada domínio, por sua vez, apresenta a mesma estrutura em ambas as
+políticas de escalonamento:
 \begin{itemize}
 \item Um conjunto de \emph{paths} conhecidos dentro daquele domínio,
 implementado como um \emph{hashset} e possuindo as mesmas complexidades
