@@ -213,7 +213,7 @@ tag será usado.
 mapas de caracteres por heurísticas compostas~\cite{mozillaiuc}.
 \end{enumerate}
 
-\subsubsection{\emph{Parsing} de páginas}
+\subsubsection{\emph{Parsing} de páginas}\label{prob:html}
 
 Apesar de ser um problema de relevância maior no processo de indexação
 de documentos, o \emph{parsing} de documentos HTML também é um problema
@@ -273,6 +273,9 @@ acrescentados à lista de \emph{links} de um
 Além disso, um dos requisitos desse trabalho era que nenhuma requisição
 a um dado servidor fosse realizada em um intervalo inferior a 30 segundos.
 
+
+%rel=``nofollow'' http://googleblog.blogspot.com/2005/01/preventing-comment-spam.html  
+
 %\subsubsection{Escalonamento de URLs e gerência de URLs visitadas}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROJETO %%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -297,7 +300,7 @@ mecanismo \texttt{robots.txt}~\cite{robotstxt}. Depois, se para alguns
 servidores compartilhados esse mecanismo aparentar ser muito agressivo,
 para domínios servidos por CDNs essa decisão será por demais suave.
 
-O conteúdo \textbf{coletado será limitado apenas a conteúdo HTML}.
+O \textbf{conteúdo coletado será limitado apenas a conteúdo HTML}.
 Verificações por essa condição serão realizadas quando do envio da
 requisição HTTP ao
 servidor, pelo envio de um cabeçalho \texttt{Accept}, e logo após a
@@ -307,7 +310,11 @@ verificação é necessária pois nem todos os servidores respeitam a
 condição imposta pelo cabeçalho \texttt{Accept} enviado na requisição da
 página. Qualquer outro
 conteúdo ou mesmo conteúdo HTML, caso este seja informado incorretamente pelo
-servidor, será ignorado.
+servidor, será ignorado. Em nossa implementação são reconhecidos como
+conteúdo HTML páginas servidos com os seguintes tipos
+MIME~\cite{xhtml1, html4tr, xhtmlmediatypes, rfc3236}:
+\texttt{text/html}, \texttt{application/xhtml+xml} e conteúdo do tipo
+\texttt{application/\emph{*}-xml}.
 
 Outra decisão adotada diz respeito a forma com que lidamos com erros. Em
 nossa implementação, \textbf{qualquer problema que ocorra durante a requisição
@@ -330,9 +337,10 @@ apresenta-se como uma boa solução de compromisso.
 
 Finalmente, tendo em vista os pontos discutidos nas
 sub-seções~\ref{prob:charmapnorm} e \ref{prob:urlnorm}, decidimos que
-\textbf{todo o conteúdo de páginas HTML coletado será covertido para
+\textbf{todo o conteúdo de páginas HTML coletado será convertido para
 UTF-8} antes
-de que se realize o \emph{parsing} do mesmo.
+de que se realize o \emph{parsing} do mesmo. Além disso, o conteúdo será
+salvo compactado, para economizar acessos ao disco.
 
 
 \subsection{Componentes}
@@ -418,7 +426,7 @@ integrado, tudo isso em um modelo de orientação a objetos
 similar ao do C++. Devido a isso, várias das boas práticas de
 programação encorajadas pelo ambiente de prototipação foram herdadas no
 código em C++. Uma dessas heranças foi um conjunto substancial de \emph{unit
-tests}, que em C++ totalizam 105 conjuntos testes distintos,
+tests}, que em C++ totalizam 105 testes distintos,
  criados sobretudo para os
 \emph{parsers} de HTML e de URLs, que checam um conjunto extensivo de
 erros de mal-formidade para esses dois padrões. No código em C++ a
@@ -432,7 +440,7 @@ ambos os códigos encontram-se anexados a esse documento.
 Durante a elaboração e testes da nossa implementação, realizamos testes
 com duas política de escalonamento de URLs distintas:
 \begin{description}
-\item[Depth-First (FD):] As páginas e os domínios são vizitados na ordem que
+\item[Breadth-First (BF):] As páginas e os domínios são vizitados na ordem que
 são encontrados no processo de \emph{crawling};
 \item[Largest Site First (LSF):] Os domínios são visitados de modo a priorizar
 aqueles que possuem a maior lista de URLs pendentes até aquele momento.
@@ -446,7 +454,7 @@ escalonamento~\cite{baezayates2005crawling}.
 
 \subsection{Estruturas de dados}
 
-Para a política DF, nossa implementação usa as seguintes estruturas de
+Para a política BF, nossa implementação usa as seguintes estruturas de
 dados para gerenciar o escalonamento de URLs~\cite{cormen-algorithms}:
 
 \begin{itemize}
@@ -495,8 +503,8 @@ implementado como um \emph{hashset} e possuindo as mesmas complexidades
 de uma \emph{hashtable}.
 \item Uma fila FIFO de \emph{paths} pendentes nesse domínio, ou seja de
 \emph{paths} que precisam ser coletados. Essa lista é implementada como
-uma lista duplamente-encadead e possui tempo constante para remoção do
-primeiro elemento e parar acréscimo ao fim de um novo elemento.
+uma lista duplamente encadeada e possui tempo constante para remoção do
+primeiro elemento e parar acréscimo ao seu final de um novo elemento.
 \end{itemize}
 
 
@@ -506,116 +514,149 @@ Nesta seção discutiremos decisões de implementação, problemas e soluções
 encontradas no desenvolvimento de cada um dos componentes da nossa
 solução.
 
-\subsubsection{Parser}
+\subsubsection{\emph{Parsers}}
 
-O parser deveria ser mais do que um simples extrator de URL de tags 'a'.
+Tanto a extração de \emph{links} como a interpretação e normalização de
+URLs apresentam algumas características em comum. Para aproveitar esse
+fato e a duplicação código, foi criado uma pequena infra-estrutura para
+a construção de \emph{parsers} recursivos-descendentes
+(\texttt{BaseParser}). Essa implementação busca evitar cópias
+desnecessárias de dados ao fazer uso extensivo de uma estrutura própria
+(\texttt{filebuf}) em lugar de strings C++ convencionais.
 
-Como não era possível usar um parser HTML pronto nem depender de expressões
-regulares, acaba sendo necessário então escrever um pequeno parser \emph{push}
-para HTML.
+\subsubsection{\emph{Parsing} de documentos HTML e extração de
+\emph{links}}
 
-Toda a infra-estrutura criada para esse parar será futuramente re-utilizada
-para o indexador. Dessa forma, preferimos no extender um pouco mais na sua
-criação, garantindo assim ganho de tempo na versao do indexador e, ao mesmo
-tempo, garantindo que o nosso parser seja mais do que capaz de lidar com a
-tarefa que lhe é solicitada no momento.
+O \texttt{LinksExtractor} é nossa implementação de um extrator de
+\emph{links} em um documento HTML. Ele é construído sobre um
+\emph{parser} genérico para documentos XML e HTML, o
+\texttt{SloppyHTMLParser}. Ele recupera \emph{links} em \emph{tags}
+\texttt{LINK}, \texttt{IFRAME}, \texttt{FRAME}, \texttt{AREA}, além da
+tradicional \emph{tag} \texttt{A}.
 
-Observer os documentos HTML existentes na Web atual não totalmente válidos e/ou
-bem formado se confrontados com os padroes existentes e publicados pela W3C
-para html. Mais Do que isso, os documentos da web atual são uma mistura de
-documentos HTML e XML e nem todos eles são documentos bem formados. Dessa forma
+O \texttt{SloppyHTMLParser}, por sua vez foi construído utilizando
+infra-estrutura provida pelo \texttt{BaseParser} e é na verdade um
+\emph{parser} completo e versátil para documentos HTML e XML. Sua
+elaboração foi feita tendo em vista as especificações dos dois padrões
+de documentos acima, e o comportamento que navegadores \emph{Web}
+tradicionais apresentam quando defrontados com documentos mal-formados.
+A interface que provida para seus usuários é similar à de \emph{parsers}
+SAX XML tradicionais~\cite{saxxml, bray2006xml, html4tr}. Ao contrário
+destes últimos, ele e é capaz de lidar com uma ampla variedade de
+construções XML e HTML, sendo bastante tolerante a documentos
+mal-formados. Além disso, ele reconhece \emph{tags} HTML que devem ter
+seu conteúdo ignorado por \emph{parsers} desse tipo de documento, como
+comentado na seção~\ref{prob:html}.
 
-\begin{itemize}
+Toda a infra-estrutura criada para o \texttt{SloppyHTMLParser} será
+futuramente re-utilizada para o indexador. Dessa forma, preferimos no
+extender um pouco mais na sua criação, garantindo assim ganho de tempo
+na versão do indexador e, ao mesmo tempo, garantindo que o nosso
+\texttt{parser} e as ferramentas que o usam, como o
+\texttt{LinkExtractor},  sejam mais do que capazes de lidar com as
+tarefas que lhe são solicitadas no momento.
 
-\item Devido a essa mescla de XML e HTML, o parser deveria ser capaz de lidar
-com a maioria das construções de XML e HTML e ser capaz de lidar com documentos
-de se situam no interim desses dois padrões, mesmo em se tratando de erros.
+\subsubsection{Interpretação e Normalização de URLs}
 
-\item Mais do que isso, o parser deve ser capaz de lidar dom
+A interpretação e normalização de URLs fica a cargo do
+\texttt{BaseURLParser}. Sua criação foi fortemente influenciada pela RFC
+3986, tanto na forma de interpretar os vários componentes de uma URI mas
+também na forma de realizar a normalização de cada um dos componentes de
+uma URL~\cite{rfc3986}:
 
-\item o parser deveria ser bem toleante a erros e tolerar documentos
-mal-formados da mesma forma com que os navegadores toleram. 
+\begin{description}
+\item[Schema:] Nosso parser apenas lida com URLs relativas ou com URLs
+absolutas com esquema HTTP. Quando presente, esse componente é
+normalizado colocando-se todas as suas letras em minúsculo.
 
-Oscilar entre os padrões.... Tags de fechamento, de abertura, atributos sem
-valor, com seu conteudo não delimitado por \" ou \'. Tentamos conciliar o
-compromisso de pegar todo o texto que um navegador fosse capaz de interpretar
-mas lidar com erros corretamente.
+\item[Authority:] Como não interessa à nossa aplicação, o sub-componente de
+informações de autenticidade de usuário é descartado. Informações sobre
+o \emph{hostname} e número do porto da URL, caso presentes, são
+validados e normalizados. A normalização para o sub-componente
+\emph{hostname} é feita colocando-se todos as suas letras em minúsculo e
+removendo o último ponto no seu final, caso este exista. No caso do
+porto, caso o \emph{schema} dessa URL seja HTTP e o porto tenha valor
+80, esse valor é suprimido da URL final.
 
-\end{itemize}
+\item[Path:] O conteúdo desse componente é normalizado através de
+    \begin{itemize}
+    \item  remoção de segmentos de ponto, seções 5.2.4 e 6.2.2.3 da RFC 3986;
+    \item  normalização de codificação de porcento (\emph{Percent Encoding}), 
+           seções 6.2.2.2 e 2.1;
+    \item  normalização da barra final (\emph{trailing slash}), seção
+           6.2.3;
+    \end{itemize}
 
-Dessa forma, para que o parser cumprisse sua função de extrair o máximo de
-informação útil possível de páginas, de maneira similar ao navegadores. Para
-isso, tentamos garantir que ele se comporta-se tão próximo dos modelos de
-fererência quanto possível (Firefox, BeautifulSoup). Entretanto, isso nos levou
-a algumas escolhas quanto á forma de lidar com erro que vão de encontro até
-mesmo com a especificação de XML e HTML.
+\item[Query e Fragment:] O conteúdo desses componentes não nos interessa
+nesse trabalho e portanto é descartado durante o processo de
+\emph{parsing}.
 
-No fragmento abaixo, de acordo com as especificaçõe de XML, não existe nenhuma tag:
-%\texttt{ a#whatever duplas="x" simples='what' html=antigo attrhtml / }
+\end{description}
 
-Isso deve-se pela especificação do que pode ser o nome (\emph{Name}) de uma
-tag, e o caractere \& não faz parte dele. Entretanto, para esse exemplo, o
-firefox reconhece a existência de uma tag 'a\&whatever', enquanto o
-BeautifulSoup reconhece a existência de uma tag 'a'.
+Dessa forma, durante o processo de interpretação da URL já conseguimos
+normalizá-la, transformando URLs como
+\begin{tabular}{c}
+\texttt{\small HTtP://WWW.exemple.com.:80/ /a/c/./../../g/não/}
+\end{tabular}
+em
+\begin{tabular}{c}
+\texttt{\small http://www.exemple.com/\%20/g/n\%E3o/}
+\end{tabular}
 
-Nossa queremos seguir o firefox tanto quanto possível.
+Além disso, o processo de resolução de URLs relativas implementado no
+\texttt{BaseURLParser} segue fielmente o procedimento especificado na
+seção 5.2.3 da RFC 3986.
 
-\subsubsection{Tags Especiais}
+\subsubsection{Detecção e Normalização de Mapas de Caracteres}
 
-Script, Style, textarea e blocos XML CDATA não devem ter seu conteúdo
-processados pelo parser.
+O componente \texttt{UnicodeBugger} é o responsável em nossa
+implementação pela detecção e normalização de mapas de caracteres.  Todo
+o conteúdo coletado, antes de ser processado, é convertido para UTF-8
+por instâncias desse componente, resolvendo os problemas comentados na
+seção~\ref{prob:charmapnorm}.
 
-Tags empty (que fecham sozinhas). Por isso, nosso parser difere de outros por
-já sinalizar que uma tag é auto-closing. Isso permite ao programador
-diferenciar se essa é uma Start Tag normal, o que torna possívevl ao usuário
-avançar forçosamente o texto para o local onde a tag de fechamento está,
-ignorando assim seu conteúdo e protegendo o próprio parser, ou se ela é uma tag
-Empty, o que não torna necessário nenhuma intervenção do usuário.
+O processo de detecção de mapas de caracteres segue os passos descritos
+anteriormente na seção na seção~\ref{prob:charmapdetection},
+excetuando-se pelo último deles, o de heurísticas compostas, por ser
+muito dispendiosa~\cite{mozillaiuc}.
 
-\subsubsection{URL}
+\subsubsection{O coletor de páginas}
 
-RFC 3986
-
-http://en.wikipedia.org/wiki/URL\_normalization
-http://en.wikipedia.org/wiki/Percent-encoding
-
-
-
-% vim:fileencoding=utf-8:syn=tex:ai:tw=72:smartindent:
-% vim:spell:spelllang=pt:
-
-\subsubsection{Detecção de Mapas de Caracteres}
-
-\subsubsection{Mapas de Caracteres, Unicode e Codificação de Texto}
-BOM, UTF-8
-
-\subsubsection{Problemas na decodificação de textos na Web}
-
-\subsubsection{Solução encontrada}
-
-KISS.
-
-Tentaremos seguir a RFC 3023.
-\subsection{Políticas de blah para robôs}
-http://www.robotstxt.org/wc/meta-user.html
-
-rel=``nofollow'' http://googleblog.blogspot.com/2005/01/preventing-comment-spam.html  
+Na nossa implementação, cada elemento coletor de páginas nada mais é do
+que uma \emph{thread} executando uma instância do componente
+\texttt{ParanoidAndroid}. Esse componente é o responsável por orquestrar
+o uso dos outros componentes, requisitar páginas, extrair URLs e
+solicitar a resolução de URLs relativas em URLs absolutas e enviar as
+novas URLs descobertas ao gerente e escalonador de nossa implementação,
+o \texttt{DeepThought}.
 
 
-
-\subsubsection{Limitando o conteúdo baixado}
-
-Apenas HTML 
-
-w3c - xhtml, seção 5.
-RFC 3236
-http://www.w3.org/TR/2002/NOTE-xhtml-media-types-20020801/
 
 \subsection{Dificuldades}
 
 \subsection{Considerações sobre Gerência de Memória de Regiões críticas}
 
 Resource Aquisition Is Initialization.
+
+\subsection{Libcurl e rede assíncrona}
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Testes e Resultados}
+
+\subsection{Ambiente experimental}
+
+\subsection{Resultados}
+
+\subsubsection{Política \emph{Breadth First}}
+
+\subsubsection{Política \emph{Largest Site First}}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusões}
+
 
 \subsection{Problemas encontrados e Melhorias futuras}
 
@@ -658,8 +699,9 @@ como uma versão consideravelemnte ingênua das idéias por trás de algorítmos
 como o PageRank, poderiam contorar de maneira elegantes os buracos negros de
 domínio
 
-% Bibliografia
-\nocite{stroustrup97}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% Bibliografia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 \bibliographystyle {plain}
 \bibliography{relatorio}
 
