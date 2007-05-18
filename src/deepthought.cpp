@@ -198,11 +198,12 @@ void DeepThought::incCrawled(bool downloaded, docid_t id, const std::string& url
 
 
 //@synchronized(STATS_LOCK)
+//@synchronized(DOMAIN_LOCK)
 crawl_stat_t DeepThought::getCrawlingStats()
 {
 	AutoLock synchronized(STATS_LOCK);
+	AutoLock synchronized_domains(DOMAIN_LOCK);
 
-	// FIXME we probably should be helding DOMAIN_LOCK here...
 	time_t next_ts = 0;
 	if (not idle_domain_queue.empty()) {
 		next_ts = idle_domain_queue.front()->timestamp;

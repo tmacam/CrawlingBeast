@@ -281,6 +281,9 @@ public:
 	/**Retrieve crawling statistics.
 	 *
 	 * @synchronized(STATS_LOCK)
+	 * @synchronized(DOMAIN_LOCK)
+	 * @note this function calls getLastDocId, which in turn is
+	 *       syncronized on DOCID_LOCK.
 	 */
 	crawl_stat_t getCrawlingStats();
 
