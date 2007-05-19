@@ -93,7 +93,8 @@ bool endswith(const std::string& u, const std::string& end );
 //@{
 
 const std::string LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const std::string WHITESPACE = " \t\n\x0b\x0c\r";
+const char _WHITESPACE[] = " \t\n\x0b\x0c\r\0";
+const std::string WHITESPACE(_WHITESPACE,sizeof(_WHITESPACE));
 const std::string DIGITS = "0123456789";
 const std::string HEXDIGITS = "0123456789abcdefABCDEF";
 

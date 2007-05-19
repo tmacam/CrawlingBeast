@@ -1,77 +1,9 @@
-#include "gzstream.h"
-#include "filebuf.h"
-#include "mmapedfile.h"
-#include "unicodebugger.h"
+#include "zfilebuf.h"
 
 #include <iostream>
 #include <list>
 #include <memory>
 
-class GZFileWrapperException: public ErrnoSysException {
-public:
-	GZFileWrapperException (std::string msg="")
-                :ErrnoSysException(msg){}
-};
-
-/**RAII-like wrapper for gzFile.
- *
- */
-class GZFileWrapper {
-public:
-	gzFile fh;
-
-	GZFileWrapper(const char* filename, const char* mode = "r")
-	: fh(NULL)
-	{
-		if (NULL == (fh = gzopen(filename, mode)) ) {
-			throw GZFileWrapperException("gzopen");
-		}
-	}
-
-	~GZFileWrapper()
-	{
-		if (fh) {
-			gzclose(fh);
-		}
-	}
-
-	bool eof()
-	{
-		if (fh == NULL){
-			throw GZFileWrapperException("File not opened");
-		}
-
-		return gzeof(fh) == 1;
-	}
-
-	int read(char* buf, unsigned len)
-	{
-		int ret = 0;
-
-		ret = gzread(fh,buf,len);
-
-		if (ret < 0) {
-			throw GZFileWrapperException("error in gzread");
-		}
-
-		return ret;
-	}
-};
-
-/**Decompresses a gzip file into a filebuf.
- *
- * Use zlib's functions to read and decompress a gzip file into memory.
- * The memory needed to hold the decompressed file is dinamically allocated
- * by this function.
- *
- * @param filename The name of the gzip file to decompress.
- *
- * @warning It is your responsability to release (whith delete[]) the memory
- * allocated by this function.
- *
- * @throw GZFileWrapperException if anything went wrong while
- * decompressing the file pointed by filename.
- */
 filebuf decompres(const std::string filename)
 {
 	const int BUF_LEN = 10*1024;
@@ -126,23 +58,5 @@ filebuf decompres(const std::string filename)
 
 	return res;
 }
-
-
-int main(int argc, char* argv[])
-{
-	for(int i = 0; i < 100; ++i) {
-		try{
-			AutoFilebuf dec(decompres(argv[1]));
-		} catch(...) {
-			// pass
-		}
-	}
-
-	std::cout << "Done." << std::endl;
-	std::string press_enter;
-	std::cin >> press_enter;
-
-}
-
 
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:

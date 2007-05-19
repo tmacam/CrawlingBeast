@@ -99,7 +99,7 @@ struct AbstractHTMLParser {
  * @note Errors found during tag processing "promote" that thought-to-be-tag
  *	 content into text content.
  */
-class BaseHTMLParser: public AbstractHTMLParser, BaseParser {
+class BaseHTMLParser: public virtual AbstractHTMLParser, public BaseParser {
 protected:
 
 	//! Just to avoid copying Maps 

@@ -31,6 +31,8 @@
  *
  * @author Tiago Alves Macambira
  *
+ * @todo join this file wih strmisc.h
+ *
  *
  */
 

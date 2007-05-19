@@ -3,6 +3,7 @@
 
 #include "cxxtest/TestSuite.h"
 #include "explode.h"
+#include "strmisc.h"
 
 #include <vector>
 #include <string>
@@ -193,6 +194,38 @@ public:
 	{
 		std::vector< std::string > res;
 		TS_ASSERT_EQUALS(join("/",res), "");
+	}
+};
+
+
+class LStripTestSuite : public CxxTest::TestSuite {
+public:
+	void testEmpty()
+	{
+		filebuf empty;
+
+		TS_ASSERT(empty.eof());
+		TS_ASSERT_EQUALS(lstrip(empty).len(), 0);
+		TS_ASSERT(empty.eof());
+	}
+
+	void testEofAfter()
+	{
+		const char t[] = "   \v\t\n\r\0   ";
+		filebuf f(t,sizeof(t));
+
+		TS_ASSERT_EQUALS( lstrip(f).len(), 0);
+	}
+
+	void testSimple()
+	{
+		const char t[] = "   \v\t\n\r\0   a b c ";
+		filebuf f(t,sizeof(t));
+
+		const char _expected[] = "a b c ";
+		filebuf expected(_expected, sizeof(_expected));
+
+		TS_ASSERT_EQUALS( lstrip(f).str(), expected.str());
 	}
 };
 

@@ -10,7 +10,7 @@ CC	 = g++
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS)
 LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
 AR	 = ar cr
-OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a robotshandler.o
+OBJFILES = filebuf.o parser.o htmlparser.o urltools.o explode.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a robotshandler.o strmisc.o
 
 
 all: $(TARGETS) tags test crawlingbeast
@@ -34,6 +34,9 @@ runner: runner.cpp $(OBJFILES)
 unicodebugger_ex: $(OBJFILES) unicodebugger_ex.o
 
 getter: getter.o $(OBJFILES)
+
+indexer: indexer.o zfilebuf.o $(OBJFILES)
+
 
 __testa_parser: __testa_parser.o $(OBJFILES)
 
