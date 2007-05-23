@@ -7,7 +7,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
-#include "explode.h"
+#include "strmisc.h"
 
 
 const int DeepThought::MINIMUM_INTERVAL = 30;

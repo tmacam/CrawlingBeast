@@ -1,5 +1,5 @@
 #include "unicodebugger.h"
-#include "explode.h"
+#include "strmisc.h"
 
 /* ********************************************************************** *
  *				   CONSTANTS

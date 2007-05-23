@@ -3,7 +3,7 @@
 #include <curl/types.h>
 #include <curl/easy.h>
 
-#include "explode.h"
+#include "strmisc.h"
 #include "parser.h"
 
 

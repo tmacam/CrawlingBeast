@@ -1,5 +1,5 @@
 #include "robotshandler.h"
-#include "explode.h"
+#include "strmisc.h"
 
 static char CRLF[] = "\x0D\x0A";
 

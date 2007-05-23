@@ -1,5 +1,5 @@
 #include "htmlparser.h"
-#include "explode.h"
+#include "strmisc.h"
 
 #include <sstream>
 

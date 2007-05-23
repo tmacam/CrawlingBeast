@@ -13,6 +13,10 @@
  *  - For every rule-parsing function: after it's execution, the parser state
  *    should be ready do process the NEXT rule. So, _start should be updated
  *    accordingly
+ *
+ *
+ * Some of the funcionality implemented here was moved to strmisc.h
+ * @see xmlconstants
  * 
  */
 
@@ -23,83 +27,7 @@
 #include <stdexcept>
 
 #include "filebuf.h"
-
-/* **********************************************************************
- *			     STRING TRANFORMATIONS
- * ********************************************************************** */
-
-/**Coverts a string to lowercase.
- *
- * @warning The string is modified in-place!
- *
- * @param s[in,out] String to be converted to lowercase.
- * @return A reference to s, already converted to lowercase.
- */
-std::string& to_lower(std::string& s);
-
-/**Coverts a string to uppercase.
- *
- * @warning The string is modified in-place!
- *
- * @param s[in,out] String to be converted to uppercase.
- * @return A reference to s, already converted to uppercase.
- */
-std::string& to_upper(std::string& s);
-
-
-/**Remove whitespace from the start and from the end of a string.
- *
- * Works just like perl's strip and python's strip.
- *
- * @param[in,out] s The string to be trimmed/striped.
- * @return A copy of s with trailing and leading whitespace removed.
- *
- * @warning the original string IS MODIFIED
- */
-std::string strip(const std::string s);
-
-
-
-inline bool is_in(unsigned char c, const std::string& where)
-{
-        return where.find(c) != std::string::npos;
-}
-
-template<class C> bool is_in(typename C::value_type v, const C& c)
-{
-	return std::find(c.begin(), c.end(), v) != c.end();
-}
-
-
-//! u.startswith(start)
-bool startswith(const filebuf& u, const std::string& start );
-
-//! data.startswith(start)
-bool startswith(const std::string& data, const std::string& start );
-
-//! u.endswith(end)
-bool endswith(const std::string& u, const std::string& end );
-
-
-/* **********************************************************************
- *      			    SYMBOLS
- * ********************************************************************** */
-
-/**@name Symbols and Commom String Constants
- *
- * This constants have the same meaning as the corresponding rules of the
- * XML Specification, Section 2.3 Common Syntatic Constructs
- */
-//@{
-
-const std::string LETTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
-const char _WHITESPACE[] = " \t\n\x0b\x0c\r\0";
-const std::string WHITESPACE(_WHITESPACE,sizeof(_WHITESPACE));
-const std::string DIGITS = "0123456789";
-const std::string HEXDIGITS = "0123456789abcdefABCDEF";
-
-//@}
-
+#include "strmisc.h"
 
 /* **********************************************************************
  *				 GENERIC PARSER

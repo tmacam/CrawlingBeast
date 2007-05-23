@@ -1,14 +1,99 @@
-#ifndef __EXPLODE_TEST_H
-#define __EXPLODE_TEST_H
+#ifndef __STRMISC_TEST_H
+#define __STRMISC_TEST_H
 
 #include "cxxtest/TestSuite.h"
-#include "explode.h"
 #include "strmisc.h"
 
 #include <vector>
 #include <string>
 #include <deque>
 #include <list>
+
+class StringTransformsTestSuite : public CxxTest::TestSuite {
+	std::string mixed_case;
+	std::string lower_case;
+	std::string upper_case;
+public:
+
+	void setUp()
+	{
+		mixed_case = "-AbCdeFg123";
+		lower_case = "-abcdefg123";
+		upper_case = "-ABCDEFG123";
+	}
+
+	void test_to_lower(void) {
+		std::string tmp = mixed_case;
+		TS_ASSERT_EQUALS(to_lower(tmp), lower_case);
+		TS_ASSERT_DIFFERS(mixed_case, lower_case);
+	}
+
+	void test_to_upper()
+	{
+		std::string tmp = mixed_case;
+
+		TS_ASSERT_EQUALS(to_upper(tmp), upper_case);
+		TS_ASSERT_DIFFERS(mixed_case, upper_case);
+	}
+
+	void test_is_in(void)
+	{
+		TS_ASSERT( is_in('a',LETTERS) );
+		TS_ASSERT( !is_in('1',LETTERS) );
+		TS_ASSERT( is_in('1',DIGITS) );
+		TS_ASSERT( is_in(' ',WHITESPACE) );
+		TS_ASSERT( !is_in('a',WHITESPACE) );
+	}
+
+	void testStrip()
+	{
+		std::string original = "   123			\n\n";
+
+		std::string res = strip(original);
+
+		TS_ASSERT_EQUALS(res, "123");
+	}
+
+	void testeStartswithFilebuf()
+	{
+		const char teste[] = "This is a test string";
+		const char start[] = "This i";
+		const char mismatch[] = "akjdak";
+
+		filebuf data(teste, sizeof(teste));
+
+		TS_ASSERT( startswith(data, start));
+		TS_ASSERT( not startswith(data, mismatch));
+	}
+
+	void testeStartswithString()
+	{
+		std::string data = "This is a test string";
+		std::string start = "This i";
+		std::string mismatch = "akjdak";
+
+		TS_ASSERT( startswith(data, start));
+		TS_ASSERT( not startswith(data, mismatch));
+		TS_ASSERT( startswith("/teste/file.html", "/teste"));
+		TS_ASSERT( not startswith("/teste/file.html", "/tmp"));
+	}
+
+	void testeStartswithEmptyString()
+	{
+		TS_ASSERT( startswith("/teste/file.html", ""));
+		TS_ASSERT( startswith("/teste/file.html", ""));
+	}
+
+	void test_endswith()
+	{
+		std::string domainbr("www.uol.com.br");
+		std::string domainorg("www.slashdot.org");
+
+		TS_ASSERT( endswith(domainbr, ".br"));
+		TS_ASSERT( not endswith(domainorg, ".br"));
+	}
+};
+
 
 
 class SplitTestSuite : public CxxTest::TestSuite {
@@ -229,5 +314,5 @@ public:
 	}
 };
 
-#endif // __EXPLODE_TEST_H
+#endif // __STRMISC_TEST_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
