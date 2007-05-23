@@ -8,9 +8,6 @@ from parser import  BaseParser, ParsingError, ParserEOFError, InvalidCharError,\
 HEXDIGITS = unicode(string.hexdigits)
 
 HTML_ENTITIES_UTF8 = {
-    "amp"   : "&",
-    "lt"    : "<",
-    "gt"    : ">",
 	"nbsp" : "\xc2\xa0",
 	"iexcl" : "\xc2\xa1",
 	"cent" : "\xc2\xa2",
@@ -269,7 +266,7 @@ HTML_ENTITIES_UNICODE = {}
 for k,v in HTML_ENTITIES_UTF8.items():
 	HTML_ENTITIES_UNICODE[k] = unicode(v,"utf-8")
 
-class UnknownEntityError(ParsingError):
+class UnknownEntityReferenceError(ParsingError):
     pass
 
 class BaseEntityParser(BaseParser):
@@ -316,7 +313,7 @@ class BaseEntityParser(BaseParser):
             if self._start <= self._end and self._text[self._start] == u';':
                 self._consumeToken(u';')
 
-        except (InvalidCharError, UnknownEntityError):
+        except (InvalidCharError, UnknownEntityReferenceError):
             # Invalid or unexpected character found? Unknown entity?
             # Just turn everything we had from previous_start to _end into
             # text content.
@@ -336,7 +333,7 @@ class BaseEntityParser(BaseParser):
         if HTML_ENTITIES_UNICODE.has_key(identifier):
             self.handleEntity(HTML_ENTITIES_UNICODE[identifier])
         else:
-            raise UnknownEntityError("Unknown entity identifier '%s'" %
+            raise UnknownEntityReferenceError("Unknown entity identifier '%s'" %
                  identifier)
 
 
@@ -438,6 +435,8 @@ class TestURLParser(EntityParser):
 
     Some of the possible ways to represent an á
 
+    >>> parseText(u"\xe1") == u'\xe1'
+    True
     >>> parseText(u"&aacute;") == u'\xe1'
     True
     >>> parseText(u"&#xe1;") == u'\xe1'
