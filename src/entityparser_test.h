@@ -35,7 +35,6 @@ public:
 		TS_ASSERT_EQUALS( parseHTMLText("á"), "\xc3\xa1" );
 		TS_ASSERT_EQUALS( parseHTMLText("&aacute;"), "\xc3\xa1" );
 		TS_ASSERT_EQUALS( parseHTMLText("&#xE1;"), "\xc3\xa1" );
-		TS_ASSERT_EQUALS( parseHTMLText("&#xc3\xa1;"), "\xc3\xa1" );
 		TS_ASSERT_EQUALS( parseHTMLText("&#225;"), "\xc3\xa1" );
 	}
 

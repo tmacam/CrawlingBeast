@@ -92,6 +92,64 @@ filebuf& lstrip(filebuf& s)
 	return s;
 }
 
+std::string unichr(unsigned int uv)
+{
+	const int UTF_MAX  = 6;	/* They can be bigger, but we just don't care
+			    	 *  about those bastards
+			    	 */
+
+	char output[UTF_MAX +1] = {0,0,0,0,0,0,0}; /* Strings will
+						    * be null-termiinated
+						    * no matter what
+						    */
+
+	char* d = output;
+
+	if (uv < 0x80) {
+		*d++ = uv;
+		return std::string(output);
+	}
+	if (uv < 0x800) {
+		*d++ = (( uv >>  6)         | 0xc0);
+		*d++ = (( uv        & 0x3f) | 0x80);
+		return std::string(output);
+	}
+	if (uv < 0x10000) {
+		*d++ = (( uv >> 12)         | 0xe0);
+		*d++ = (((uv >>  6) & 0x3f) | 0x80);
+		*d++ = (( uv        & 0x3f) | 0x80);
+		return std::string(output);
+	}
+	if (uv < 0x200000) {
+		*d++ = (( uv >> 18)         | 0xf0);
+		*d++ = (((uv >> 12) & 0x3f) | 0x80);
+		*d++ = (((uv >>  6) & 0x3f) | 0x80);
+		*d++ = (( uv        & 0x3f) | 0x80);
+		return std::string(output);
+	}
+	if (uv < 0x4000000) {
+		*d++ = (( uv >> 24)         | 0xf8);
+		*d++ = (((uv >> 18) & 0x3f) | 0x80);
+		*d++ = (((uv >> 12) & 0x3f) | 0x80);
+		*d++ = (((uv >>  6) & 0x3f) | 0x80);
+		*d++ = (( uv        & 0x3f) | 0x80);
+		return std::string(output);
+	}
+	if (uv < 0x80000000) {
+		*d++ = (( uv >> 30)         | 0xfc);
+		*d++ = (((uv >> 24) & 0x3f) | 0x80);
+		*d++ = (((uv >> 18) & 0x3f) | 0x80);
+		*d++ = (((uv >> 12) & 0x3f) | 0x80);
+		*d++ = (((uv >>  6) & 0x3f) | 0x80);
+		*d++ = (( uv        & 0x3f) | 0x80);
+		return std::string(output);
+	}
+
+	// Corner case - returning codepoint 0x7fffffff representation
+	// in UTF-8
+        return std::string("\xfd\xbf\xbf\xbf\xbf\xbf");
+
+}
 
 /* ********************************************************************** *
 			SPLIT, EXPLODE, JOIN AND FRIENDS

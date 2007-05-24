@@ -35,6 +35,7 @@ const char _WHITESPACE[] = " \t\n\x0b\x0c\r\0";
 const std::string WHITESPACE(_WHITESPACE,sizeof(_WHITESPACE));
 const std::string DIGITS = "0123456789";
 const std::string HEXDIGITS = "0123456789abcdefABCDEF";
+const std::string ALPHANUM = LETTERS + DIGITS;
 
 //@}
 
@@ -115,6 +116,19 @@ bool endswith(const std::string& u, const std::string& end );
  *
  */
 filebuf& lstrip(filebuf& s);
+
+
+/**Convert Unicode codepoint to it's UTF-8 representation.
+ *
+ * @param uv Unicode value of the character to convert to UTF-8
+ *
+ * @warning unicode values that require more then UTF32 to be represented
+ * are not handled and silently converted to 0x7fffffff.
+ *
+ * @note Code taken from http://search.cpan.org/src/GSAR/perl-5.6.1/utf8.c
+ *
+ */
+std::string unichr(unsigned int uv);
 
 //@}
 

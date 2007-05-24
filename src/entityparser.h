@@ -17,6 +17,43 @@
 
 #include <sstream>
 
+#include <string>
+#include <ext/hash_map>
+#include <tr1/functional>
+
+/* **********************************************************************
+				   CONSTANTS
+ * ********************************************************************** */
+
+
+typedef __gnu_cxx::hash_map < std::string, std::string,
+			std::tr1::hash<std::string> >	StrStrHashMap;
+
+/** Full list of HTML entities in UTF-8.
+ *
+ * This is a map of the full list of HTML entities, as presented in 
+ * http://www.w3.org/TR/html4/sgml/entities.html and their corresponding
+ * representation in UTF-8.
+ */
+extern const StrStrHashMap html_entity_map;
+
+
+
+/**List of aphanumeric HTML entities in UTF-8.
+ *
+ * This is a reduced version of html_entity_map, but with all non-alphanumeric
+ * (i.e., space, punctuation and other "strange" characters) converted into
+ * space characters.
+ *
+ * Use this list if all you need is to convert "word" entities into their UTF-8
+ * representation. This need arises, for example, when all you want is to split
+ * text into words.
+ *
+ * @see html_entity_map
+ */
+extern const StrStrHashMap html_entity_alphanum_map;
+
+
 /* **********************************************************************
  *				   EXCEPTIONS
  * ********************************************************************** */
@@ -90,6 +127,7 @@ public:
  */
 class BaseEntityParser : public BaseParser, public AbstractEntityParser {
 protected:
+	const StrStrHashMap& entity_map;
 
 	void parsePureText();
 
@@ -111,11 +149,13 @@ public:
 	 * @param _url The string representation of the URL.
 	 *
 	 */
-	BaseEntityParser(const std::string text="")
-	:BaseParser( filebuf(text.c_str(), text.size()) ) {}
+	BaseEntityParser(const std::string text="",
+			 const StrStrHashMap& em = html_entity_map)
+	:BaseParser( filebuf(text.c_str(), text.size()) ), entity_map(em) {}
 
-	BaseEntityParser(const filebuf _buf)
-	:BaseParser( _buf ) {}
+	BaseEntityParser(const filebuf _buf,
+			 const StrStrHashMap& em =html_entity_map)
+	:BaseParser( _buf ), entity_map(em) {}
 
 	/**Parses the URL.
 	 *
@@ -139,14 +179,15 @@ class EntityParser : public BaseEntityParser {
 	std::ostringstream output;
 public:
 
-	EntityParser(const std::string text="")
-	:BaseEntityParser( filebuf(text.c_str(), text.size()) ), output()
+	EntityParser(const std::string text="",
+			const StrStrHashMap& em = html_entity_map)
+	:BaseEntityParser( filebuf(text.c_str(), text.size()), em), output()
 	{
 		parse();
 	}
 
-	EntityParser(const filebuf _buf)
-	:BaseEntityParser( _buf ), output()
+	EntityParser(const filebuf _buf, const StrStrHashMap& em = html_entity_map)
+	:BaseEntityParser( _buf, em), output()
 	{
 		parse();
 	}

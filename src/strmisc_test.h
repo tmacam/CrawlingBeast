@@ -92,6 +92,15 @@ public:
 		TS_ASSERT( endswith(domainbr, ".br"));
 		TS_ASSERT( not endswith(domainorg, ".br"));
 	}
+
+	void test_unichr()
+	{
+		TS_ASSERT_EQUALS( unichr(0), "");
+		TS_ASSERT_EQUALS( unichr(38), "&");
+		TS_ASSERT_EQUALS( unichr(97), "a");
+		TS_ASSERT_EQUALS( unichr(193), "\xc3\x81"); // Aacute
+		TS_ASSERT_EQUALS( unichr(9824), "\xe2\x99\xa0"); // spades
+	}
 };
 
 
