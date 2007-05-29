@@ -5,14 +5,14 @@
 #include "strmisc.h"
 #include "entityparser.h"
 
-#include "TokenIterator.h"
-
 #include <iterator>
 #include <algorithm>
 #include <list>
 #include <ext/hash_map>
 #include <tr1/functional>
+#include <functional>
 
+#include <locale.h>
 
 
 /***********************************************************************
@@ -197,7 +197,7 @@ public:
 	 */
 	inline bool operator==(const HTMLContentIterator& other)
 	{
-		return content.eof();
+		return content.eof() && text.empty();
 	}
 
 	bool operator!=(const HTMLContentIterator& other)
@@ -352,24 +352,74 @@ void assert_equal(HTMLContentWideCharStreamIterator i, HTMLContentWideCharStream
 	}
 }
 
+
+
+
+struct Isalpha : std::unary_function<char, bool> {
+	bool operator()(char c) {
+		return not (std::ispunct(c) || std::isspace(c));
+	}
+};
+
+struct WIsalpha : std::unary_function<wchar_t, bool> {
+	static const wchar_t control_code_start = 0x007f; // [control] DELETE
+	static const wchar_t control_code_end = 0x00A0; // NBSP
+	bool operator()(wchar_t c) {
+		return not ( (c >= control_code_start && c <= control_code_end)
+				|| std::iswpunct(c) || std::iswspace(c));
+	}
+};
+
+/**Normalize a term or word.
+ *
+ * For now, normalization means:
+ * - lowercasing
+ * - converting accented letters to their corresponding representations without
+ *   accents.
+ *
+ * FIXME wouldn't a hashtable be better?
+ * FIXME Are we really ignoring non-latin1 vowels? see
+ * 	 http://www.windspun.com/unicode-test/unicode.xml
+ * 	 and look for letters such as U+0100 ..
+ */
+inline std::wstring& normalize_term(std::wstring& word)
+{
+	to_lower(word);
+	//filter_accents(word);
+	for(size_t i = 0; i < word.size(); ++i){
+		wchar_t& c = word[i];
+		if (c >= 224 && c <= 230 ) { c = L'a';}
+		if (c == 231 ) { c = L'c';}
+		if (c >= 232 && c <= 235 ) { c = L'e';}
+		if (c >= 236 && c <= 239 ) { c = L'i';}
+		if (c == 241 ) { c = L'n';}
+		if (c >= 242 && c <= 248 ) { c = L'o';}
+		if (c >= 249 && c <= 252 ) { c = L'u';}
+		if (c >= 253 && c <= 255 ) { c = L'y';}
+	}
+	return word;
+}
+
+
 /**Blah.
  *
  * wfreq is cleared at every function call.
  */
-void getWordFrequency(filebuf f, StrIntMap& wfreq)
+void getWordFrequency(filebuf f, StrIntMap& wfreq, WideCharConverter wconv)
 {
-	Isalpha isalpha;
+	WIsalpha isalpha;
 
 	HTMLContentIterator ci(f), ce;
-	std::string word;
+	std::wstring word;
 
 	// Clear word frequency
-	wfreq.clear();
+	// FIXME wfreq.clear();
+
 
 	// For each text node (text inside and between tags) content
 	for(; ci != ce; ++ci){
-		std::string text_node = *ci;
-		std::string::const_iterator i(text_node.begin()),
+		std::wstring text_node = wconv.mbs_to_wcs(*ci);
+		std::wstring::const_iterator i(text_node.begin()),
 				      end(text_node.end());
 		// Get all words from this text node 
 		while(i != text_node.end()){
@@ -383,32 +433,73 @@ void getWordFrequency(filebuf f, StrIntMap& wfreq)
 				++i;
 			}
 			// Grabbed a full word. 
-			wfreq[word] = wfreq[word] + 1;
+			if(!word.empty()) {
+				normalize_term(word);
+				std::string w(wconv.wcs_to_mbs(word));
+				wfreq[w] = wfreq[w] + 1;
+			}
 		}
 
 	}
 }
 
+
+void dumpWFreq(filebuf& f, StrIntMap& wfreq)
+{
+	WideCharConverter wcconv;
+
+	getWordFrequency(f, wfreq, wcconv);
+	StrIntMap::const_iterator i;
+//        for(i = wfreq.begin(); i != wfreq.end(); ++i){
+//                std::cout << i->first << ": " << i->second 
+//                        << std::endl;
+//        }
+
+}
+
 int main(int argc, char* argv[])
 {
+//        std::string degenerado("aÇão weißbier 1ªcolocada palavra«perdida»©");
+//        filebuf degen(degenerado.c_str(), degenerado.size());
+//        dumpWFreq(degen);
+//
+//        WideCharConverter wconv;
+//        std::string in("ßá");
+//        std::wstring out =  wconv.mbs_to_wcs(in);
+//        std::cout << "Out: " << wconv.wcs_to_mbs(out) << std::endl;
+
+//        return 1;
+
+
+	StrIntMap wfreq;
+
+
 	for(int i = 1; i < argc; ++i) {
 //                try{
 			AutoFilebuf dec(decompres(argv[i]));
 			filebuf f = dec.getFilebuf();
-			std::ostream_iterator<std::string> os(std::cout," ");
-//                        std::copy(it, endit, os);
-			HTMLContentWideCharStreamIterator is(f), ends;
-			TokenIterator<HTMLContentWideCharStreamIterator>
-				wordIter(is, ends), end;
-			std::copy(wordIter, end, os);
+			dumpWFreq(f, wfreq);
+
 //                } catch(...) {
 //                        throw;
 			// pass
 //                }
 	}
+	std::cout << wfreq.size() << std::endl;
+	std::map<std::string, int> ordenado(wfreq.begin(), wfreq.end());
+
+	std::map<std::string, int>::const_iterator i;
+	for(i = ordenado.begin(); i != ordenado.end(); ++i){
+		std::cout << i->first << ": " <<
+				i->second << std::endl;
+	}
+
 
 	std::cout << "Done." << std::endl;
 //        std::string press_enter;
 //        std::cin >> press_enter;
+
+
+
 
 }
