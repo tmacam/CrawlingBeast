@@ -12,6 +12,10 @@
 #include <tr1/functional>
 #include <functional>
 
+#include <fstream>
+#include <sstream>
+#include <iomanip>
+
 #include <locale.h>
 
 
@@ -329,30 +333,164 @@ public:
 
 };
 
+/***********************************************************************
+				 RUN ITERATORS
+ ***********************************************************************/
+
+/** Stores <term_id, doc_id, freq> triples.
+ *
+ * Theses triples are mostly used while generating "runs", hence the the
+ * name "run_triple"
+ */
+struct run_triple{
+
+	uint32_t termid;
+	uint32_t docid; // docid_t is a unit32_t
+	uint16_t freq;
+
+	run_triple(uint32_t tid = 0, docid_t did=0, uint16_t f=0)
+	: termid(tid), docid(did), freq(f)
+	{}
+
+	/**Comparison operator (less than).
+	 *
+	 * The smaller run_triple is the one with the smaller termid.
+	 * Docid is used to resolve ties,  winning the one with the smallest
+	 * one.
+	 */
+	inline bool operator< (const run_triple& other) const
+	{
+		return (termid < other.termid) ||
+			(termid == other.termid && docid < other.docid);
+	}
+	
+} __attribute__((packed));
+
+/**Inserter or output interator for runs.
+ *
+ * This is just syntatic sugar for writing runs to disk.
+ *
+ * @warning This class ONLY flushes all it's data on descruction.
+ */
+class run_inserter :public std::iterator<std::output_iterator_tag, run_triple, void,
+					void, void>
+{
+private:
+	std::string path_prefix;
+	size_t max_length; //!< Max ammount of bytes we reserve to store triples
+	size_t max_triples; //!< Max number of tripes we hold in memory
+	
+	run_triple* run_buf; //!< Triples buffer
+	run_triple* cur_triple; //!< The position of the next triple writing pos
+	run_triple* end; //!< Past-the-last-triple-in-buffer position
+
+	int n_runs; //!< Number of runs flushed to disk so far
+
+
+	//! Not default constructible
+	run_inserter();
+
+	//! Prevent Copying and assignment.
+	run_inserter(const run_inserter& );
+
+	//! Prevent Copying and assignment.
+	run_inserter& operator=(const run_inserter&);
+public:
+	/**Constructor.
+	 *
+	 * @param prefix prefix where the run_?? file will be stored.
+	 *        It can include a full path.
+	 * @param length max ammount in bytes of memory will be used to hold
+	 * 		 a run in memory before flushing it to a run file.
+	 *
+	 */
+	run_inserter(const std::string prefix, size_t length)
+	: path_prefix(prefix), max_length(length),
+	  max_triples( max_length / sizeof(run_triple)),
+	  run_buf( new run_triple[ max_triples ]),
+	  cur_triple(run_buf),
+	  end(&cur_triple[max_triples]),
+	  n_runs(0)
+	{}
+
+	~run_inserter()
+	{
+		try {
+			flush();
+		} catch(...) {
+			std::cerr << "An error ocurred in run_inserter" << 
+				std::endl;
+		}
+
+		delete run_buf;
+	}
+
+	inline run_inserter& operator=(const run_triple& val)
+	{
+		*cur_triple++ = val;
+
+		if(cur_triple == end) {
+			flush();
+		}
+
+		return *this;
+	}
+
+	inline run_inserter& operator*() {return *this;}	// deref
+	inline run_inserter& operator++() {return *this;}	// prefix
+	inline run_inserter& operator++(int) {return *this;}	// postfix
+
+	/** Write the current pending/remaining triples to disk.
+	 *
+	 * You should call this function before instance desctruction.
+	 * Although this class destructor calls flush any possible
+	 * raised exception will be consumed and ignored if called inside
+	 * the destructor.
+	 */
+	void flush()
+	{
+
+		// We only run if there are pending triples
+		if (cur_triple == run_buf){
+			return;
+		}
+
+		// sort triples
+		std::sort(run_buf,cur_triple);
+
+		// Ok. There are pending triples.
+		unsigned int n_triples_pending = cur_triple - run_buf;
+
+		// Let's write 'em to disk
+		// FIXME woudn't UNIX I/O rotines perform better?
+		std::ostringstream filename_stream;
+		std::ofstream out;
+		// Turn on exception reporting for file operations
+		out.exceptions( std::ios_base::badbit|std::ios_base::failbit);
+		filename_stream << path_prefix << "/run_" <<
+			std::hex <<  std::setw(4) << std::setfill('0') <<
+			n_runs; //"%s/run_%04x"
+		out.open(filename_stream.str().c_str(),
+			 std::ios::binary | std::ios::out);
+		out.rdbuf()->pubsetbuf(0, 0); // unbuffering out
+		out.write( (char *)run_buf,
+			   n_triples_pending * sizeof(run_triple));
+
+		// Update the number of runs written
+		++n_runs;
+		//reset reading/writing position
+		cur_triple = run_buf;
+	}
+
+	int getNRuns() const {return n_runs;}
+
+};
+
+
 
 /***********************************************************************
 				      MAIN
  ***********************************************************************/
-
-template<class T>
-void imprime_conteudo(T is, T ie)
-{
-	std::ostream_iterator< typename T::value_type> os(std::cout,"");
-//        for(; is != ie; ++is, ++os) {
-//                *os = *is;
-//        }
-	std::copy(is, ie , os);
-}
-
-void assert_equal(HTMLContentWideCharStreamIterator i, HTMLContentWideCharStreamIterator& e, HTMLContentWideCharStreamIterator end)
-{
-	while(i != end){
-		assert(*i == *e);
-		++i; ++e;
-	}
-}
-
-
 
 
 struct Isalpha : std::unary_function<char, bool> {
@@ -380,6 +518,7 @@ struct WIsalpha : std::unary_function<wchar_t, bool> {
  * FIXME wouldn't a hashtable be better?
  * FIXME Are we really ignoring non-latin1 vowels? see
  * 	 http://www.windspun.com/unicode-test/unicode.xml
+ * 	 http://www.decodeunicode.org/w3.php?viewMode=block&ucHex=0080
  * 	 and look for letters such as U+0100 ..
  */
 inline std::wstring& normalize_term(std::wstring& word)
@@ -401,11 +540,19 @@ inline std::wstring& normalize_term(std::wstring& word)
 }
 
 
-/**Blah.
+/**Retrieve the term or word frequency for a given document.
+ *
+ * @param f The HTML file from which the term frequency will be extracted.
+ * @param[out] wfreq The term frequency dictionary. Will be cleared upon
+ * 			function start.
+ * @param wconv	wide-string converter. Used only for caching and
+ * 		performance purposes.
+ *
  *
  * wfreq is cleared at every function call.
  */
-void getWordFrequency(filebuf f, StrIntMap& wfreq, WideCharConverter wconv)
+void getWordFrequency(filebuf f, StrIntMap& wfreq,
+			const WideCharConverter& wconv)
 {
 	WIsalpha isalpha;
 
@@ -413,7 +560,7 @@ void getWordFrequency(filebuf f, StrIntMap& wfreq, WideCharConverter wconv)
 	std::wstring word;
 
 	// Clear word frequency
-	// FIXME wfreq.clear();
+	wfreq.clear();
 
 
 	// For each text node (text inside and between tags) content
@@ -443,6 +590,22 @@ void getWordFrequency(filebuf f, StrIntMap& wfreq, WideCharConverter wconv)
 	}
 }
 
+void testTripleInserter()
+{
+	const int KB = 1<<10;
+
+	run_inserter run("/tmp/down/", 10*KB);
+
+	for(int i = 7.5*float(KB) ; i > 0 ; --i){
+		*run++ = run_triple(i,i,i);
+	}
+
+	run.flush();
+	std::cout << "Foram geradas " << run.getNRuns() <<
+		" runs" << std::endl;
+
+}
+
 
 void dumpWFreq(filebuf& f, StrIntMap& wfreq)
 {
@@ -459,6 +622,9 @@ void dumpWFreq(filebuf& f, StrIntMap& wfreq)
 
 int main(int argc, char* argv[])
 {
+	testTripleInserter();
+	return 1;
+
 //        std::string degenerado("aÇão weißbier 1ªcolocada palavra«perdida»©");
 //        filebuf degen(degenerado.c_str(), degenerado.size());
 //        dumpWFreq(degen);
