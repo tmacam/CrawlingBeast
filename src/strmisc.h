@@ -64,6 +64,21 @@ const std::string ALPHANUM = LETTERS + DIGITS;
  */
 std::string& to_lower(std::string& s);
 
+/**Coverts a wide-string to lowercase.
+ *
+ * @warning The wide-string is modified in-place!
+ *
+ * @param s[in,out] Wide String to be converted to lowercase.
+ * @return A reference to s, already converted to lowercase.
+ */
+inline std::wstring& to_lower(std::wstring& s)
+{
+	std::transform(s.begin(), s.end(), s.begin(),
+			(wint_t(*)(wint_t))towlower);
+	return s;
+}
+
+
 /**Coverts a string to uppercase.
  *
  * @warning The string is modified in-place!
@@ -258,6 +273,58 @@ std::string join( const typename C::value_type& delimiter,
 
 //@}
 
+/* ********************************************************************** *
+		     WIDE CHAR STRINGS CONVERSION UTILITIES
+ * ********************************************************************** */
 
+/**Converts string with multi-byte encoded content to wide-char strings.
+ *
+ * Convertion is done using plain C locale utils (mbsrtowcs and wcstombs).
+ */
+class WideCharConverter {
+protected:
+	std::string locale_name;
+public:
+
+	WideCharConverter(const std::string locale_name = "pt_BR.UTF-8")
+	: locale_name(locale_name)
+	{
+		if (setlocale(LC_CTYPE, "pt_BR.UTF-8") == NULL) {
+			throw std::runtime_error("Failed to set locale");
+		}
+	}
+
+	inline std::wstring mbs_to_wcs(const std::string& mbs)
+	{
+
+		size_t wcs_len = mbs.size() + 1;
+		std::auto_ptr<wchar_t> _wcs(new wchar_t[wcs_len]);
+		wchar_t* wcs = _wcs.get();
+
+		int res = mbstowcs(wcs, mbs.c_str(), wcs_len);
+
+		if (res == -1) {
+			throw std::runtime_error("WideCharConverter error in mbs_to_wcs");
+		}
+
+		return std::wstring(wcs,res);
+	}
+
+	inline std::string wcs_to_mbs(	std::wstring& wcs)
+	{
+		size_t mbs_len = wcstombs(NULL,wcs.c_str(),0)+1;
+		std::auto_ptr<char> _mbs(new char[mbs_len]);
+		char* mbs = _mbs.get();
+
+		int res = wcstombs(mbs, wcs.c_str(), mbs_len);
+
+		if (res == -1) {
+			throw std::runtime_error("WideCharConverter error in wcs_to_mbs");
+		}
+
+		return std::string(mbs,res);
+
+	}
+};
 
 #endif // __STRMISC_H

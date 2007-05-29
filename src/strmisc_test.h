@@ -323,5 +323,36 @@ public:
 	}
 };
 
+
+class WideCharConverterTestSuite : public CxxTest::TestSuite {
+public:
+	void testNullStr()
+	{
+		std::string in;
+		std::wstring out;
+
+		WideCharConverter wconv;
+		
+		out = wconv.mbs_to_wcs(in);
+		TS_ASSERT_EQUALS(out, std::wstring());
+
+		in = wconv.wcs_to_mbs(out);
+		TS_ASSERT_EQUALS(in, std::string());
+
+	}
+
+	void testSimpleExample()
+	{
+		std::string utf8("aÇão weißbier 1ªcolocada palavra«perdida»©");
+
+
+		WideCharConverter wconv;
+
+		std::wstring tmp = wconv.mbs_to_wcs(utf8);
+
+		TS_ASSERT_EQUALS(utf8 ,wconv.wcs_to_mbs(tmp));
+	}
+};
+
 #endif // __STRMISC_TEST_H
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
