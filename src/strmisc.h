@@ -294,7 +294,7 @@ public:
 		}
 	}
 
-	inline std::wstring mbs_to_wcs(const std::string& mbs)
+	inline std::wstring mbs_to_wcs(const std::string& mbs) const
 	{
 
 		size_t wcs_len = mbs.size() + 1;
@@ -310,7 +310,7 @@ public:
 		return std::wstring(wcs,res);
 	}
 
-	inline std::string wcs_to_mbs(	std::wstring& wcs)
+	inline std::string wcs_to_mbs(	std::wstring& wcs) const
 	{
 		size_t mbs_len = wcstombs(NULL,wcs.c_str(),0)+1;
 		std::auto_ptr<char> _mbs(new char[mbs_len]);
