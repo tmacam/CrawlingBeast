@@ -405,7 +405,8 @@ public:
 	 *
 	 */
 	run_inserter(const std::string prefix, size_t length)
-	: path_prefix(prefix), max_length(length),
+	: path_prefix(prefix),
+	  max_length(length),
 	  max_triples( max_length / sizeof(run_triple)),
 	  run_buf( new run_triple[ max_triples ]),
 	  cur_triple(run_buf),
@@ -427,6 +428,7 @@ public:
 
 	inline run_inserter& operator=(const run_triple& val)
 	{
+		// Add current
 		*cur_triple++ = val;
 
 		if(cur_triple == end) {
@@ -489,7 +491,7 @@ public:
 
 
 /***********************************************************************
-				      MAIN
+		     VOCABULARY RETRIEVAL AND NORMALIZATION
  ***********************************************************************/
 
 
@@ -590,13 +592,18 @@ void getWordFrequency(filebuf f, StrIntMap& wfreq,
 	}
 }
 
+
+/***********************************************************************
+				      TEST
+ ***********************************************************************/
+
 void testTripleInserter()
 {
 	const int KB = 1<<10;
 
 	run_inserter run("/tmp/down/", 10*KB);
 
-	for(int i = 7.5*float(KB) ; i > 0 ; --i){
+	for(int i = int(7.5*float(KB)); i > 0 ; --i){
 		*run++ = run_triple(i,i,i);
 	}
 
@@ -620,10 +627,93 @@ void dumpWFreq(filebuf& f, StrIntMap& wfreq)
 
 }
 
+inline std::string make_filename(std::string store_dir, docid_t docid)
+{
+	std::ostringstream id_hex;
+
+	id_hex << std::uppercase << std::hex << std::setw(8) <<
+                std::setfill('0') << docid;
+	std::string id_hex_str = id_hex.str();
+
+	std::string id_path =  store_dir + "/" + 
+				id_hex_str.substr(0,2) + "/" +
+				id_hex_str.substr(2,2) + "/" +
+				id_hex_str.substr(4,2) + "/" +
+				id_hex_str.substr(6,2) + "/data.gz"; // FIXME data.gz constant
+	return id_path;
+}
+
+void index_files(const char* store_dir, const char* docids_list,
+		const char* output_dir)
+{
+	std::ifstream known_docids(docids_list);
+	std::string url;
+	docid_t docid;
+
+	const unsigned int KB = 1<<10;
+	run_inserter runs(output_dir, 100*KB );
+
+	StrIntMap vocabulary; // term -> term_id
+	StrIntMap wfreq; // term -> frequency in current doc
+	WideCharConverter wcconv;
+
+	StrIntMap::const_iterator w; // intra-document word iterator
+
+	// For every docid / retrieved document
+	while(known_docids >> docid >> url){
+		std::string filename = make_filename(store_dir, docid);
+
+		//FIXME
+		std::cout << "DOCID " << docid << std::endl;
+
+		// read document (decompressing)
+		AutoFilebuf dec(decompres(filename.c_str()));
+		filebuf f = dec.getFilebuf();
+
+		// parse document and get intra-ducument term frequency
+		getWordFrequency(f, wfreq, wcconv);
+
+		// For every term in the document
+		for(w = wfreq.begin(); w != wfreq.end(); ++w){
+			const std::string& term = w->first;
+			const int& freq =  w->second;
+
+			// Add to vocabulary if this is an unknown term
+			if (vocabulary.find(term) == vocabulary.end()) {
+				vocabulary[term] = vocabulary.size();
+			}
+
+			// add this triple to the current run(s)
+			*runs++ = run_triple(	vocabulary[term],
+						docid,
+						freq);
+		} // end for each word in document
+	} // end for each document
+}
+
+
+/***********************************************************************
+				      MAIN
+ ***********************************************************************/
+
 int main(int argc, char* argv[])
 {
-	testTripleInserter();
-	return 1;
+	const char* store_dir;
+	const char* docid_list;
+	const char* output_dir;
+
+	if(argc < 4) {
+		std::cerr << "wrong number of arguments" << std::endl;
+		std::cerr << "indexer store_dir docid_list output_dir" << std::endl;
+		exit(1);
+	}
+
+	store_dir = argv[1];
+	docid_list = argv[2];
+	output_dir = argv[3];
+
+	index_files(store_dir, docid_list, output_dir);
+	exit(0);
 
 //        std::string degenerado("aÇão weißbier 1ªcolocada palavra«perdida»©");
 //        filebuf degen(degenerado.c_str(), degenerado.size());

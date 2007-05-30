@@ -114,7 +114,6 @@ std::string DeepThought::getDocIdPath(docid_t docid)
 {
 	std::ostringstream id_hex;
 
-	// FIXME it should be setw(4) - docid_t is a uint32_t now
 	id_hex << std::uppercase << std::hex << std::setw(8) <<
                 std::setfill('0') << docid;
 	std::string id_hex_str = id_hex.str();
