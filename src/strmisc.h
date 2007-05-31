@@ -298,8 +298,10 @@ public:
 	{
 
 		size_t wcs_len = mbs.size() + 1;
-		std::auto_ptr<wchar_t> _wcs(new wchar_t[wcs_len]);
-		wchar_t* wcs = _wcs.get();
+		std::vector<wchar_t> _wcs(wcs_len);
+		wchar_t* wcs = &_wcs[0]; /* assuming vector uses a linear
+					  * memory arrangement.
+					  */
 
 		int res = mbstowcs(wcs, mbs.c_str(), wcs_len);
 
@@ -313,8 +315,11 @@ public:
 	inline std::string wcs_to_mbs(	std::wstring& wcs) const
 	{
 		size_t mbs_len = wcstombs(NULL,wcs.c_str(),0)+1;
-		std::auto_ptr<char> _mbs(new char[mbs_len]);
-		char* mbs = _mbs.get();
+		std::vector<char> _mbs(mbs_len);
+		char* mbs = &_mbs[0]; 	/* assuming vector uses a linear
+					 * memory arrangement.
+					 */
+
 
 		int res = wcstombs(mbs, wcs.c_str(), mbs_len);
 

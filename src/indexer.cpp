@@ -1,5 +1,6 @@
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
 
+#include "indexer.h"
 #include "zfilebuf.h"
 #include "htmlparser.h"
 #include "strmisc.h"
@@ -8,8 +9,6 @@
 #include <iterator>
 #include <algorithm>
 #include <list>
-#include <ext/hash_map>
-#include <tr1/functional>
 #include <functional>
 
 #include <fstream>
@@ -17,16 +16,6 @@
 #include <iomanip>
 
 #include <locale.h>
-
-
-/***********************************************************************
-			     Typedefs and constants
- ***********************************************************************/
-
-typedef __gnu_cxx::hash_map < std::string, int,
-                        std::tr1::hash<std::string> > StrIntMap;
-
-typedef std::map<int,std::string> IntStrMap;
 
 
 /***********************************************************************
@@ -339,35 +328,6 @@ public:
 				 RUN ITERATORS
  ***********************************************************************/
 
-/** Stores <term_id, doc_id, freq> triples.
- *
- * Theses triples are mostly used while generating "runs", hence the the
- * name "run_triple"
- */
-struct run_triple{
-
-	uint32_t termid;
-	uint32_t docid; // docid_t is a unit32_t
-	uint16_t freq;
-
-	run_triple(uint32_t tid = 0, docid_t did=0, uint16_t f=0)
-	: termid(tid), docid(did), freq(f)
-	{}
-
-	/**Comparison operator (less than).
-	 *
-	 * The smaller run_triple is the one with the smaller termid.
-	 * Docid is used to resolve ties,  winning the one with the smallest
-	 * one.
-	 */
-	inline bool operator< (const run_triple& other) const
-	{
-		return (termid < other.termid) ||
-			(termid == other.termid && docid < other.docid);
-	}
-	
-} __attribute__((packed));
-
 /**Inserter or output interator for runs.
  *
  * This is just syntatic sugar for writing runs to disk.
@@ -425,7 +385,7 @@ public:
 				std::endl;
 		}
 
-		delete run_buf;
+		delete[] run_buf;
 	}
 
 	inline run_inserter& operator=(const run_triple& val)
@@ -594,40 +554,9 @@ void getWordFrequency(filebuf f, StrIntMap& wfreq,
 	}
 }
 
-
 /***********************************************************************
-				      TEST
+			       INDEXING FUNCTIONS
  ***********************************************************************/
-
-void testTripleInserter()
-{
-	const int KB = 1<<10;
-
-	run_inserter run("/tmp/down/", 10*KB);
-
-	for(int i = int(7.5*float(KB)); i > 0 ; --i){
-		*run++ = run_triple(i,i,i);
-	}
-
-	run.flush();
-	std::cout << "Foram geradas " << run.getNRuns() <<
-		" runs" << std::endl;
-
-}
-
-
-void dumpWFreq(filebuf& f, StrIntMap& wfreq)
-{
-	WideCharConverter wcconv;
-
-	getWordFrequency(f, wfreq, wcconv);
-	StrIntMap::const_iterator i;
-//        for(i = wfreq.begin(); i != wfreq.end(); ++i){
-//                std::cout << i->first << ": " << i->second 
-//                        << std::endl;
-//        }
-
-}
 
 inline std::string make_filename(std::string store_dir, docid_t docid)
 {
@@ -755,6 +684,42 @@ void index_files(const char* store_dir, const char* docids_list,
 
 	dump_vocabulary(vocabulary, output_dir);
 }
+
+/***********************************************************************
+				      TEST
+ ***********************************************************************/
+
+void testTripleInserter()
+{
+	const int KB = 1<<10;
+
+	run_inserter run("/tmp/down/", 10*KB);
+
+	for(int i = int(7.5*float(KB)); i > 0 ; --i){
+		*run++ = run_triple(i,i,i);
+	}
+
+	run.flush();
+	std::cout << "Foram geradas " << run.getNRuns() <<
+		" runs" << std::endl;
+
+}
+
+
+void dumpWFreq(filebuf& f, StrIntMap& wfreq)
+{
+	WideCharConverter wcconv;
+
+	getWordFrequency(f, wfreq, wcconv);
+	StrIntMap::const_iterator i;
+//        for(i = wfreq.begin(); i != wfreq.end(); ++i){
+//                std::cout << i->first << ": " << i->second 
+//                        << std::endl;
+//        }
+
+}
+
+
 
 
 /***********************************************************************
