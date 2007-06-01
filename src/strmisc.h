@@ -306,7 +306,7 @@ public:
 		int res = mbstowcs(wcs, mbs.c_str(), wcs_len);
 
 		if (res == -1) {
-			throw std::runtime_error("WideCharConverter error in mbs_to_wcs");
+			throw ConversionError("WideCharConverter error in mbs_to_wcs");
 		}
 
 		return std::wstring(wcs,res);
@@ -324,12 +324,19 @@ public:
 		int res = wcstombs(mbs, wcs.c_str(), mbs_len);
 
 		if (res == -1) {
-			throw std::runtime_error("WideCharConverter error in wcs_to_mbs");
+			throw ConversionError("WideCharConverter error in wcs_to_mbs");
 		}
 
 		return std::string(mbs,res);
 
 	}
+
+	class ConversionError : public std::runtime_error {
+	public:
+		ConversionError(const std::string& _msg)
+		: std::runtime_error(_msg)
+		{}
+	};
 };
 
 #endif // __STRMISC_H

@@ -37,6 +37,8 @@ getter: getter.o $(OBJFILES)
 
 indexer: indexer.o zfilebuf.o $(OBJFILES)
 
+slidingreader: slidingreader.o $(OBJFILES)
+
 
 __testa_parser: __testa_parser.o $(OBJFILES)
 

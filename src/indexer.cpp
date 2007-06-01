@@ -512,11 +512,14 @@ inline std::wstring& normalize_term(std::wstring& word)
  * @param wconv	wide-string converter. Used only for caching and
  * 		performance purposes.
  *
+ * @param docid is used just for error reporting and can be ignored in commom
+ * 		usage.
+ *
  *
  * wfreq is cleared at every function call.
  */
 void getWordFrequency(filebuf f, StrIntMap& wfreq,
-			const WideCharConverter& wconv)
+			const WideCharConverter& wconv, docid_t docid=0)
 {
 	WIsalpha isalpha;
 
@@ -529,26 +532,31 @@ void getWordFrequency(filebuf f, StrIntMap& wfreq,
 
 	// For each text node (text inside and between tags) content
 	for(; ci != ce; ++ci){
-		std::wstring text_node = wconv.mbs_to_wcs(*ci);
-		std::wstring::const_iterator i(text_node.begin()),
-				      end(text_node.end());
-		// Get all words from this text node 
-		while(i != text_node.end()){
-			// new word
-			word.clear();
-			// Find word start
-			i = std::find_if(i,end,isalpha);
-			// Go until word end
-			while(i != end && isalpha(*i)){
-				word += *i;
-				++i;
+		try{
+			std::wstring text_node = wconv.mbs_to_wcs(*ci);
+			std::wstring::const_iterator i(text_node.begin()),
+					      end(text_node.end());
+			// Get all words from this text node 
+			while(i != text_node.end()){
+				// new word
+				word.clear();
+				// Find word start
+				i = std::find_if(i,end,isalpha);
+				// Go until word end
+				while(i != end && isalpha(*i)){
+					word += *i;
+					++i;
+				}
+				// Grabbed a full word. 
+				if(!word.empty()) {
+					normalize_term(word);
+					std::string w(wconv.wcs_to_mbs(word));
+					wfreq[w] = wfreq[w] + 1;
+				}
 			}
-			// Grabbed a full word. 
-			if(!word.empty()) {
-				normalize_term(word);
-				std::string w(wconv.wcs_to_mbs(word));
-				wfreq[w] = wfreq[w] + 1;
-			}
+		} catch (WideCharConverter::ConversionError& conv){
+			std::cerr << " # ERR " << docid << " " <<
+				conv.what() << std::endl;
 		}
 
 	}
@@ -651,14 +659,16 @@ void index_files(const char* store_dir, const char* docids_list,
 		std::string filename = make_filename(store_dir, docid);
 
 		//FIXME
-		std::cout << "DOCID " << docid << std::endl;
+		if (docid % 100 == 0) {
+			std::cout << "DOCID " << docid << std::endl;
+		}
 
 		// read document (decompressing)
 		AutoFilebuf dec(decompres(filename.c_str()));
 		filebuf f = dec.getFilebuf();
 
 		// parse document and get intra-ducument term frequency
-		getWordFrequency(f, wfreq, wcconv);
+		getWordFrequency(f, wfreq, wcconv, docid);
 
 		// For every term in the document
 		for(w = wfreq.begin(); w != wfreq.end(); ++w){
@@ -693,7 +703,7 @@ void testTripleInserter()
 {
 	const int KB = 1<<10;
 
-	run_inserter run("/tmp/down/", 10*KB);
+	run_inserter run("/tmp/runtest/", 10*KB);
 
 	for(int i = int(7.5*float(KB)); i > 0 ; --i){
 		*run++ = run_triple(i,i,i);
@@ -764,13 +774,21 @@ int main(int argc, char* argv[])
 //                try{
 			AutoFilebuf dec(decompres(argv[i]));
 			filebuf f = dec.getFilebuf();
-			dumpWFreq(f, wfreq);
+//                        dumpWFreq(f, wfreq);
+			HTMLContentIterator ci(f), ciend;
+			for(; ci != ciend; ++ci){
+				std::cout << *ci << std::endl;
+			}
 
 //                } catch(...) {
 //                        throw;
 			// pass
 //                }
 	}
+	return 0;
+
+
+
 	std::cout << wfreq.size() << std::endl;
 	std::map<std::string, int> ordenado(wfreq.begin(), wfreq.end());
 
