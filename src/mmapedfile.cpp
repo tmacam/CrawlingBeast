@@ -62,10 +62,42 @@ MMapedFile::MMapedFile(std::string filename)
 	buf = filebuf((const char*)mmap_start_pos, filesize);
 }
 
+
+MMapedFile::MMapedFile(std::string filename, size_t length, off_t offset)
+	: file(filename.c_str()), buf()
+{
+
+	size_t filesize = 0;
+	void *mmap_start_pos = 0;
+
+	filesize = file.filesize();
+
+	mmap_start_pos = mmap(	0,			// start
+				length,			// length
+				PROT_READ,		// prot
+				MAP_PRIVATE,		// flags
+				file.getFileno(),	// fd
+				offset);		// offset
+	if (mmap_start_pos == MAP_FAILED) {
+		// mmap failed failed
+		 throw MMapedFileException("in mmap with offset");
+	}
+
+	buf = filebuf((const char*)mmap_start_pos, length);
+}
+
+
 MMapedFile::~MMapedFile()
 {
 	if (buf.start) {
 		munmap((void *)buf.start, buf.len());
+	}
+}
+
+void MMapedFile::advise(advice_t adv)
+{
+	if ( madvise((void*)buf.start, buf.len(), adv) ) {
+		throw MMapedFileException("mavise(2) failed.");
 	}
 }
 

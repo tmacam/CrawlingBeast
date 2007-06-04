@@ -102,9 +102,39 @@ private:
 	//!This class is non-copyable
 	MMapedFile& operator=(const MMapedFile&);
 public:
+	enum advice_t {
+		sequential = MADV_SEQUENTIAL,
+		random = MADV_RANDOM};
+
 	MMapedFile(std::string filename);
+	
+	/**Constructor.
+	 *
+	 * This constructor mmaps a file at a given offset.
+	 *
+	 * @param filename Name of the file to mmap.
+	 *
+	 * @param length Length of the mmap'ing.
+	 *
+	 * @param offset Position from file start where this mmap should
+	 * 		"start". This value should be a multiple of page size
+	 * 		as returned by getpagesize().
+	 *
+	 * We will try to gracefully deal with request that goes beyond the
+	 * end of the file - but don't expect miracles. FIXME not implemented.
+	 *
+	 */
+	MMapedFile(std::string filename, size_t length, off_t offset);
+
 	~MMapedFile();
+
 	filebuf getBuf() {return buf;}
+
+	/**Give advice about use of memory.
+	 *
+	 * It calls madvise() internally.
+	 */
+	void advise(advice_t);
 };
 
 

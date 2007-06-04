@@ -15,7 +15,7 @@ BaseInvertedFileDumper::BaseInvertedFileDumper(std::string output_path,
   merger(m),
   n_index(0),
   max_data_size(_max_data_size),
-  hdr_file(std::string(output_path + "index.hdr").c_str(),
+  hdr_file(std::string(output_path + "/index.hdr").c_str(),
   		std::ios::binary | std::ios::out),
   data_file( mk_data_filename(output_path,n_index).c_str(),
   		std::ios::binary | std::ios::out)

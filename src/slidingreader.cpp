@@ -7,10 +7,14 @@
 int main(int argc, char* argv[])
 {
 	run_triple t;
-	FStreamSlidingReader w("_indexer_test_dir/run_0008",(10<<10)/9);
+	run_triple last_triple(0,0,0);
+
+	MMapedSlidingReader w("/tmp/indexer_test_dir/run_0008",(1<<20));
 	for( ; !w.eof(); ++w) {
 		t = *w;
-		std::cout << t.termid << " " << t.docid << " " << t.freq <<
-			std::endl;
+//                std::cout << t.termid << " " << t.docid << " " << t.freq <<
+//                        std::endl;
+		assert(last_triple < t);
+		last_triple = t;
 	}
 }

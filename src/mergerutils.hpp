@@ -109,6 +109,8 @@ class RunMerger {
         //! Prevent Copying and assignment.
         RunMerger& operator=(const RunMerger&);
 public:
+	typedef FStreamSlidingReader SlidingReader;
+
 	/**Constructor.
 	 *
 	 * @param _n_runs Number of runs to merge.
@@ -126,7 +128,7 @@ public:
 			std::string run_filename = 
 			      run_inserter::make_run_filename(run_store_dir, i);
 			BaseSlidingReader* new_run_reader =
-				new FStreamSlidingReader( run_filename.c_str(),
+				new SlidingReader( run_filename.c_str(),
 								mem_per_run);
 
 			if (! new_run_reader->eof()) {
@@ -208,7 +210,6 @@ public:
 
 };
 
-
 /***********************************************************************
 				BaseIndexDumper
  ***********************************************************************/
@@ -250,7 +251,7 @@ public:
  *
  */
 class BaseInvertedFileDumper {
-	
+protected:
 	std::string output_dir;	/**< Output directory where inverted-file file's
 				 *   will be written.
 				 */

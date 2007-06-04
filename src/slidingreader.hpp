@@ -143,6 +143,63 @@ public:
 	}
 };
 
+class MMapedSlidingReader : public BaseSlidingReader
+{
+	std::string filename;
+	ManagedFilePtr file;
+	off_t filesize;
+	off_t cur_offset;
+	std::auto_ptr<MMapedFile> reader;	//!< File reader
+public:
+	MMapedSlidingReader(const char* filename, size_t _max_mem)
+	: BaseSlidingReader(filename,getNearestValueAndPageMultiple(_max_mem)),
+	  filename(filename),
+	  file(filename),
+	  filesize(file.filesize()),
+	  cur_offset(0),
+	  reader( new MMapedFile(filename,max_memory,0)) // This mmap wil be destructed by ++*this
+	{
+		// Populate current memory pos
+		++*this;
+	}
+
+	/**getNearestValueAndPageMultiple.
+	 *
+	 * Return the nearest (and smallest) value from @p ammount that is
+	 * multiple of both page size and @c value_type.
+	 *
+	 * @see getpagesize()
+	 *
+	 */
+	static size_t getNearestValueAndPageMultiple(size_t ammount)
+	{
+		return ammount - (ammount % (sizeof(value_type)*getpagesize()));
+	}
+
+	virtual void advanceWindow()
+	{
+		// Don't perform anything if EOF was reached before and,
+		// if unsure, re-check with reader it's status
+		if ( (! eof()) && !( _eof = (cur_offset >= filesize))  ) {
+			// MMapedFile doesn't deal with "out-of-file-range" request
+			// gracefully
+			size_t missing = filesize - cur_offset;
+			size_t req_size = (missing > max_memory) ? max_memory: missing;
+
+			// Renew mmap
+			reader.reset( new MMapedFile(filename,req_size,cur_offset));
+			reader->advise(MMapedFile::sequential);
+
+			cur_offset += req_size;
+
+			// reading position is rewinded to mmap's start
+			cur_pos = (value_type*) reader->getBuf().start;
+			end_pos = (value_type*) reader->getBuf().end;
+
+		}
+	}
+};
+
 #endif // __SLIDINGREADER_H
 
 

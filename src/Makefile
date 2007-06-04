@@ -28,7 +28,7 @@ libgzstream.a : gzstream.o
 test.o: test.cpp parser.h
 
 runner.cpp: *test.h *.h
-	cxxtest/cxxtestgen.pl --error-printer --abort-on-fail -o runner.cpp *test.h
+	cxxtest/cxxtestgen.pl --error-printer -o runner.cpp *test.h
 
 runner: runner.cpp $(OBJFILES)
 
@@ -47,7 +47,7 @@ test_indexer: test_indexer.o $(OBJFILES)
 
 dump_index: dump_index.o $(OBJFILES)
 
-slidingreader: slidingreader.o
+slidingreader: slidingreader.o mmapedfile.o
 
 
 __testa_parser: __testa_parser.o $(OBJFILES)
