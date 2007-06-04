@@ -7,7 +7,7 @@
 int main(int argc, char* argv[])
 {
 	run_triple t;
-	FStreamSlidingReader w("/tmp/runtest/run_0007",256);
+	FStreamSlidingReader w("_indexer_test_dir/run_0008",(10<<10)/9);
 	for( ; !w.eof(); ++w) {
 		t = *w;
 		std::cout << t.termid << " " << t.docid << " " << t.freq <<

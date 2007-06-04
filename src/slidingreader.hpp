@@ -60,8 +60,6 @@ public:
 	{
 		// Advance window if its end was reached
 		if(cur_pos == end_pos){
-			// FIXME
-			std::cout << "## Advancing window" << std::endl;
 			this->advanceWindow();
 		}
 
@@ -108,13 +106,13 @@ class FStreamSlidingReader : public BaseSlidingReader
 	const ArrDelAdapter<char> arena;//!< Memory arena for blocks.
 	std::ifstream reader;		//!< File reader
 public:
-	FStreamSlidingReader(const char* filename, size_t max_memory)
-	: BaseSlidingReader(filename,max_memory),
+	FStreamSlidingReader(const char* filename, size_t _max_mem)
+	: BaseSlidingReader(filename,_max_mem),
 	  arena(new char[max_memory]),
 	  reader( filename , std::ios::binary | std::ios::in)
 	{
 		// Turn on exception reporting
-		reader.exceptions(std::ios_base::badbit|std::ios_base::failbit);
+		reader.exceptions(std::ios_base::badbit);
 		// Populate current memory pos
 		++*this;
 	}
@@ -124,15 +122,18 @@ public:
 		// Don't perform anything if EOF was reached before and,
 		// if unsure, re-check with reader it's status
 		if ( (! eof()) || (_eof = reader.eof())  ) {
-			// reading pos rewinds to start of the arena
-			cur_pos = (run_triple*) arena.get();
+			// reading position is rewinded to arena's start
+			cur_pos = (value_type*) arena.get();
 
-			int n = reader.readsome( (char*)cur_pos,
-					max_elements*sizeof(run_triple));
-			end_pos = &cur_pos[n/sizeof(run_triple)];
+			reader.read( (char*)cur_pos, max_memory);
+			int n = reader.gcount();
+			end_pos = &cur_pos[n/sizeof(value_type)];
+
 			// Did we reach the end of this file ?
-			_eof =  (n == 0);
-			std::cout << "## pointers " << (void *) cur_pos << " " << (void *) end_pos << std::endl;
+			if (n == 0) {
+				_eof = true;
+			}
+			assert(n % sizeof(value_type) == 0);
 		}
 	}
 };

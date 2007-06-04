@@ -60,6 +60,13 @@ struct run_triple{
 		return (termid < other.termid) ||
 			(termid == other.termid && docid < other.docid);
 	}
+
+	inline bool operator==(const run_triple& other) const
+	{
+		return this->termid == other.termid && 
+			this->docid == other.docid &&
+			this->freq == other.freq;
+	}
 	
 } __attribute__((packed));
 
@@ -153,6 +160,9 @@ public:
 	 * the destructor.
 	 */
 	void flush();
+
+	/**Make a run filename from a prefix and a run number.*/
+	static std::string make_run_filename(std::string path_prefix, int n);
 	
 	int getNRuns() const {return n_runs;}
 

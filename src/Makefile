@@ -28,7 +28,7 @@ libgzstream.a : gzstream.o
 test.o: test.cpp parser.h
 
 runner.cpp: *test.h *.h
-	cxxtest/cxxtestgen.pl --error-printer -o runner.cpp *test.h
+	cxxtest/cxxtestgen.pl --error-printer --abort-on-fail -o runner.cpp *test.h
 
 runner: runner.cpp $(OBJFILES)
 
@@ -38,7 +38,11 @@ getter: getter.o $(OBJFILES)
 
 indexer: indexer.o $(OBJFILES)
 
-slidingreader: slidingreader.o $(OBJFILES)
+merger: merger.o $(OBJFILES)
+
+test_indexer: test_indexer.o $(OBJFILES)
+
+slidingreader: slidingreader.o
 
 
 __testa_parser: __testa_parser.o $(OBJFILES)
@@ -46,7 +50,7 @@ __testa_parser: __testa_parser.o $(OBJFILES)
 threadingutils_teste: threadingutils_teste.cpp threadingutils.h $(OBJFILES)
 
 tags: *.cpp *.h
-	ctags *.cpp *.h
+	ctags *.cpp *.h *.hpp
 
 
 .PHONY: clean test

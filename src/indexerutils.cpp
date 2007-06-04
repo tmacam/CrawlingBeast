@@ -12,6 +12,17 @@
 				 RUN ITERATORS
  ***********************************************************************/
 
+std::string run_inserter::make_run_filename(std::string path_prefix, int n)
+{
+
+	std::ostringstream filename_stream;
+	filename_stream << path_prefix << "/run_" <<
+		std::hex <<  std::setw(4) << std::setfill('0') <<
+		n; //"%s/run_%04x"
+	return filename_stream.str();
+
+}
+
 void run_inserter::flush()
 {
 
@@ -28,14 +39,10 @@ void run_inserter::flush()
 
 	// Let's write 'em to disk
 	// FIXME woudn't UNIX I/O rotines perform better?
-	std::ostringstream filename_stream;
 	std::ofstream out;
 	// Turn on exception reporting for file operations
 	out.exceptions( std::ios_base::badbit|std::ios_base::failbit);
-	filename_stream << path_prefix << "/run_" <<
-		std::hex <<  std::setw(4) << std::setfill('0') <<
-		n_runs; //"%s/run_%04x"
-	out.open(filename_stream.str().c_str(),
+	out.open(make_run_filename(path_prefix, n_runs).c_str(),
 		 std::ios::binary | std::ios::out);
 	out.rdbuf()->pubsetbuf(0, 0); // unbuffering out
 	out.write( (char *)run_buf,
