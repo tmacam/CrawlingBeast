@@ -10,7 +10,7 @@ CC	 = g++
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS)
 LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
 AR	 = ar cr
-OBJFILES = filebuf.o parser.o htmlparser.o urltools.o strmisc.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a robotshandler.o entityparser.o htmliterators.o indexerutils.o zfilebuf.o 
+OBJFILES = filebuf.o parser.o htmlparser.o urltools.o strmisc.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a robotshandler.o entityparser.o htmliterators.o indexerutils.o mergerutils.o zfilebuf.o 
 
 
 
@@ -38,9 +38,14 @@ getter: getter.o $(OBJFILES)
 
 indexer: indexer.o $(OBJFILES)
 
-merger: merger.o $(OBJFILES)
+merger.o: merger.cpp mergerutils.?pp indexerutils.?pp
+
+merger: merger.o mergerutils.o 
+	g++  -lz -pthread   merger.o mergerutils.o -o merger
 
 test_indexer: test_indexer.o $(OBJFILES)
+
+dump_index: dump_index.o $(OBJFILES)
 
 slidingreader: slidingreader.o
 

@@ -24,6 +24,8 @@ void show_usage()
 
 int main(int argc, char* argv[])
 {
+	const int MB =  1<<20;
+
 	int max_mem = 1<<30; // 1GB
 
 	/*
@@ -36,15 +38,9 @@ int main(int argc, char* argv[])
 	int n_runs = fromString<int>(argv[1]);
 	const char* output_dir = argv[2];
 
-	//Merge!
+	// Create index
 	RunMerger merger(n_runs, output_dir, max_mem);
-	while(!merger.eof()){
-		run_triple val = merger.getNext();
+	BaseInvertedFileDumper ifile(output_dir, merger, MB);
+	ifile.dump();
 
-		std::cout << val.termid << " " << 
-			val.docid << " " << 
-			val.freq << " " << 
-			std::endl;
-
-	}
 }

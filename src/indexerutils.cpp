@@ -4,6 +4,7 @@
 
 #include "htmliterators.hpp"
 #include "zfilebuf.h"
+#include "mmapedfile.h"
 
 #include <fstream>
 #include <iomanip>
@@ -11,17 +12,6 @@
 /***********************************************************************
 				 RUN ITERATORS
  ***********************************************************************/
-
-std::string run_inserter::make_run_filename(std::string path_prefix, int n)
-{
-
-	std::ostringstream filename_stream;
-	filename_stream << path_prefix << "/run_" <<
-		std::hex <<  std::setw(4) << std::setfill('0') <<
-		n; //"%s/run_%04x"
-	return filename_stream.str();
-
-}
 
 void run_inserter::flush()
 {
@@ -179,6 +169,31 @@ void dump_vocabulary(const StrIntMap& vocabulary, const char* output_dir)
 	}
 }
 
+void load_vocabulary(StrIntMap& vocabulary, const char* store_dir)
+{
+	// Setup dump files' filename
+	std::string voc_prefix(store_dir);
+	voc_prefix += "/vocabulary";
+	std::string voc_hdr_filename =  voc_prefix + ".hdr";
+	std::string voc_data_filename =  voc_prefix + ".data";
+
+	MMapedFile hdr(voc_hdr_filename);
+	uint32_t* h_start = (uint32_t*) hdr.getBuf().start;
+	uint32_t* h_end = (uint32_t*) hdr.getBuf().end;
+	size_t wcount = h_end - h_start;
+
+	MMapedFile data(voc_data_filename);
+	const char* word = data.getBuf().start;
+	
+	for(size_t i = 0; i < wcount; ++i) {
+		const char* word_start = &word[h_start[i]];
+		vocabulary[std::string(word_start)] = i;
+	}
+
+
+}
+
+
 void index_files(const char* store_dir, const char* docids_list,
 		const char* output_dir)
 {
@@ -221,7 +236,8 @@ void index_files(const char* store_dir, const char* docids_list,
 				// We MUST get the current number of elements
 				// inside the vocabulary separatly: assigning
 				// voc[term] = size() in a single statement
-				// makes termid start couting from 1...
+				// would make termid start couting from 1
+				// what is something we *do not* want.
 				int len = vocabulary.size();
 				vocabulary[term] = len;
 			}

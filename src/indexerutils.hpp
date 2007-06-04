@@ -19,6 +19,7 @@
 #include <tr1/functional>
 #include <map>
 #include <string>
+#include <iomanip> // for make_run_filename
 
 /***********************************************************************
 			     Typedefs and constants
@@ -66,6 +67,14 @@ struct run_triple{
 		return this->termid == other.termid && 
 			this->docid == other.docid &&
 			this->freq == other.freq;
+	}
+
+	friend std::ostream& operator<<(std::ostream& out, const run_triple& tri)
+	{
+		out << "<" << tri.termid << "," <<
+				tri.docid << "," <<
+			     	tri.freq << ">";
+		return out;
 	}
 	
 } __attribute__((packed));
@@ -162,7 +171,18 @@ public:
 	void flush();
 
 	/**Make a run filename from a prefix and a run number.*/
-	static std::string make_run_filename(std::string path_prefix, int n);
+	static std::string make_run_filename(std::string path_prefix, int n)
+	{
+
+		std::ostringstream filename_stream;
+		filename_stream << path_prefix << "/run_" <<
+			std::hex <<  std::setw(4) << std::setfill('0') <<
+			n; //"%s/run_%04x"
+		return filename_stream.str();
+
+	}
+
+
 	
 	int getNRuns() const {return n_runs;}
 
@@ -288,6 +308,17 @@ void mapIdToTerms(const StrIntMap& term2id, IntStrMap& id2term);
  * @note We assume that we have a sequential ordering of the term ids.
  */
 void dump_vocabulary(const StrIntMap& vocabulary, const char* output_dir);
+
+
+/**Load a dumped vocabulary.
+ *
+ * @see dump_vocabulary
+ *
+ * @param[out] vocabulary Map where the vocabulary will be loaded.
+ * @param[in] store_dir	Directory where the dumped vocabulary is.
+ *
+ */
+void load_vocabulary(StrIntMap& vocabulary, const char* store_dir);
 
 
 

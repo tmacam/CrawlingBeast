@@ -113,6 +113,11 @@ public:
 	{
 		// Turn on exception reporting
 		reader.exceptions(std::ios_base::badbit);
+		if(!reader) {
+			std::string msg("Error opening RUN file ");
+			msg +=filename;
+			throw std::runtime_error(msg);
+		}
 		// Populate current memory pos
 		++*this;
 	}
