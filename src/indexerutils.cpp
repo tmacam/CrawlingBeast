@@ -201,6 +201,12 @@ void index_files(const char* store_dir, const char* docids_list,
 	std::string url;
 	docid_t docid;
 
+	// Statistics
+	docid_t d_count = 0;
+	uint64_t byte_count = 0;
+	uint64_t last_byte_count = 0;
+	time_t last_broadcast = time(NULL);
+
 	const unsigned int KB = 1<<10;
 	run_inserter runs(output_dir, 100*KB );
 
@@ -213,11 +219,6 @@ void index_files(const char* store_dir, const char* docids_list,
 	// For every docid / retrieved document
 	while(known_docids >> docid >> url){
 		std::string filename = make_filename(store_dir, docid);
-
-		//FIXME
-		if (docid % 100 == 0) {
-			std::cout << "DOCID " << docid << std::endl;
-		}
 
 		// read document (decompressing)
 		AutoFilebuf dec(decompres(filename.c_str()));
@@ -247,6 +248,21 @@ void index_files(const char* store_dir, const char* docids_list,
 						docid,
 						freq);
 		} // end for each word in document
+
+		// Statistics
+		++d_count;
+		byte_count += f.len();
+		if (d_count  % 100 == 0) {
+			uint64_t byte_amount = byte_count - last_byte_count;
+			std::cout << "# docs: " << d_count << " bytes: " <<
+				byte_amount << " / " << byte_count << " bps: " <<
+				byte_amount/(time(NULL) - last_broadcast) << std::endl;
+
+			last_broadcast = time(NULL);
+			last_byte_count = byte_count;
+		}
+
+
 	} // end for each document
 
 	dump_vocabulary(vocabulary, output_dir);

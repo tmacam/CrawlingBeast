@@ -32,6 +32,7 @@ int main(int argc, char* argv[])
 
 	index_files(store_dir, docid_list, output_dir);
 	exit(0);
+}
 
 	/* WARNING  WARNING   WARNING   WARNING   WARNING   WARNING   WARNING  
 	 * WARNING  WARNING   WARNING   WARNING   WARNING   WARNING   WARNING  
@@ -54,49 +55,6 @@ int main(int argc, char* argv[])
 //        std::cout << "Out: " << wconv.wcs_to_mbs(out) << std::endl;
 
 //        return 1;
-
-
-	StrIntMap wfreq;
-
-
-	for(int i = 1; i < argc; ++i) {
-//                try{
-			AutoFilebuf dec(decompres(argv[i]));
-			filebuf f = dec.getFilebuf();
-//                        dumpWFreq(f, wfreq);
-			HTMLContentIterator ci(f), ciend;
-			for(; ci != ciend; ++ci){
-				std::cout << *ci << std::endl;
-			}
-
-//                } catch(...) {
-//                        throw;
-			// pass
-//                }
-	}
-	return 0;
-
-
-
-	std::cout << wfreq.size() << std::endl;
-	std::map<std::string, int> ordenado(wfreq.begin(), wfreq.end());
-
-	std::map<std::string, int>::const_iterator i;
-	for(i = ordenado.begin(); i != ordenado.end(); ++i){
-		std::cout << i->first << ": " <<
-				i->second << std::endl;
-	}
-
-
-	std::cout << "Done." << std::endl;
-//        std::string press_enter;
-//        std::cin >> press_enter;
-
-
-
-
-}
-
 
 
 //EOF
