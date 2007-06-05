@@ -194,11 +194,9 @@ void load_vocabulary(StrIntMap& vocabulary, const char* store_dir)
 }
 
 
-void index_files(const char* store_dir, const char* docids_list,
+void index_files(const char* store_dir, const std::vector<docid_t> docids_list,
 		const char* output_dir)
 {
-	std::ifstream known_docids(docids_list);
-	std::string url;
 	docid_t docid;
 
 	// Statistics
@@ -218,7 +216,9 @@ void index_files(const char* store_dir, const char* docids_list,
 	StrIntMap::const_iterator w; // intra-document word iterator
 
 	// For every docid / retrieved document
-	while(known_docids >> docid >> url){
+	for(unsigned int i = 0; i < docids_list.size(); ++i){
+		docid = docids_list[i];
+
 		std::string filename = make_filename(store_dir, docid);
 
 		// read document (decompressing)
@@ -250,7 +250,7 @@ void index_files(const char* store_dir, const char* docids_list,
 						freq);
 		} // end for each word in document
 
-		// Statistics
+		// Statistics and prefetching
 		++d_count;
 		byte_count += f.len();
 		if (d_count  % 100 == 0) {
@@ -264,6 +264,12 @@ void index_files(const char* store_dir, const char* docids_list,
 
 			last_broadcast = now;
 			last_byte_count = byte_count;
+
+			if( (i + 1000) < docids_list.size()){
+				std::vector<docid_t> pref(&docids_list[i],
+							&docids_list[i+1000]);
+				prefetchDocs(store_dir,pref);
+			}
 		}
 
 
@@ -275,6 +281,15 @@ void index_files(const char* store_dir, const char* docids_list,
 /***********************************************************************
 				      TEST
  ***********************************************************************/
+
+void prefetchDocs(const char* store_dir, std::vector<docid_t>& ids)
+{
+	std::vector<docid_t>::const_iterator i;
+	for(i = ids.begin(); i != ids.end(); ++i){
+		std::string filename = make_filename(store_dir, *i);
+		ManagedFilePtr p(filename.c_str());
+	}
+}
 
 void testTripleInserter()
 {

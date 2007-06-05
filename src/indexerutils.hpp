@@ -335,8 +335,11 @@ void load_vocabulary(StrIntMap& vocabulary, const char* store_dir);
  * @param output_dir Path where the indexing "runs" will be created.
  *
  */
-void index_files(const char* store_dir, const char* docids_list,
+void index_files(const char* store_dir, std::vector<docid_t> docids_list,
 		const char* output_dir);
+
+
+void prefetchDocs(const char* store_dir, std::vector<docid_t>& ids);
 
 #endif // __INDEXERUTILS_H__
 
