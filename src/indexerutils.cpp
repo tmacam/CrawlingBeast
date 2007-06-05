@@ -206,6 +206,7 @@ void index_files(const char* store_dir, const char* docids_list,
 	uint64_t byte_count = 0;
 	uint64_t last_byte_count = 0;
 	time_t last_broadcast = time(NULL);
+	time_t time_started = time(NULL);
 
 	const unsigned int KB = 1<<10;
 	run_inserter runs(output_dir, 100*KB );
@@ -253,12 +254,15 @@ void index_files(const char* store_dir, const char* docids_list,
 		++d_count;
 		byte_count += f.len();
 		if (d_count  % 100 == 0) {
+			time_t now = time(NULL);
+
 			uint64_t byte_amount = byte_count - last_byte_count;
 			std::cout << "# docs: " << d_count << " bytes: " <<
 				byte_amount << " / " << byte_count << " bps: " <<
-				byte_amount/(time(NULL) - last_broadcast) << std::endl;
+				byte_amount/(now - last_broadcast) << 
+				" elapsed " << now - time_started << std::endl;
 
-			last_broadcast = time(NULL);
+			last_broadcast = now;
 			last_byte_count = byte_count;
 		}
 
