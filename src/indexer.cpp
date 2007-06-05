@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
 	docid_list = argv[2];
 	output_dir = argv[3];
 
-	std::cout << "# Reading docid list ... ";
+	std::cout << "# Reading docid list ... "<< std::endl;
 	std::vector<docid_t> ids;
 	ids.reserve(1<<20);
 	std::ifstream known_docids(docid_list);
@@ -39,7 +39,7 @@ int main(int argc, char* argv[])
 	while(known_docids >> docid >> url){
 		ids.push_back(docid);
 	}
-	std::cout << "done." << std::endl;
+	std::cout << "# Reading docid list ... done." << std::endl;
 
 	index_files(store_dir, ids, output_dir);
 	exit(0);

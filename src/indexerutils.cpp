@@ -253,12 +253,12 @@ void index_files(const char* store_dir, const std::vector<docid_t> docids_list,
 		// Statistics and prefetching
 		++d_count;
 		byte_count += f.len();
-		if (d_count  % 100 == 0) {
+		if (d_count  % 1000 == 0) {
 			time_t now = time(NULL);
 
 			uint64_t byte_amount = byte_count - last_byte_count;
 			std::cout << "# docs: " << d_count << " bytes: " <<
-				byte_amount << " / " << byte_count << " bps: " <<
+				byte_amount << " / " << byte_count << " bps: "<<
 				byte_amount/(now - last_broadcast) << 
 				" elapsed " << now - time_started << std::endl;
 
