@@ -7,9 +7,9 @@
 
 
 #include "slidingreader.hpp"
+#include "indexcompression.hpp"
 
 #include <queue>
-#include <list>
 #include <vector>
 
 
@@ -31,14 +31,6 @@ typedef std::priority_queue< BaseSlidingReader*,
 			     ReadersPtrVec,
 			     GetSmallestQueue >		RunPriorityQueue;
 
-/*We could have used a uint16_t for freq. but this would not matter anyway as
- * this struct is not __attribute__((packed))*/
-typedef std::pair<uint32_t, uint32_t> d_fdt_t;
-
-typedef std::list<d_fdt_t> inverted_list_t;
-
-typedef std::vector<d_fdt_t> inverted_list_vec_t;
-
 struct hdr_entry_t {
 	uint32_t ft;	//!< Count of documents containint term t
 	uint32_t pos;	/**< Position of the inverted list in data file
@@ -52,8 +44,6 @@ struct hdr_entry_t {
 	: ft(count), pos(position), fileno(n)
 	{}
 } __attribute__((packed));
-
-
 
 /***********************************************************************
 				   RunMerger
@@ -234,7 +224,7 @@ public:
  *
  * - index.hdr
  *
- *  	The inverted list header, holding the search structure of this inverted
+ *  	The inverted file header, holding the search structure of this inverted
  *  	file. It consists of an array of @c hdr_entry tuples, containing, for
  *  	each term, its <document count (tf), file position, data file number>.
  *  	
@@ -248,6 +238,11 @@ public:
  * 	data. There are tricks to get around this limitation but they are way
  * 	too much troublesome for this assignment. For this reason, an index
  * 	file may be splitted in more then one data file.
+ *
+ * @warning This whole thing assume that all terms in the vocabulary appear at
+ * 	    least once in the indexed documents and, thus, that all the terms
+ * 	    in the vocabulary *will* appear and appear sequentially in ascening
+ * 	    order in the resulting inverted file header.
  *
  */
 class BaseInvertedFileDumper {
@@ -339,6 +334,42 @@ public:
 	virtual void dumpInvertedList(uint32_t tf, const inverted_list_t& ilist);
 
 };
+
+/***********************************************************************
+		      ByteWiseCompressedInvertedFileDumper
+ ***********************************************************************/
+
+/**A index dumper that compresses its output with a byte-wise coding.
+ *
+ * Yeah, we really enjoi VIM's autocomplete and really long class names.
+ *
+ * This class justs re-implements the virtual method dumpInvertedList. Being
+ * so, there is no need to re-document all its the methods - they behave just
+ * like the ones in its parent class, except for the compressed-index-stuff
+ * part.
+ *
+ * For information on the bytewise compressor see @p ByteWiseCompressor .
+ *
+ * @see ByteWiseCompressor
+ */
+class ByteWiseCompressedInvertedFileDumper: public BaseInvertedFileDumper {
+	ByteWiseCompressor::charvec_t out_buffer;
+public:
+
+	ByteWiseCompressedInvertedFileDumper(std::string output_path,
+			RunMerger& m, size_t _max_data_size,
+			size_t header_reserve=1<<22)
+	: BaseInvertedFileDumper(output_path, m, _max_data_size,
+				header_reserve=1<<22)
+	{}
+
+
+	/**Dump an inverted list compressed using byte-wise coding to disk.
+	 *
+	 */
+	void dumpInvertedList(uint32_t tf, const inverted_list_t& ilist);
+};
+
 
 
 

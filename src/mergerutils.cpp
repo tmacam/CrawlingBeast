@@ -79,11 +79,16 @@ void BaseInvertedFileDumper::dump()
 
 void BaseInvertedFileDumper::rotateDataFile()
 {
+	// If the index file is too big it will be rotated
 	if (data_file.tellp() > max_data_size) {
 		data_file.close();
-		++n_index; // New index file
+		// New index file in the house!
+		++n_index; 
 		data_file.open(mk_data_filename(output_dir,n_index).c_str(),
 	  	    	std::ios::binary | std::ios::out);
+		// Turning exceptions - again... better safe then sorry
+		data_file.exceptions( std::ios_base::badbit|
+					std::ios_base::failbit);
 	}
 }
 
@@ -111,3 +116,28 @@ void BaseInvertedFileDumper::dumpInvertedList(uint32_t tf,
 	data_file.write( (char*) &list_dump[0], tf*sizeof(d_fdt_t));
 
 }
+
+/***********************************************************************
+		      ByteWiseCompressedInvertedFileDumper
+ ***********************************************************************/
+
+void ByteWiseCompressedInvertedFileDumper::dumpInvertedList(uint32_t tf,
+					const inverted_list_t& ilist)
+{
+	// Clear previous invocations
+	out_buffer.clear();
+
+	//We expect the compressed list to be no bigger than the original.
+	size_t expected_len = tf*sizeof(d_fdt_t);
+	if (out_buffer.capacity() < expected_len ) {
+		out_buffer.reserve(expected_len);
+	}
+
+	ByteWiseCompressor::compress(ilist,out_buffer);
+	assert( ! out_buffer.empty()  );
+
+	data_file.write( (char*) &out_buffer[0], out_buffer.size());
+}
+
+
+// EOF

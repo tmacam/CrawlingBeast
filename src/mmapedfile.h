@@ -121,7 +121,10 @@ public:
 	 * 		as returned by getpagesize().
 	 *
 	 * We will try to gracefully deal with request that goes beyond the
-	 * end of the file - but don't expect miracles. FIXME not implemented.
+	 * end of the file - but don't expect miracles.
+	 *
+	 * @todo we are not really sure out-of-range requests are handled
+	 *       properly.
 	 *
 	 */
 	MMapedFile(std::string filename, size_t length, off_t offset);

@@ -5,8 +5,8 @@
  * @brief Index compression functors.
  */
 
-#include "mergerutils.hpp"
-#include "filebuf.h"	// We made this f*cking for byte processing, right?
+#include "filebuf.h"	// We made this f*cker for byte processing, right?
+#include "indexerutils.hpp"
 
 /***********************************************************************
 			     Typedefs and constants
@@ -16,6 +16,16 @@
 			 ByteWise Compression Functions
  ***********************************************************************/
 
+/**Byte-wise compression routines for inverted lists.
+ *
+ * For more information on the methods implemented here see the survey from
+ * Zobel and Moffat, entitled "Inverted files for text search engines",
+ * ACM, 2006. http://doi.acm.org/10.1145/1132956.1132959
+ *
+ * Yeah, we are using a struct just like if it was a namespace holder
+ * - so what?
+ *
+ */
 struct ByteWiseCompressor {
 
 	typedef std::vector<uint8_t> charvec_t;
@@ -30,7 +40,7 @@ struct ByteWiseCompressor {
 
 		value = value -1;
 
-		while(value & hi_128) {
+		while(value & hi_128) {	// Value >= 128
 			// write ( 128 + x mod 128)
 			output.push_back( bit_128 | (low_128 & value));
 			// value =  (value div 128) -1
@@ -47,17 +57,22 @@ struct ByteWiseCompressor {
 		value = 0;
 		uint32_t p = 0;
 
-		while(b & hi_128) {
-			value += ((b - 127) << p);
-			p += 7;
-			b = *bytes.read(1);
+		while(b & hi_128) {		   //while value >= 128
+			value += ((b - 127) << p); //	x +=  (b-127) x p
+			p += 7;			   //	p *= 128
+			b = *bytes.read(1);	   //   b = read_byte()
 		}
-		value = value + ((b+1) << p);
+		value = value + ((b+1) << p);	   //	x += (b+2)xp	
 	}
 
 
 	
-	/**Compress.
+	/**Compress an inverted list.
+	 *
+	 * Document id (stored as d-gaps) and term frequency in the documents
+	 * are  both stored using this class' byte-wise encoding method.
+	 *
+	 * @note We expect to see ascending docids in the list.
 	 *
 	 * @param[in] in inverted list to compress
 	 * @param[out] out compressed output.

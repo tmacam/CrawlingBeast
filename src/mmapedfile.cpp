@@ -67,10 +67,17 @@ MMapedFile::MMapedFile(std::string filename, size_t length, off_t offset)
 	: file(filename.c_str()), buf()
 {
 
-	size_t filesize = 0;
 	void *mmap_start_pos = 0;
 
-	filesize = file.filesize();
+	// Deals with "out of range" requests
+	off_t filesize = file.filesize();
+	if (offset > filesize) {
+		// This should probably be an std::out_of_range but...
+		throw MMapedFileException("MMapedFileException with offset: "
+					  "offset bigger than filesize.");
+	} else if (off_t(length + offset) > filesize) {
+		length = filesize - offset;
+	}
 
 	mmap_start_pos = mmap(	0,			// start
 				length,			// length

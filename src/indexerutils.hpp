@@ -19,6 +19,7 @@
 #include <tr1/functional>
 #include <map>
 #include <string>
+#include <list>
 #include <iomanip> // for make_run_filename
 
 /***********************************************************************
@@ -29,6 +30,16 @@ typedef __gnu_cxx::hash_map < std::string, int,
                         std::tr1::hash<std::string> > StrIntMap;
 
 typedef std::map<int,std::string> IntStrMap;
+
+/*We could have used a uint16_t for freq. but this would not matter anyway as
+ * this struct is not __attribute__((packed))*/
+typedef std::pair<uint32_t, uint32_t> d_fdt_t;
+
+typedef std::list<d_fdt_t> inverted_list_t;
+
+typedef std::vector<d_fdt_t> inverted_list_vec_t;
+
+
 
 
 /***********************************************************************

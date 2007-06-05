@@ -40,7 +40,7 @@ int main(int argc, char* argv[])
 
 	// Create index
 	RunMerger merger(n_runs, output_dir, max_mem);
-	BaseInvertedFileDumper ifile(output_dir, merger, MB);
+	ByteWiseCompressedInvertedFileDumper ifile(output_dir, merger, MB);
 	ifile.dump();
 
 }
