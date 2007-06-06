@@ -1,0 +1,802 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage{graphicx,url}
+\usepackage{subfigure}
+
+\usepackage[brazil]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{times}
+\usepackage{subfigure}
+\usepackage{graphicx}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Header  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Trabalho prático 2}
+\author{Tiago Alves Macambira \\ \texttt{tmacam@dcc.ufmgbr}}
+\date{6 de julho de 2007}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  Body  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\maketitle
+
+\section{Introdução}
+
+O segundo trabalho prático da disciplina de Recuperação de Informação
+consiste no projeto e implementação de programas eficientes para
+recuperação eficiente de grandes base de dados. Tal sistema deve
+ atender vários requisitos, como disposto no
+enunciado do trabalho~\cite{tp1}, dentre os quais podemos citar:
+\begin{itemize}
+\item O sistema deve utilizar como base os dados coletados pelo
+\emph{crawler} do TP1,
+\item O sistema deve ser capaz de responder \emph{queries} com uma ou
+mais palavras e intepretar o uso dos operadores booleanos \texttt{AND}
+e \texttt{OR}.
+\item O sistema deve utilizar arquivos invertidos como mecanismo
+de índice.
+\item O uso de mecanismos para compactação de índice, apesar de
+opcional, é recomendado.
+\item O sistema deve ser escrito em C/C++. Bibliotecas extras somente
+poderão ser utilizadas mediante autorização dos professores.
+\end{itemize}
+
+Nesse relatório, comentaremos sobre a resolução do nosso trabalho:
+os desafios encontrados, as escolhas de projetos
+adotadas e peculiaridades de nossa implementação. Além disso, comentamos
+sobre o desempenho do mesmo, as estruturas de dados usadas bem como suas
+complexidades.
+
+Muitos dos pontos abordados no trabalho prático anterior são também
+relevantes a esse trabalho prático. Por esse motivo e para tornar a
+leitura desse relatório independente da leitura do relatório anterior,
+sempre que necessário, utilizaremos fragmentos do relatório anterior.
+
+\section{Indexação de páginas web}
+
+Dado um conjunto de páginas \emph{Web} coletadas, para que seja possível
+realizar buscas eficientemente nessa coleção é necessário, antes de mais
+nada, indexar o seu conteúdo.
+
+De forma resumida, a indexação tanto de conteúdo \emph{Web} bem como 
+de coleções de texto no geral possui os seguintes passos:
+
+\begin{description}
+
+\item[Reconhecimento da estrutura:] No caso de documentos HTML, essa
+etapa corresponde ao \emph{parsing} dos documentos da coleção e a
+extração dos fragmentos de texto existentes em cada documento.
+
+\item[Normalização de caso e acentos:] Para o propósito de indexar
+documentos, não faz sentido diferenciar letras maiúsculas de letras
+minúsculas em palavras. Além disso, é comum também que se ignore a
+presença de acentos em palavras, de forma a considerar, por exemplo,
+ as palavras ``\texttt{ação}'' e ``\texttt{acao}'' como sendo iguais.
+
+\item[Remoção de \emph{stopwords}:] Algumas palavras tais como
+preposições e conjunções não agregam valor semântico ao texto e, em
+teoria, a remoção destas palavras não acarretaria danos ao processo de
+indexação. Além disso, devido a freqüência dessas palavras nos textos,
+sua remoção também proporciona economia no tamanho do índice. Todavia,
+alguns trabalhos argumentam que, no contexto de máquinas de busca para a
+\emph{Web}, não faz sentido retirar \emph{stopwords} durante a
+indexação, sob pena de prejudicar o processamento de
+frases~\cite{moffat1999managing}.
+
+\item[\emph{Steeming}:] A idéia é a de armazenar apenas os radicais das
+palavras no índice, facilitando assim as buscas por flexões da mesma
+palavra e, novamente, diminuindo o tamanho o mesmo.
+
+\item[Geração do Índice:] Finalmente, a última etapa da indexação é a
+geração propriamente dita das estruturas e do conteúdo do índice. 
+
+\end{description}
+
+\subsection{Problemas e desafios}
+
+Nessa seção comentaremos sobre alguns dos problemas que podem ser
+encontrados durante a indexação de conteúdo HTML. Na
+seção~\ref{sec:implementation} comentaremos como lidamos com esses
+problemas na nossa implementação.
+
+\subsubsection{Normalização de mapas de
+caracteres}\label{prob:charmapnorm}
+
+As diferentes línguas utilizadas pelo homem usam distintos conjuntos de
+símbolos para sua representação e, para vários desses conjunto de
+símbolos, mais de uma forma de representação binária existe. Esse fato
+torna complicado a troca e a interpretação de texto em línguas diferentes
+e mesmo para documentos escritos na mesma língua. Para a língua inglesa,
+por exemplo, que utiliza um conjunto de caracteres bem limitado, existem
+dois conjuntos de mapas de caracteres históricos diferentes e
+incompatíveis, ASCII e EBCDIC. Se contarmos os mapas de caracteres e
+formas de codificação diferentes existentes para as várias línguas
+humanas, esse problema torna-se bem mais complexo.
+Mesmo a existência de conjuntos ``universais'' como UTF-8, UTF-16 e
+UTF-32 não resolvem esse problema, pois nem todos os documentos na
+Internet se encontram codificados nesses mapas de caracteres.
+
+É salutar observar que a capacidade de interpretar corretamente
+documentos escritos em mapas de caracteres distintos e de recodificá-los
+para um mapa de caractere comum  repercute não somente na capacidade de
+realizar \emph{parsing} de documentos, mas também na capacidade de
+indexação e extração de \emph{links} do mesmo, uma vez a forma de
+representar caracteres irá afetar diretamente a capacidade de
+normalizar o vocabulário e de normalizar URLs.
+
+\subsubsection{Descoberta de mapa de
+caracteres}\label{prob:charmapdetection}
+
+Associado ao problema de normalizar os documentos em um único mapa de
+caracteres está o problema de, dado um documento, descobrir em qual mapa
+de caracteres o mesmo se encontra para que se possa então realizar a
+tradução. Informações sobre o mapa de caractere usado por uma página
+\emph{Web} podem ser fornecidas de diversas formas:
+\begin{itemize}
+\item por cabeçalhos da requisição HTTP~\cite{rfc2616},
+ o protocolo de aplicação utilizado na \emph{Web},
+\item pelo prólogo de um documento XML~\cite{bray2006xml},
+\item através de uma \emph{tag} \texttt{Meta} em um documento
+(x)HTML~\cite{html4tr}.
+\end{itemize}
+
+Entretanto, os padrões acima apresentam sobreposições, colocando o
+desenvolvedor em situações de impasse. Por exemplo, quando mais de um
+padrão fornece informações conflitantes, qual utilizar?  Quando nenhum
+mecanismo acima informa nada sobre o mapa de caracteres usado, qual
+padrão ou qual regra usar por omissão?
+
+Uma alternativa plausível é realizar o mesmo processo utilizado por
+navegadores \emph{Web}, que é uma extensão do modelo proposto pela RFC
+3023~\cite{rfc3023}. Esse processo consiste em seguir os passos abaixo,
+parando no primeiro que tenha suas restrições atendidas:
+\begin{enumerate}
+\item Usar as informações dos cabeçalhos HTTP, sempre que possível e
+sempre que estes estejam disponíveis.
+\item  Se os primeiros 2--4 bytes forem macadores de ordem de bytes
+(BOM, de \emph{Byte Order Mark}) XML ou UTF, a codificação
+correspondente será utilizada.
+\item Se o documento iniciar com um prólogo XML legível e que informe a
+codificação do documento, esse será utilizado.
+\item Se o documento conter a tag HTML \texttt{meta}, como em \texttt{<meta
+http-equiv="Content-Type" ...> }, o mapa de caracteres declarado nessa
+tag será usado.
+\item Finalmente, como última opção, existe a abordagem de detecção de
+mapas de caracteres por heurísticas compostas~\cite{mozillaiuc}.
+\end{enumerate}
+
+\subsubsection{\emph{Parsing} de páginas HTML}\label{prob:html}
+
+Apesar de já aparecer no contexto de extração de \emph{links} (TP1),
+esse problema  possui uma maior relevância no processo de indexação
+de documentos.
+
+Os documentos HTML existentes na \emph{Web} atual geralmente não são
+considerados válidos
+e/ou bem formados se confrontados com os padrões existentes e publicados
+pela W3C para HTML e XHTML~\cite{html4tr, bray2006xml}, sendo comumente
+uma mistura dos dois padrões. Uma busca por URLs de maneira simples como
+através do uso de expressões regulares, se eficiente, mostra-se ingênua
+quando deparada com documentos HTMLs mais complexos. Não somente uma
+abordagem dessas pode ignorar seções como comentários HTML/XML, mas
+também ignorar \emph{tags} especiais do HTML tais como a \texttt{SCRIPT},
+\texttt{TEXTAREA} e \texttt{STYLE}, que, se presentes, podem conter
+conteúdo que não é HTML e que não deve ser indexado.
+
+\subsubsection{\emph{Parsing} de entidades}
+
+Observe que o \emph{parsing} de documentos HTML para a indexação não se
+restringe a retirar destes os fragmentos de texto presentes observando
+apenas as características estruturais do documento, mas também consiste
+em realizar, nos fragmentos de texto encontrados, a conversão de
+referência de caracteres e referências de entidades para representações
+textuais das mesmas. Esse processo só deve ser feito após a extração dos
+fragmentos de texto, conforme indicado na especificação de XML, e
+pressupõe a capacidade de converter \emph{codepoints} Unicode
+arbitrários para suas respectivas representações no mapa de caracteres
+em uso pelo parser~\cite{bray2006xml}.
+
+\subsubsection{Internacionalização e \emph{tokenização} de
+texto}\label{prob:token}
+
+O conteúdo existente na \emph{Web} pode estar representado nas mais
+diversas línguas. Como mencionado acima, diversas formas de representar
+e diversas opções de normalização de mapas de caracteres existem. Se o
+intuito é evitar a perda de informação, é mais interessante armazenar os
+documentos em alguma codificação de Unicode, tais como UTF-8 e UTF-32,
+entre outras. Todavia, as várias opções existentes para formas de
+representar dados com Unicode apresentam diversas opções de
+compromisso.
+
+Se por um lado representações \emph{multi-byte} como UTF-8 e UTF-16
+permitem o armazenamento de conteúdo de línguas latinas em menor espaço,
+essas representações dificultam significativamente o trabalho de separar
+o texto em \emph{tokens} ou ``\emph{tokenizar}''. Considere, por
+exemplo, o texto ``\emph{ação«perdida»}''. Todos os caracteres gráficos
+e todas as letras acentuadas no exemplo, quando codificados em UTF-8,
+utilizarão 2 caracteres. Esse texto, em UTF-8 é representado como
+\begin{small}
+\begin{verbatim}a\xc3\xa7\xc3\xa3o\xc2\xabperdida\xc2\xbb\end{verbatim}.
+\end{small}
+A menos que o
+tokenizador ``interprete'' os símbolos multi-byte, não será possível
+para ele diferenciar um byte que faz parte de uma seqüência
+multi-byte de uma letra de um que faz parte de uma seqüência multi-byte
+de um símbolo ou sinal de pontuação, o que inviabilizaria a tokenização.
+
+Representações que usam \emph{wide-char}, como UTF-32, facilitam
+significativamente o trabalho de tokenizar o texto, uma vez que cada
+\emph{codepoint} Unicode ocupa apenas um único \emph{wide-char}, de
+tamanho definido e constante. Por outro lado, existe um grande
+desperdício de espaço no uso desse tipo de representação de dados em
+Unicode.
+
+
+
+\subsubsection{Compressão de Índice}
+
+Existem diversos métodos para comprimir o índice gerado (
+Ellias-\(\gamma\), Ellias-\(\delta\), codificações
+\emph{byte-wise}, etc)~\cite{moffat1999managing,moffat2006survey}.
+Dependendo do tamanho do índice gerado e das suas limitações de espaço
+e/ou de desempenho, pode ser necessário usar algum desses métodos no
+processo de escrita e de leitura do índice.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROJETO %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{O projeto do indexador}
+
+Realizamos o projeto de nosso indexador tendo em mente os desafios
+mencionados na seção anterior e algumas decisões tomadas durante o
+trabalho prático 1 (TP1). Algumas decisões de projeto tiveram que
+ser tomadas tanto para contornar tais problemas como para ser capaz de
+completar o trabalho num prazo razoável.
+
+
+\subsection{Premissas e decisões iniciais de projetos}
+
+Uma das primeiras decisões tomadas, ainda no TP1, foi sobre qual mapa de
+caractere seria utilizado na normalização dos dados coletados.
+Tendo em vista os pontos discutidos nas
+sub-seções~\ref{prob:charmapnorm} e \ref{prob:urlnorm} e a despeito dos
+pontos lançados em~\ref{prob:token}, decidimos que
+\textbf{todo o conteúdo de páginas HTML coletadas será normalizado para
+UTF-8}.
+
+Outra opção de projeto foi sobre o que seria indexado e como seria o
+nosso tratamento de \emph{stopwords}. Como recomendado nos artigos e
+livros sugeridos na ementa da disciplina para indexação de conteúdo
+\emph{Web}, \textbf{indexamos toda e qualquer palavra que apareça} na
+nossa coleção, sem realizar nenhum tratamento especial para
+números~\cite{moffat1999managing}.
+
+Não \textbf{realizaremos \emph{stemming}} das palavras.
+
+\textbf{Realizaremos compressão do índice}. Todavia, ao invés de
+utilizar os métodos sugeridos em sala, utilizaremos um \textbf{método de
+codificação \emph{byte-wise}} tanto para codificação de \emph{d-gaps}
+como para codificar as freqüências \(f_{d,f}\) nas listas invertidas.
+Esse método de compressão apresenta ganhos menores que os obtidos com
+codificações \emph{bit-oriented} mas mesmo assim seus ganhos são
+significativos e essa codificação apresenta um desempenho melhor tanto
+no processo de compressão como no processo de \emph{query
+evaluation}~\cite{zobel2002fastquery}.
+
+
+
+\subsection{Componentes}
+
+
+Os componentes da no nosso \emph{indexador} são:
+\begin{description}
+\item[armazém de dados:] uma fina camada sobre o sistema de arquivos que
+permite organizar os dados coletados/indexados;
+\item[indexador:] realiza o \emph{parsing} dos documentos e escreve
+\emph{runs};
+\item[merger:] realiza o \emph{n-way merging} das runs salvas e escreve
+o arquivo invetido comprimido;
+\item[querybool:] nosso processador de consultas booleanas.
+\end{description}
+
+
+Observe que o processador de consultas não faz parte do processo de
+indexação propriamente dito, mas faz parte da especificação do trabalho.
+
+Maiores detalhes sobre a implementação deles serão fornecidos na seção
+seguinte.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% IMPLEMENTAÇÃO %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Implementação}\label{sec:implementation}
+
+\subsection{Decisões de implementações}
+
+Nosso indexador foi escrito em C++
+e utiliza a biblioteca de gabaritos padrões (STL) dessa
+linguagem~\cite{stroustrup97}.
+
+Foram utilizadas as seguintes bibliotecas extras:
+\begin{itemize}
+\item zlib, para leitura de páginas compactadas no sistema de
+arquivo;
+\end{itemize}
+
+Não foi adicionada nenhuma dependência em relação ao TP1.
+
+Além disso, nosso código faz uso extensivo de uma técnica para controle
+de recursos (como memória, \emph{locks} etc)  muito comum em C++,
+denominada RAII (\emph{Resource Acquisition Is Initialization}).
+Além disso, como comentaremos mais a frente, diversas partes de nosso
+ccódigo possuem código de teste (\emph{Unit Testing}).
+
+\subsection{Estruturas de dados}\label{sec:datastructures}
+
+Para a política BF, nossa implementação usa as seguintes estruturas de
+dados para gerenciar o escalonamento de URLs~\cite{cormen-algorithms}:
+
+\begin{itemize}
+\item Uma \emph{hashtable} de domínios conhecidos. Busca e inserção
+nessa estrutura possui uma complexidade de tempo médio de \(O\left(1 
+\right)\).
+\item Uma fila de prioridades de domínios pendentes, implementada como
+uma \emph{heap} ordenada pelo tempo da última visita ao domínio.
+Inserção, e remoção nessa estrutura possuem
+complexidades de tempo no pior caso de \(O\left(\log n\right)\). A
+localização do elemento de maior prioridade leva tempo constante.
+\end{itemize}
+
+Para a política LSF, nossa implementação usa as seguintes estruturas de
+dados para gerenciar o escalonamento de URLs:
+
+\begin{itemize}
+
+\item Uma \emph{hashtable} de domínios conhecidos. Busca e inserção
+nessa estrutura possui uma complexidade de tempo médio de \(O\left(1 
+\right)\).
+
+\item Uma fila de domínios inativos. Essa fila contêm domínios que
+anda não podem ser coletados pois o intervalo mínimo de tempo entre
+visitas consecutivas para eles ainda não foi atingido. Essa fila foi
+implementada como uma fila com terminação dupla (DEQue, ou \emph{Double
+Ended Queue}), e a inserção e remoção de nós nessa lista leva tempo
+constante. Por construção, ela possui uma lista de domínios ordenados
+pelo tempo da última visita de maneira crescente.
+
+\item Uma fila de prioridades de domínios ativos. Essa estrutura contém
+uma lista de todos os domínios que podem ser visitados naquele instante
+e é implementada como uma \emph{heap} ordenada pelo tamanho da fila de
+URLs pendentes de cada domínio. Inserção e remoção nessa estrutura
+possuem complexidades de tempo no pior caso de \(O\left(\log n\right)\).
+A localização do elemento de maior prioridade leva tempo constante.
+
+\end{itemize}
+
+
+Cada domínio, por sua vez, apresenta a mesma estrutura em ambas as
+políticas de escalonamento:
+\begin{itemize}
+\item Um conjunto de \emph{paths} conhecidos dentro daquele domínio,
+implementado como um \emph{hashset} e possuindo as mesmas complexidades
+de uma \emph{hashtable}.
+\item Uma fila FIFO de \emph{paths} pendentes nesse domínio, ou seja de
+\emph{paths} que precisam ser coletados. Essa lista é implementada como
+uma lista duplamente encadeada e possui tempo constante para remoção do
+primeiro elemento e para acréscimo ao seu final de um novo elemento.
+\end{itemize}
+
+
+\subsection{Componentes}
+
+Nesta seção discutiremos decisões de implementação, problemas e soluções
+encontradas no desenvolvimento de cada um dos componentes da nossa
+solução.
+
+\subsubsection{\emph{Parsers}}
+
+Tanto a extração de \emph{links} como a interpretação e normalização de
+URLs apresentam algumas características em comum. Para aproveitar esse
+fato e evitar duplicação código, foi criada uma pequena infra-estrutura para
+a construção de \emph{parsers} recursivos-descendentes
+(\texttt{BaseParser}). Essa implementação busca evitar cópias
+desnecessárias de dados ao fazer uso extensivo de uma estrutura própria
+(\texttt{filebuf}) em lugar de strings C++ convencionais.
+
+\subsubsection{\emph{Parsing} de documentos HTML e extração de
+\emph{links}}
+
+O \texttt{LinksExtractor} é nossa implementação de um extrator de
+\emph{links} em um documento HTML. Ele é construído sobre um
+\emph{parser} genérico para documentos XML e HTML, o
+\texttt{SloppyHTMLParser}. Ele recupera \emph{links} em \emph{tags}
+\texttt{LINK}, \texttt{IFRAME}, \texttt{FRAME}, \texttt{AREA}, além da
+tradicional \emph{tag} \texttt{A}.
+
+O \texttt{SloppyHTMLParser}, por sua vez foi construído utilizando
+infra-estrutura provida pelo \texttt{BaseParser} e é na verdade um
+\emph{parser} completo e versátil para documentos HTML e XML. Sua
+elaboração foi feita tendo em vista as especificações dos dois padrões
+de documentos acima e o comportamento que navegadores \emph{Web}
+tradicionais apresentam quando defrontados com documentos mal-formados.
+A interface provida para seus utilizadores é similar à de \emph{parsers}
+SAX XML tradicionais~\cite{saxxml, bray2006xml, html4tr}. Ao contrário
+destes últimos, ele e é capaz de lidar com uma ampla variedade de
+construções XML e HTML mesmo em documentos
+mal-formados. Além disso, ele reconhece \emph{tags} HTML que devem ter
+seu conteúdo ignorado por \emph{parsers} desse tipo de documento, como
+comentado na seção~\ref{prob:html}.
+
+Toda a infra-estrutura criada para o \texttt{SloppyHTMLParser} será
+futuramente re-utilizada para o indexador. Dessa forma, preferimos nos
+extender um pouco mais na sua criação, garantindo assim ganho de tempo
+na versão do indexador e, ao mesmo tempo, garantindo que o nosso
+\emph{parser} e as ferramentas que o usam, como o
+\texttt{LinkExtractor},  sejam mais do que capazes de lidar com as
+tarefas que lhe são solicitadas no momento.
+
+\subsubsection{Detecção e Normalização de Mapas de Caracteres}
+
+O componente \texttt{UnicodeBugger} é o responsável em nossa
+implementação pela detecção e normalização de mapas de caracteres.  Todo
+o conteúdo coletado, antes de ser processado, é convertido para UTF-8
+por instâncias desse componente, resolvendo os problemas comentados na
+seção~\ref{prob:charmapnorm}.
+
+O processo de detecção de mapas de caracteres segue os passos descritos
+anteriormente na seção na seção~\ref{prob:charmapdetection},
+excetuando-se pelo último deles, o de heurísticas compostas, por ser
+muito dispendiosa~\cite{mozillaiuc}.
+
+\subsection{Dificuldades}
+
+Nessa sub-seção discutiremos alguns dos problemas enfrentados durante a
+elaboração e teste da nossa implementação.
+
+\subsubsection{Considerações sobre Gerência de Memória de Regiões críticas}
+
+Uma das maiores preocupações existentes durante a fase de implementação
+de nosso \emph{crawler} era garantir (ou evitar) que não haveria
+vazamentos de memória. Além de ser uma preocupação constante no
+desenvolvimento de qualquer projeto robusto, evitar esse tipo de
+problema é especialmente importante em um programa que roda por um longo
+período de tempo e que re-executa o mesmo trecho de código várias vezes
+por segundo.
+
+Projetos que utilizam vários processo diferentes podem
+utilizar reciclagem de processos como forma de evitar ou contornar
+possíveis vazamentos. Todavia, esse não é o caso em  um sistema
+\emph{multi-threaded}, uma vez que vazamentos em qualquer uma das
+\emph{threads} repercute no sistema como um todo e não é possível
+reciclar processos sem que todo o sistema tenha quer ser re-iniciado.
+
+Uma das formas adotadas para evitar a todo custo esse problema foi a
+adoção, em várias classes, da técnica RAII (\emph{Resource Aquisition
+Is Initialization}), muito comum em C++. Essa técnica consistem em
+delegar ao próprio C++, através de seus mecanismos de construção e
+destruição automática de objetos na pilha, a responsabilidade de liberar
+recursos -- sejam eles memória, \emph{locks} ou descritores de arquivo.
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Testes e Resultados}
+
+\subsection{Ambiente experimental}
+
+Todos os testes de nossa implementação foram realizados em um micro do
+laboratório de graduação do DCC/UFMG, rodando como S.O. Linux Gentoo
+1.12.9, kernel 2.6.19-gentoo-r5, dotado de uma CPU Pentium 4 de
+3.00~MHz, 1~GB de memória RAM e 1~GB de \emph{swap}.
+
+\subsection{Resultados}
+
+Documentos/s : 20.568
+KB/s : 562
+
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|c|r|r|} \hline
+Política	&  Breadth-First	& Largest Site First	\\
+\hline\hline
+Tempo de Coleta &   24h24m01s		&	11h50m39s	\\\hline
+URLs Descobertas& & \\
+	total	& 	10.806.787,00	&	6.345.287,00	\\
+média por seg.	&		122,19  &	      148,81	\\\hline
+URLs Visitadas	& & \\
+	total	& 	  1.151.652,00	&	1.935.617,00	\\
+média por seg.	&		 13,03  &	       45,40	\\\hline
+URLs Coletadas	& & \\
+	total	& 	    827.230,00	&	1.572.822,00	\\
+média por seg.	&		  9,35  & 	       36,89	\\\hline
+\hline
+\end{tabular}
+\caption{Dados sobre as coletas}
+\label{tab:sumario}
+\end{table}
+
+
+A Tabela~\ref{tab:sumario} apresenta alguns valores referentes às
+coletas executadas tanto com a política BF como a política LSF.
+Nessa tabela, URL descoberta correspode àquelas que tiveram sua URL
+mencionada em alguma página coletada. URL visitada corresponde àquelas
+URLs que foram acessadas pelos coletores mas que não necessariamente
+corresponderam a uma coleta bem sucedida. URLs coletadas correspondem
+àquelas para as quais a sua coleta foi bem sucedida.
+
+Uma das primeiras coisas que chama a atenção na Tabala~\ref{tab:sumario}
+é que, a despeito da implementação com a política LSF ter ficado metade
+do tempo no ar que a implementaçao BF, a primeira visitou e coletou
+quase o dobro de páginas do que a implementação BF. Vê-se então
+uma primeira vantagem da política de escalonamento LSF: ao priorizar
+sítios com fila maior acaba-se priorizando sítios que, por
+ter mais conteúdo, acabam tendo maior infra-estrutura
+pra servir esse conteúdo. Além disso, visitar prioritariamente os mesmos
+sítios (outro efeito da política LSF) também acaba aliviando a carga no DNS.
+
+Na Figura~\ref{fig:desempenho}, apresentada em escala log-normal,
+pode-se comparar ver o desempenho da
+coleta no decorrer do tempo para as duas políticas de escalonamento.
+Nela podemos ver mais duas vantagens da política LSF:
+\begin{itemize}
+\item Primeiro, a coleta com essa política consegue manter-se a uma
+velocidade mais constante e, na maioria das vezes, superior ao obtido
+com a política BF.
+\item Ao contrário da política BF, que é sucetível a ficar presa em
+sítio que utilizam vários sub-domínios para sua organização, a política
+LFS mostra-se praticamente imune aos problemas acarretados por esse tipo
+de prática. Comentaremos mais sobre isso na seção~\ref{dif:armadilhas}.
+\end{itemize}
+
+\begin{figure*}
+  \centering
+  \mbox{
+    \subfigure[Bytes indexados/s]{
+          \label{fig:bf}
+          \includegraphics[width=0.45\textwidth]{plot_bps}}
+ }
+ \mbox{
+    \subfigure[Documentos indexados]{
+          \label{fig:lsf}
+          \includegraphics[width=0.45\textwidth]{plot_dps}}
+  }
+  \caption{Desempenho do indexador}
+  \label{fig:desempenho}
+\end{figure*}
+
+%
+% Observe que os gráficos são referentes a uma execução diferente
+% daquela apresentada nas tabela, que diz respeito a idendexação
+% de todo o conteúdo coletado. Isso cocorreu devido ao fato de que as
+% alterações necessárias no indexador para a geração desse grafico
+% foram feita tardiamente e uma re-execução completa do processo
+% de indexação levaria aproximadamente 15,5 horas.
+
+\subsection{Uso}
+
+\begin{figure*}
+\begin{center}
+\begin{verbatim}
+./querybool ../test_indexer/
+Loading vocabulary and inverted file ... done
+Type your query using AND, OR and spaces to split terms.
+Default operation is AND (conjunctive).
+Notice: a AND b c OR d == (((a AND b) AND c) OR d )
+> porridge
+Document(s) found matching query 'porridge':  1 2
+> hot
+Document(s) found matching query 'hot':  1 4
+> hot AND porridge
+Document(s) found matching query 'hot AND porridge':  1
+> hot OR porridge
+Document(s) found matching query 'hot OR porridge':  1 2 4
+>
+\end{verbatim}
+\caption{Uso da ferramenta com dados fictícios}
+\end{center}
+\end{figure*}
+
+\begin{figure*}
+\begin{center}
+\begin{verbatim}
+$ ./querybool ../index_data
+Loading vocabulary and inverted file ... done
+Type your query using AND, OR and spaces to split terms.
+Default operation is AND (conjunctive).
+Notice: a AND b c OR d == (((a AND b) AND c) OR d )
+> lésbicas OR selvagens AND freiras
+Document(s) found matching query 'lésbicas OR selvagens AND freiras':  31922
+65842 84882 94838 108508 115584 124033 130857 141172 158426 168044
+183336 196840 207264 216442 226165 236593 243890 252612 256096 263363
+272922 282825 290036 299370 307725 315274 323257 332230 341223 349546
+356752 364623 373471 382413 390689 409396 426570 439908 449507 456076
+462829 469155 475139 480537 487507 496218 502690 512025 518657 524208
+531037 540090 544070 549361 555214 560007 565528 568628 570142 574648
+579555 585285 591063 592813 604989 610850 615952 625775 630188 632206
+641719 646877 651394 658620 663791 663793 663953 669615 674586 680257
+682757 687234 693030 698780 704742 709824 715349 720210 724919 731019
+737507 737589 743592 748693 754156 756055 758788 760390 760392 763375
+769037 773114 777792 780059 781749 785801 789528 791333 794381 799364
+804656 809995 817204 826368 828038 830201 834120 838065 849036 854318
+861354 865075 869356 873638 886580 891076 896460 902930 903463 910369
+914225 920268 924571 930078 935533 939771 944401 949906 953827 959028
+963400 967952 972054 976207 980077 984419 989587 994954 999051 1004041
+1006623 1010623 1011280 1015995 1016813 1021027 1026184 1030933 1041424
+1045448 1051886 1057097 1057299 1061454 1065080 1065520 1070027 1074334
+1079421 1083479 1086813 1087051 1091880 1092497 1099165 1172010 1172012
+1208717 1215003 1225674 1231362 1237443 1242387 1253852 1260545 1266924
+1271244 1277691 1283726 1289641 1296986 1302666 1304467 1307215 1313336
+1318746 1324809 1329855 1335839 1340520 1342909 1346002 1350950 1355268
+1361052 1366442 1373461 1385372 1390943 1396249 1401501 1406075 1411560
+1417425 1423514 1427359 1429289 1433270 1438565 1442471 1447409 1451165
+1455432 1461749 1466591 1470365 1473606 1477900 1481885 1485432 1488742
+1492894 1496786 1501076 1501246 1505783 1508451 1510345 1510486 1514772
+1518651 1523382 1527498 1533617 1537628 1540675 1544839 1548062 1551580
+1552308 1878118 1914096 2172227 2172229 2520734 2566735 2566737 2647844
+2665235 2953721 3080068 3704516 3726904 4307367
+> freiras hentai
+Document(s) found matching query 'freiras hentai':  5090591
+> psicanalistas AND psicopatas
+Document(s) found matching query 'psicanalistas AND psicopatas':  1940391
+2091678
+>
+\end{verbatim}
+\caption{Uso da ferramenta com dados fictícios}
+\end{center}
+\end{figure*}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Conclusões}
+
+Nesse relatório descrevemos a implementação do \emph{crawler}
+especificado no TP1 da disciplina~\cite{tp1}, bem como os problemas
+enfrentados e as decisões de projeto tomadas.
+
+Pudemos observar como a política de escalonamento possui um papel
+fundamental no desempenho do coletor. Em nossos experimentos, o
+uso da política ``\emph{largest site first}'' mostrou-se capaz de, em
+50\% do tempo necessário, baixar 150\% do conteúdo desejado para um
+único dia de coleta. Além disso, mostro-se quase duas vezes mais eficiente do que a
+política ``\emph{breadth-first}''. Esses resultados, embora bastante
+interessantes, estão longe de ser novidades, sendo bastante estudados na
+literatura~\cite{baezayates2005crawling}.
+
+
+Finalmente, foi também possível observar como que, a despeito de ser
+aparentemente um problema simples, a elaboração de um \emph{crawler}
+industrial é complicada.
+
+\subsection{Problemas encontrados e Melhorias
+futuras}\label{sec:problemas}
+
+Durante a implementação do \emph{crawler}, diversos problema foram
+observados mas, devido a problema relativos ao tempo de entrega do
+trabalho, tiveram que ser deixados de lado. Todavia, esses problemas
+merecem menção, uma vez que constituem limitações da implementação e
+que, em TP's futuros podem se revelar como problemas cuja solução será
+necessária.
+
+\subsubsection{Armadilhas para \emph{crawlers}}\label{dif:armadilhas}
+
+Um dos problemas de se lidar com a coleta de conteúdo dinâmico é que
+sítios com esse tipo de página pode conter o que se chama e ``buracos
+negros'', ou seja, é possível que o coletor possa se perder ou passar
+mais tempo do que o necessário tentando coletar uma
+infinidade de páginas geradas dinamicamente. Ignorar o conteúdo do
+componente \emph{query} de URLs é uma forma de tentar contornar esse
+problema mas está longe de ser uma solução eficaz, uma vez que existem
+formas de se apresentar conteúdo dinâmico sem que esse envolva o uso de
+URLs com componentes \emph{query}.
+
+Uma outra forma de gerar conteúdo ou URLs dinâmicas é através do
+componente \emph{domainname} de URLs. Essa forma é particularmente
+nociva à nossa implementação, sobretudo na que usa a política de
+escalonamento BF. Isso deve-se a diversos fatores:
+\begin{itemize}
+\item Quando uma página em um domínio desses é encontrada pela primeira
+vez, acaba-se descobrindo por tabela diversas páginas em diversos
+domínios dinâmicos pertencentes ao mesmo sítio;
+\item uma vez que cada novo domínio gerado
+acarreta a criação de uma instância de gerente de domínio em nossa
+implementação, ao visitar apenas uma única página num sítio desses
+diversas instâncias de gerentes de domínios terão de ser geradas
+instantaneamente,
+\item finalmente,  como nessa política os domínios são visitados por ordem de
+descoberta, o inicio da coleta do primeiro domínio dinâmico de um sítio
+desses acarretará diversas requisições DNS, uma para cada um dos outros
+domínios dinâmicos encontrados em seqüência.
+\end{itemize}
+
+Nessas circunstâncias o desempenho do coletor cai para patamares
+baixíssimos, como pode-se observam em alguns vales na
+Figura~\ref{fig:bf}. A política de escalonamento LSF contorna isso de
+maneira elegante, mas até que ponto? Se tivessemos deixado o coletor com
+LSF rodando por mais tempo teríamos encontrado esse tipo de
+comportamento?
+
+%Buracos negros - nossa abordagem de escalonamento foi baseada em domínios. Isso
+%permitia não somente controlar o tempo mínimo de intervalo entre acessos
+%consecutívos a um mesmo domínio, limitar o uso de memória (já que nao era mais
+%necesári armazenar o nome de domínio em cada URL pertencente a ele) e armazenar
+%a lista de URLs pendentes. Todavia, para a nossa implementação, sítios que
+%fazem uso extensivo de sub-domínios para sua organização são torna um problema.
+%Isso deve-se ao fato de que, custumeiramente, a obtenção e \emph{parsing} de
+%uma unica página de um sítio destes acarreta na ``descoberta'' de vários
+%sub-domínos desse sítio, o que por sua vez acarreta no acréscimo de cada um
+%destes na lista de domínios conhecidos e de domínios pendentes. Além desses
+%domínios serem costumeriramente rasos, ou seja, sem muitos links para
+%documentos internos, a sua adição limitará a capacidade do crawler de baixar
+%páginas de conteúdo, uma vez que, antes de que qualquer conteúdo possa ser
+%obtido desses domínios, os arquivos \texttt{robots.txt} dele terá de ser
+%obtido.
+
+\subsubsection{Esgotamento da memória primária}
+
+Todas as estruturas de controle de nossa implementação são deixadas em
+memória primária. Em questão de horas isso começa a se tornar um
+problema, quando o S.O. inicia um processo de colocar algumas das
+páginas de memória de nosso sistema em  memória secundária. A medida que
+o tempo passa, vai se tornando cada vez mais difícil não ser afetado
+pela troca de páginas entre a memória principal e o \emph{swap}, fruto
+do consumo de memória de nossa aplicação.
+
+Uma forma de contornar o uso de memória seria fazer um uso mais
+agressivo de identificadores numéricos para as páginas. Isso será útil
+não somente para a contenção dos gastos com memória mas também quando
+estivermos realizando a indexação dos documentos.
+
+Encontrar mecanismos que nos permitam determinar a lista de URLs
+pendentes em um dominio além de rapidamente determinar se uma
+determinada URL já foi encontrada antes ou não sem depender tanto de
+memória primária é um problema não resolvido de nossa implementação.
+O uso de soluções como \emph{hashtables} distribuídas foi cogitado, mas
+não chegamos a implementá-lo.
+
+\subsubsection{Melhores implementações de listas de prioridades}
+
+A adoção da política de escalonamento LSF mostrou-se bastante benéfica à
+nossa implementação. Todavia, da forma que ela está implementada, ela
+sofre de uma severa limitação: uma vez que um domínio tenha entrado na
+lista de domínios ativos (Seção~\ref{sec:datastructures}), o valor do
+tamanho da sua fila de páginas pendentes não pode mais ser atualizado.
+Isso ocorre porque os algoritmos e estruturas disponíveis na STL, a
+bilbioteca padrão de tipos e algoritmos do C++, para lidar com listas de
+prioridades e \emph{heaps} não possuem métodos para decrementar ou
+incrementar um o valor atribuído a um ítem interno ao \emph{heap}. Essa
+limitação dificulta e limita também a implementação de políticas de
+escalonamento de domínios ou de páginas baseados na quantidade de
+\emph{links} que apontam para os mesmos.
+
+Um solução seria implementar \emph{heaps} binários e de Fibonacci do
+zero, de tal forma que esses possuíssem métodos para decrementar o valor
+associado a um ítem ou atualizá-lo dinamicamente. Foi cogitada a
+implementação uma estrutura similar a um \emph{heap} de Fibonacci mas
+com custos assintóticos inferiores, conhecida como \emph{relaxed heap},
+mas, por questões de tempo, essa implementação não foi
+possível~\cite{driscoll1988relaxed}.
+
+\subsubsection{Estrutura de diretórios}
+
+\subsubsection{UTF-8 vs Latin1}
+
+Considerando-se o fato de que o trabalho objetivava o uso de uma coleção
+de páginas da \emph{Web} brasileira e, por tanto, de conteúdo em língua
+portuguesa, as escolha de UTF-8 como mapa de caracteres utilizado após a
+normalização não parece mais um boa decisão. Considerando os problemas
+que UTF-8 causa no processo de parsing e normalização dos termos,
+percebe-se agora que o uso de Latin-1 seria um escolha mais sensata.
+Ainda mais considerando que, após a normalização de caso e de acentos
+nas palavras, tudo o que resta de útil é um conteúdo limitado de ASCII
+7-bits.
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%% Bibliografia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle {plain}
+\bibliography{relatorio}
+
+
+\end{document}
+
+% vim:tw=72 fileencoding=utf-8 spelllang=pt spell syn=tex:
