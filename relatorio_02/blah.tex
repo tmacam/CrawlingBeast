@@ -1,0 +1,66 @@
+
+
+\section{Parsing de documentos HTML}
+Ao iniciar o processo de indexação com documentos reais pudemos observar ainda mais "aberrações" em documentos reais. Um exemplo é o documento #6586 (0x19ba), a página da fump.
+
+
+
+
+\section{Ainda brigando com unicode}
+
+Primeiro: como converter Character References e Numeric Whaterver para utf-8?
+
+http://search.cpan.org/src/GSAR/perl-5.6.1/utf8.c
+
+Outra: como separar palavras? Ispunct|| isspace certamente não resolve:
+Copyright© futuação«ª¶↵∀, por exemplo, não sai como deveria se usarmos ispunct. Converter tudo isso de multibyte strings para wide-char strings me parece muito dispendioso.
+
+observe como o pessoal do gnupg faz:
+http://alt.org/pipermail/pgp-keyserver-folk/2004-October/003412.html
+
+\section{steeming, word-case, etc}
+
+\section{A forma de organizar o lexicon/vocabulário.}
+
+Como comentado no Manging Gigabytes, sec. 4.1.
+
+Quantos bytes ele pegou mesmo?
+
+\section{indexer}
+
+runs de 0.5 G
+
+Base totalisa 13.977.374.720 bytes
+
+\section{merger}
+
+Merger - último passo é feito juntamente com a escrita do índice.
+Nesse último pass
+
+runs: 7180092 bytes.
+
+real    9m43.120s
+user    2m55.930s
+sys     0m51.310s
+
+Índice sem commpressão: 5.764.740 Kb
+
+Com compressão:
+
+Setup complete. Staring the merging process.
+
+real    7m12.012s
+user    2m33.110s
+sys     0m26.110s
+
+1.547.700 Kb
+
+
+\section{compression}
+
+http://doi.acm.org/10.1145/564376.564416
+
+\section{Problemas}
+
+MMap de 64bits poderia ter ajudado bastante
+

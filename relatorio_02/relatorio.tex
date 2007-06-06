@@ -12,7 +12,7 @@
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Header  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \title{Trabalho prático 2}
-\author{Tiago Alves Macambira \\ \texttt{tmacam@dcc.ufmgbr}}
+\author{Tiago Alves Macambira \\ \texttt{tmacam@dcc.ufmg.br}}
 \date{6 de julho de 2007}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  Body  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -23,7 +23,7 @@
 \section{Introdução}
 
 O segundo trabalho prático da disciplina de Recuperação de Informação
-consiste no projeto e implementação de programas eficientes para
+consiste no projeto e implementação de programas para
 recuperação eficiente de grandes base de dados. Tal sistema deve
  atender vários requisitos, como disposto no
 enunciado do trabalho~\cite{tp1}, dentre os quais podemos citar:
@@ -175,8 +175,9 @@ Os documentos HTML existentes na \emph{Web} atual geralmente não são
 considerados válidos
 e/ou bem formados se confrontados com os padrões existentes e publicados
 pela W3C para HTML e XHTML~\cite{html4tr, bray2006xml}, sendo comumente
-uma mistura dos dois padrões. Uma busca por URLs de maneira simples como
-através do uso de expressões regulares, se eficiente, mostra-se ingênua
+uma mistura dos dois padrões. A utilização de estratégias simples para
+\emph{parsing} do conteúdo HTML como
+através do uso de expressões regulares, se eficiente,  mostra-se ingênua
 quando deparada com documentos HTMLs mais complexos. Não somente uma
 abordagem dessas pode ignorar seções como comentários HTML/XML, mas
 também ignorar \emph{tags} especiais do HTML tais como a \texttt{SCRIPT},
@@ -256,12 +257,12 @@ completar o trabalho num prazo razoável.
 \subsection{Premissas e decisões iniciais de projetos}
 
 Uma das primeiras decisões tomadas, ainda no TP1, foi sobre qual mapa de
-caractere seria utilizado na normalização dos dados coletados.
-Tendo em vista os pontos discutidos nas
-sub-seções~\ref{prob:charmapnorm} e \ref{prob:urlnorm} e a despeito dos
-pontos lançados em~\ref{prob:token}, decidimos que
+caractere seria utilizado na normalização dos dados coletados.  Tendo em
+vista os pontos discutidos na sub-seção~\ref{prob:charmapnorm} e a
+despeito dos pontos lançados em~\ref{prob:token}, decidimos que
 \textbf{todo o conteúdo de páginas HTML coletadas será normalizado para
-UTF-8}.
+UTF-8}. O problema de descoberta de mapas de caracteres foi contornado
+durante a coleta das páginas.
 
 Outra opção de projeto foi sobre o que seria indexado e como seria o
 nosso tratamento de \emph{stopwords}. Como recomendado nos artigos e
@@ -270,19 +271,20 @@ livros sugeridos na ementa da disciplina para indexação de conteúdo
 nossa coleção, sem realizar nenhum tratamento especial para
 números~\cite{moffat1999managing}.
 
-Não \textbf{realizaremos \emph{stemming}} das palavras.
+\textbf{Não realizaremos \emph{stemming}} das palavras.
 
 \textbf{Realizaremos compressão do índice}. Todavia, ao invés de
 utilizar os métodos sugeridos em sala, utilizaremos um \textbf{método de
 codificação \emph{byte-wise}} tanto para codificação de \emph{d-gaps}
 como para codificar as freqüências \(f_{d,f}\) nas listas invertidas.
 Esse método de compressão apresenta ganhos menores que os obtidos com
-codificações \emph{bit-oriented} mas mesmo assim seus ganhos são
+codificações orientadas a bits mas ainda assim seus ganhos são
 significativos e essa codificação apresenta um desempenho melhor tanto
 no processo de compressão como no processo de \emph{query
 evaluation}~\cite{zobel2002fastquery}.
 
-
+Assumimos que \textbf{todo o vocabulário cabe na memória}. Isso é necessário
+tanto para a indexação como para o processamento de consultas.
 
 \subsection{Componentes}
 
@@ -314,76 +316,92 @@ seguinte.
 Nosso indexador foi escrito em C++
 e utiliza a biblioteca de gabaritos padrões (STL) dessa
 linguagem~\cite{stroustrup97}.
-
-Foram utilizadas as seguintes bibliotecas extras:
-\begin{itemize}
-\item zlib, para leitura de páginas compactadas no sistema de
-arquivo;
-\end{itemize}
-
-Não foi adicionada nenhuma dependência em relação ao TP1.
+Não foi utilizada nenhuma nova libioteca em comparação às já utilizadas
+no TP1.
 
 Além disso, nosso código faz uso extensivo de uma técnica para controle
 de recursos (como memória, \emph{locks} etc)  muito comum em C++,
 denominada RAII (\emph{Resource Acquisition Is Initialization}).
-Além disso, como comentaremos mais a frente, diversas partes de nosso
-ccódigo possuem código de teste (\emph{Unit Testing}).
+Diversas partes de nosso código possuem código de teste (\emph{Unit
+Testing}).
+
+Além disso sempre que possível, delegamos o processo de leitura de
+arquivos ao SO através do uso de \texttt{mmaps}.
+
+\subsection{Estruturas de armazenamento}\label{sec:storage}
+
+A forma como que os dados são gravados e recuperados do disco é
+tão importante quanto os algoritmos e estruturas de dados utilizados
+pelo nosso indexador. As estruturas de armazenamento podem ditar ou
+limitar a efetividade dos algoritmos utilizados.
+
+Em nossa solução, vocabulário e arquivo invertido possuem uma estrutura
+de armazenamento similar e composta, de maneira geral, de dois
+elementos:
+\begin{description}
+
+\item[Arquivo-cabeçalho] Uma estrutura que permite acesso rápido a
+informações sobre um determinado termo ou documento.  Tais informações
+consistem, entre outras coisas, na localização (\emph{offset} ou
+ponteiro) do conteúdo de interesse no arquivo(s) de dados . \footnote{
+Na prática, esse arquivo nada mais é do que o \emph{dump} de um
+\emph{array}, o que, ao utilizarmos técnicas como \texttt{mmap}, permite
+o aceso quase que em tempo constante à informação desejada.}
+
+\item[Arquivo(s) de dados] Nesse arquivo, termos do vocabulário ou listas
+invertidas propriamente ditas são armazenadas concatenadas. A
+localização de um item em um arquivo de dados depende da leitura do
+arquivo-cabeçalho correspondente.
+\end{description}
+
+No caso do vocabulário, o arquivo de dados consiste na concatenação das
+palavras do vocabulário em ordem ascendente de seus \(t_{id}\).
+
+As listas invertidas podem, quando concatenadas, atingir um tamanho
+superior ao tamanho máximo de um arquivo no SO utilizador. Para evitar
+problemas, os dados das listas invertidas são distribuídos entre vários
+arquivos de dados, cada um de aproximadamente 256~MB. A localização de
+uma lista invertida relativa a um termo em um destes arquivo de dados
+bem como a informação de em qual arquivo de dados essa lista se encontra
+é guardada no arquivo-cabeçalho do arquivo invertido. 
 
 \subsection{Estruturas de dados}\label{sec:datastructures}
 
-Para a política BF, nossa implementação usa as seguintes estruturas de
-dados para gerenciar o escalonamento de URLs~\cite{cormen-algorithms}:
+Nossa implementação usa as seguintes estruturas de
+dados~\cite{cormen-algorithms}:
 
 \begin{itemize}
-\item Uma \emph{hashtable} de domínios conhecidos. Busca e inserção
-nessa estrutura possui uma complexidade de tempo médio de \(O\left(1 
-\right)\).
-\item Uma fila de prioridades de domínios pendentes, implementada como
-uma \emph{heap} ordenada pelo tempo da última visita ao domínio.
-Inserção, e remoção nessa estrutura possuem
+
+\item Na indexação, utiliza-se uma \emph{hashtable} tanto para armazenar
+o vocabulário (termo\(\rightarrow t_{id}\)) como para obter a representação
+textual em UTF-8 de referências para entidades. No processamento de
+consulta, também se utiliza uma \emph{hashtable} como nos moldes acima
+para armazenar o vocabulário.  Busca e inserção nessa estrutura possui
+uma complexidade de tempo médio de \(O\left(1 \right)\).
+
+\item Uma fila de prioridades é utilizada no processo de \emph{n-way
+merging}. Essa fila é implementada como uma \emph{heap} de ``leitores de
+\emph{runs}'' e os elementos dela são ordenados pelo valor da tripla
+\(<t_{id}, d_{id}, f_{d,t}>\) disponível para leitura em cada um dos
+``leitores de \emph{run}''.  Inserção, e remoção nessa estrutura possuem
 complexidades de tempo no pior caso de \(O\left(\log n\right)\). A
-localização do elemento de maior prioridade leva tempo constante.
-\end{itemize}
+localização do elemento de maior prioridade leva tempo constante.  O
+processo completo de intercalar as \emph{runs} é da ordem de \(O\left(
+n\times\log r\right)\) , onde \(r\) é o número de leitores de
+\emph{runs} em uso.
 
-Para a política LSF, nossa implementação usa as seguintes estruturas de
-dados para gerenciar o escalonamento de URLs:
+\item Cada leitor de \emph{run} apresenta tempo constante para obtenção
+do seu próximo valor.
 
-\begin{itemize}
-
-\item Uma \emph{hashtable} de domínios conhecidos. Busca e inserção
-nessa estrutura possui uma complexidade de tempo médio de \(O\left(1 
-\right)\).
-
-\item Uma fila de domínios inativos. Essa fila contêm domínios que
-anda não podem ser coletados pois o intervalo mínimo de tempo entre
-visitas consecutivas para eles ainda não foi atingido. Essa fila foi
-implementada como uma fila com terminação dupla (DEQue, ou \emph{Double
-Ended Queue}), e a inserção e remoção de nós nessa lista leva tempo
-constante. Por construção, ela possui uma lista de domínios ordenados
-pelo tempo da última visita de maneira crescente.
-
-\item Uma fila de prioridades de domínios ativos. Essa estrutura contém
-uma lista de todos os domínios que podem ser visitados naquele instante
-e é implementada como uma \emph{heap} ordenada pelo tamanho da fila de
-URLs pendentes de cada domínio. Inserção e remoção nessa estrutura
-possuem complexidades de tempo no pior caso de \(O\left(\log n\right)\).
-A localização do elemento de maior prioridade leva tempo constante.
+\item Durante o processo de indexação e geração da \emph{runs}, várias
+triplas são armazenadas em memória até que se atinja um volume
+pré-determinado (512~MB). Atingido esse valor, essas triplas são
+ordenadas com um algoritmo \emph{introsort}\footnote{ D. R. Musser,
+"Introspective Sorting and Selection Algorithms", Software Practice and
+Experience 27(8):983, 1997.  } cuja complexidade de pior caso é
+\(O\left(n \log n\right)\)
 
 \end{itemize}
-
-
-Cada domínio, por sua vez, apresenta a mesma estrutura em ambas as
-políticas de escalonamento:
-\begin{itemize}
-\item Um conjunto de \emph{paths} conhecidos dentro daquele domínio,
-implementado como um \emph{hashset} e possuindo as mesmas complexidades
-de uma \emph{hashtable}.
-\item Uma fila FIFO de \emph{paths} pendentes nesse domínio, ou seja de
-\emph{paths} que precisam ser coletados. Essa lista é implementada como
-uma lista duplamente encadeada e possui tempo constante para remoção do
-primeiro elemento e para acréscimo ao seu final de um novo elemento.
-\end{itemize}
-
 
 \subsection{Componentes}
 
@@ -393,26 +411,18 @@ solução.
 
 \subsubsection{\emph{Parsers}}
 
-Tanto a extração de \emph{links} como a interpretação e normalização de
-URLs apresentam algumas características em comum. Para aproveitar esse
-fato e evitar duplicação código, foi criada uma pequena infra-estrutura para
+Para extrair texto dos documentos HTML e para converter texto com
+entidades em texto puro, aproveitamos a pequena infra-estrutura para
 a construção de \emph{parsers} recursivos-descendentes
-(\texttt{BaseParser}). Essa implementação busca evitar cópias
+(\texttt{BaseParser}) criada para o TP1. Essa implementação busca evitar cópias
 desnecessárias de dados ao fazer uso extensivo de uma estrutura própria
 (\texttt{filebuf}) em lugar de strings C++ convencionais.
 
-\subsubsection{\emph{Parsing} de documentos HTML e extração de
-\emph{links}}
+\subsubsection{\emph{Parsing} de documentos HTML}
 
-O \texttt{LinksExtractor} é nossa implementação de um extrator de
-\emph{links} em um documento HTML. Ele é construído sobre um
+O extrator de texto de documentos HTML foi é construído sobre um
 \emph{parser} genérico para documentos XML e HTML, o
-\texttt{SloppyHTMLParser}. Ele recupera \emph{links} em \emph{tags}
-\texttt{LINK}, \texttt{IFRAME}, \texttt{FRAME}, \texttt{AREA}, além da
-tradicional \emph{tag} \texttt{A}.
-
-O \texttt{SloppyHTMLParser}, por sua vez foi construído utilizando
-infra-estrutura provida pelo \texttt{BaseParser} e é na verdade um
+\texttt{SloppyHTMLParser}. Esse parser é na verdade um
 \emph{parser} completo e versátil para documentos HTML e XML. Sua
 elaboração foi feita tendo em vista as especificações dos dois padrões
 de documentos acima e o comportamento que navegadores \emph{Web}
@@ -425,19 +435,12 @@ mal-formados. Além disso, ele reconhece \emph{tags} HTML que devem ter
 seu conteúdo ignorado por \emph{parsers} desse tipo de documento, como
 comentado na seção~\ref{prob:html}.
 
-Toda a infra-estrutura criada para o \texttt{SloppyHTMLParser} será
-futuramente re-utilizada para o indexador. Dessa forma, preferimos nos
-extender um pouco mais na sua criação, garantindo assim ganho de tempo
-na versão do indexador e, ao mesmo tempo, garantindo que o nosso
-\emph{parser} e as ferramentas que o usam, como o
-\texttt{LinkExtractor},  sejam mais do que capazes de lidar com as
-tarefas que lhe são solicitadas no momento.
-
 \subsubsection{Detecção e Normalização de Mapas de Caracteres}
 
-O componente \texttt{UnicodeBugger} é o responsável em nossa
-implementação pela detecção e normalização de mapas de caracteres.  Todo
-o conteúdo coletado, antes de ser processado, é convertido para UTF-8
+Como dito anteriormente, a detecção e normalização de mapas de
+caracteres foi feita durante o processo de coleta utilizando o
+componente componente \texttt{UnicodeBugger} Todo
+o conteúdo coletado, antes de ser processado, foi convertido para UTF-8
 por instâncias desse componente, resolvendo os problemas comentados na
 seção~\ref{prob:charmapnorm}.
 
@@ -446,35 +449,39 @@ anteriormente na seção na seção~\ref{prob:charmapdetection},
 excetuando-se pelo último deles, o de heurísticas compostas, por ser
 muito dispendiosa~\cite{mozillaiuc}.
 
-\subsection{Dificuldades}
 
-Nessa sub-seção discutiremos alguns dos problemas enfrentados durante a
-elaboração e teste da nossa implementação.
+\subsubsection{Normalização de Termos}
 
-\subsubsection{Considerações sobre Gerência de Memória de Regiões críticas}
+Durante o processo de indexação e durante o processamento de consultas
+realizamos a normalização dos termos (indexados e termos da consulta).
+A normalização possui os seguintes passos:
+\begin{enumerate}
+\item Conversão de texto de UTF-8 para UTF-32
+\item Tokenização de conteúdo em UTF-32
+\item Conversão das letras de cada palavra encontrada para minúsculo.
+\item Conversão de caracteres acentuados para seus respectivos
+caracteres sem acento
+\item conversão de texto em UTF-32 para UTF-8
+\end{enumerate}
 
-Uma das maiores preocupações existentes durante a fase de implementação
-de nosso \emph{crawler} era garantir (ou evitar) que não haveria
-vazamentos de memória. Além de ser uma preocupação constante no
-desenvolvimento de qualquer projeto robusto, evitar esse tipo de
-problema é especialmente importante em um programa que roda por um longo
-período de tempo e que re-executa o mesmo trecho de código várias vezes
-por segundo.
+Dessa forma, nosso indexador e nosso processador de consulta  não faz
+diferença entre os termos \texttt{AçãO} e \texttt{acao}. Observa-se que
+um processo com efeitos similares ocorre em máquinas de buscas como o
+Google. 
 
-Projetos que utilizam vários processo diferentes podem
-utilizar reciclagem de processos como forma de evitar ou contornar
-possíveis vazamentos. Todavia, esse não é o caso em  um sistema
-\emph{multi-threaded}, uma vez que vazamentos em qualquer uma das
-\emph{threads} repercute no sistema como um todo e não é possível
-reciclar processos sem que todo o sistema tenha quer ser re-iniciado.
+\subsubsection{Leitores, escritores e intercaladores de \emph{run}}
 
-Uma das formas adotadas para evitar a todo custo esse problema foi a
-adoção, em várias classes, da técnica RAII (\emph{Resource Aquisition
-Is Initialization}), muito comum em C++. Essa técnica consistem em
-delegar ao próprio C++, através de seus mecanismos de construção e
-destruição automática de objetos na pilha, a responsabilidade de liberar
-recursos -- sejam eles memória, \emph{locks} ou descritores de arquivo.
+Tentamos modelar nossos leitores, escritores e intercaladores de
+\emph{runs} como iteradores C++. Desta forma, torna-se mais fácil
+integrar o código existente com os algoritmos da C++ que esperam
+interadores.
 
+
+%\subsection{Dificuldades}
+%
+%Nessa sub-seção discutiremos alguns dos problemas enfrentados durante a
+%elaboração e teste da nossa implementação.
+%
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -495,19 +502,22 @@ KB/s : 562
 
 \begin{table}[htbp]
 \centering
-\begin{tabular}{|c|r|r|} \hline
-Política	&  Breadth-First	& Largest Site First	\\
-\hline\hline
-Tempo de Coleta &   24h24m01s		&	11h50m39s	\\\hline
-URLs Descobertas& & \\
-	total	& 	10.806.787,00	&	6.345.287,00	\\
-média por seg.	&		122,19  &	      148,81	\\\hline
-URLs Visitadas	& & \\
-	total	& 	  1.151.652,00	&	1.935.617,00	\\
-média por seg.	&		 13,03  &	       45,40	\\\hline
-URLs Coletadas	& & \\
-	total	& 	    827.230,00	&	1.572.822,00	\\
-média por seg.	&		  9,35  & 	       36,89	\\\hline
+\begin{tabular}{|c|r|} \hline
+Volume do vocabulário&	      29.948 KB \\\hline
+Volume da base de &   			\\
+dados (compactado)&   	  13.977.374 KB \\\hline
+Volume das runs  &	   7.180.092 KB \\\hline
+Volume do índice  &			\\
+  sem compressão  &	   5.764.740 KB \\
+  com compressão  &	   1.547.700 KB \\\hline
+Tempo para geração do índice  &		\\
+  sem compressão  &	   9m43.120s \\
+  com compressão  &	   7m12.012s \\\hline
+Velocidade de indexação&		\\
+  doc/s		  & 20,568		\\
+  KB/s		& 562			\\\hline
+Número de Termos&     2.311.837	\\\hline
+Número de documentos& 1.572.822		\\\hline
 \hline
 \end{tabular}
 \caption{Dados sobre as coletas}
@@ -515,63 +525,50 @@ média por seg.	&		  9,35  & 	       36,89	\\\hline
 \end{table}
 
 
-A Tabela~\ref{tab:sumario} apresenta alguns valores referentes às
-coletas executadas tanto com a política BF como a política LSF.
-Nessa tabela, URL descoberta correspode àquelas que tiveram sua URL
-mencionada em alguma página coletada. URL visitada corresponde àquelas
-URLs que foram acessadas pelos coletores mas que não necessariamente
-corresponderam a uma coleta bem sucedida. URLs coletadas correspondem
-àquelas para as quais a sua coleta foi bem sucedida.
+A Tabela~\ref{tab:sumario} apresenta um sumário dos valores de
+desempenho e de outras informações pertinentes sobre esse TP.
 
-Uma das primeiras coisas que chama a atenção na Tabala~\ref{tab:sumario}
-é que, a despeito da implementação com a política LSF ter ficado metade
-do tempo no ar que a implementaçao BF, a primeira visitou e coletou
-quase o dobro de páginas do que a implementação BF. Vê-se então
-uma primeira vantagem da política de escalonamento LSF: ao priorizar
-sítios com fila maior acaba-se priorizando sítios que, por
-ter mais conteúdo, acabam tendo maior infra-estrutura
-pra servir esse conteúdo. Além disso, visitar prioritariamente os mesmos
-sítios (outro efeito da política LSF) também acaba aliviando a carga no DNS.
-
-Na Figura~\ref{fig:desempenho}, apresentada em escala log-normal,
-pode-se comparar ver o desempenho da
-coleta no decorrer do tempo para as duas políticas de escalonamento.
-Nela podemos ver mais duas vantagens da política LSF:
-\begin{itemize}
-\item Primeiro, a coleta com essa política consegue manter-se a uma
-velocidade mais constante e, na maioria das vezes, superior ao obtido
-com a política BF.
-\item Ao contrário da política BF, que é sucetível a ficar presa em
-sítio que utilizam vários sub-domínios para sua organização, a política
-LFS mostra-se praticamente imune aos problemas acarretados por esse tipo
-de prática. Comentaremos mais sobre isso na seção~\ref{dif:armadilhas}.
-\end{itemize}
+Na Figura~\ref{fig:desempenho}, podemos acompanhar o desempenho do
+processo de indexação. Na sub-figura~\ref{fig:bytes} vemos o gráfico da
+da variação da taxa de indexação medida em KBytes. Já na
+sub-figura~\ref{fig:docs} vemos o crescimento do volume acumulado de
+documentos indexados no decorrer do tempo.
 
 \begin{figure*}
   \centering
   \mbox{
     \subfigure[Bytes indexados/s]{
-          \label{fig:bf}
+          \label{fig:bytes}
           \includegraphics[width=0.45\textwidth]{plot_bps}}
  }
  \mbox{
     \subfigure[Documentos indexados]{
-          \label{fig:lsf}
+          \label{fig:docs}
           \includegraphics[width=0.45\textwidth]{plot_dps}}
   }
   \caption{Desempenho do indexador}
   \label{fig:desempenho}
 \end{figure*}
 
-%
-% Observe que os gráficos são referentes a uma execução diferente
-% daquela apresentada nas tabela, que diz respeito a idendexação
-% de todo o conteúdo coletado. Isso cocorreu devido ao fato de que as
-% alterações necessárias no indexador para a geração desse grafico
-% foram feita tardiamente e uma re-execução completa do processo
-% de indexação levaria aproximadamente 15,5 horas.
 
-\subsection{Uso}
+Observe que os gráficos apresentados na Figura~\ref{fig:desempenho} são
+referentes a uma execução do processo de indexação diferente daquela
+apresentada na Tabela~\ref{tab:sumario}. A execução cujos dados estão
+apresentados nessa tabela dizem respeito a idenxação de todo o conteúdo
+coletado. A existência dessa diferença entre a tabela e os dados ocorre
+devido ao fato de que as alterações necessárias no indexador para a
+geração desse gráfico foram feitas tardiamente e uma re-execução
+completa do processo de indexação levaria aproximadamente mais 15,5
+horas.\footnote{E esse TP já está atrasado.}
+
+\subsection{Exemplo de uso}
+
+Podemos ver saídas de execuções do processador de consultas nas
+Figuras~\ref{fig:exemplo} e \ref{fig:real}. A primeira presenta a saída
+de uma execução na qual foi utilizada uma coleção de dados de exemplo
+igual a coleção usada em sala de aula nas aulas de indexação. A segunda
+apresenta a saída para algumas \emph{queries} utilizando o índice gerado
+a partir dos dados coletados.
 
 \begin{figure*}
 \begin{center}
@@ -591,7 +588,8 @@ Document(s) found matching query 'hot AND porridge':  1
 Document(s) found matching query 'hot OR porridge':  1 2 4
 >
 \end{verbatim}
-\caption{Uso da ferramenta com dados fictícios}
+\caption{Uso da ferramenta com uma base de exemplo}
+\label{fig:exemplo}
 \end{center}
 \end{figure*}
 
@@ -640,157 +638,158 @@ Document(s) found matching query 'psicanalistas AND psicopatas':  1940391
 2091678
 >
 \end{verbatim}
-\caption{Uso da ferramenta com dados fictícios}
+\caption{Uso da ferramenta com dados reais}
+\label{fig:real}
 \end{center}
 \end{figure*}
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\section{Conclusões}
-
-Nesse relatório descrevemos a implementação do \emph{crawler}
-especificado no TP1 da disciplina~\cite{tp1}, bem como os problemas
-enfrentados e as decisões de projeto tomadas.
-
-Pudemos observar como a política de escalonamento possui um papel
-fundamental no desempenho do coletor. Em nossos experimentos, o
-uso da política ``\emph{largest site first}'' mostrou-se capaz de, em
-50\% do tempo necessário, baixar 150\% do conteúdo desejado para um
-único dia de coleta. Além disso, mostro-se quase duas vezes mais eficiente do que a
-política ``\emph{breadth-first}''. Esses resultados, embora bastante
-interessantes, estão longe de ser novidades, sendo bastante estudados na
-literatura~\cite{baezayates2005crawling}.
-
-
-Finalmente, foi também possível observar como que, a despeito de ser
-aparentemente um problema simples, a elaboração de um \emph{crawler}
-industrial é complicada.
-
-\subsection{Problemas encontrados e Melhorias
-futuras}\label{sec:problemas}
-
-Durante a implementação do \emph{crawler}, diversos problema foram
-observados mas, devido a problema relativos ao tempo de entrega do
-trabalho, tiveram que ser deixados de lado. Todavia, esses problemas
-merecem menção, uma vez que constituem limitações da implementação e
-que, em TP's futuros podem se revelar como problemas cuja solução será
-necessária.
-
-\subsubsection{Armadilhas para \emph{crawlers}}\label{dif:armadilhas}
-
-Um dos problemas de se lidar com a coleta de conteúdo dinâmico é que
-sítios com esse tipo de página pode conter o que se chama e ``buracos
-negros'', ou seja, é possível que o coletor possa se perder ou passar
-mais tempo do que o necessário tentando coletar uma
-infinidade de páginas geradas dinamicamente. Ignorar o conteúdo do
-componente \emph{query} de URLs é uma forma de tentar contornar esse
-problema mas está longe de ser uma solução eficaz, uma vez que existem
-formas de se apresentar conteúdo dinâmico sem que esse envolva o uso de
-URLs com componentes \emph{query}.
-
-Uma outra forma de gerar conteúdo ou URLs dinâmicas é através do
-componente \emph{domainname} de URLs. Essa forma é particularmente
-nociva à nossa implementação, sobretudo na que usa a política de
-escalonamento BF. Isso deve-se a diversos fatores:
-\begin{itemize}
-\item Quando uma página em um domínio desses é encontrada pela primeira
-vez, acaba-se descobrindo por tabela diversas páginas em diversos
-domínios dinâmicos pertencentes ao mesmo sítio;
-\item uma vez que cada novo domínio gerado
-acarreta a criação de uma instância de gerente de domínio em nossa
-implementação, ao visitar apenas uma única página num sítio desses
-diversas instâncias de gerentes de domínios terão de ser geradas
-instantaneamente,
-\item finalmente,  como nessa política os domínios são visitados por ordem de
-descoberta, o inicio da coleta do primeiro domínio dinâmico de um sítio
-desses acarretará diversas requisições DNS, uma para cada um dos outros
-domínios dinâmicos encontrados em seqüência.
-\end{itemize}
-
-Nessas circunstâncias o desempenho do coletor cai para patamares
-baixíssimos, como pode-se observam em alguns vales na
-Figura~\ref{fig:bf}. A política de escalonamento LSF contorna isso de
-maneira elegante, mas até que ponto? Se tivessemos deixado o coletor com
-LSF rodando por mais tempo teríamos encontrado esse tipo de
-comportamento?
-
-%Buracos negros - nossa abordagem de escalonamento foi baseada em domínios. Isso
-%permitia não somente controlar o tempo mínimo de intervalo entre acessos
-%consecutívos a um mesmo domínio, limitar o uso de memória (já que nao era mais
-%necesári armazenar o nome de domínio em cada URL pertencente a ele) e armazenar
-%a lista de URLs pendentes. Todavia, para a nossa implementação, sítios que
-%fazem uso extensivo de sub-domínios para sua organização são torna um problema.
-%Isso deve-se ao fato de que, custumeiramente, a obtenção e \emph{parsing} de
-%uma unica página de um sítio destes acarreta na ``descoberta'' de vários
-%sub-domínos desse sítio, o que por sua vez acarreta no acréscimo de cada um
-%destes na lista de domínios conhecidos e de domínios pendentes. Além desses
-%domínios serem costumeriramente rasos, ou seja, sem muitos links para
-%documentos internos, a sua adição limitará a capacidade do crawler de baixar
-%páginas de conteúdo, uma vez que, antes de que qualquer conteúdo possa ser
-%obtido desses domínios, os arquivos \texttt{robots.txt} dele terá de ser
-%obtido.
-
-\subsubsection{Esgotamento da memória primária}
-
-Todas as estruturas de controle de nossa implementação são deixadas em
-memória primária. Em questão de horas isso começa a se tornar um
-problema, quando o S.O. inicia um processo de colocar algumas das
-páginas de memória de nosso sistema em  memória secundária. A medida que
-o tempo passa, vai se tornando cada vez mais difícil não ser afetado
-pela troca de páginas entre a memória principal e o \emph{swap}, fruto
-do consumo de memória de nossa aplicação.
-
-Uma forma de contornar o uso de memória seria fazer um uso mais
-agressivo de identificadores numéricos para as páginas. Isso será útil
-não somente para a contenção dos gastos com memória mas também quando
-estivermos realizando a indexação dos documentos.
-
-Encontrar mecanismos que nos permitam determinar a lista de URLs
-pendentes em um dominio além de rapidamente determinar se uma
-determinada URL já foi encontrada antes ou não sem depender tanto de
-memória primária é um problema não resolvido de nossa implementação.
-O uso de soluções como \emph{hashtables} distribuídas foi cogitado, mas
-não chegamos a implementá-lo.
-
-\subsubsection{Melhores implementações de listas de prioridades}
-
-A adoção da política de escalonamento LSF mostrou-se bastante benéfica à
-nossa implementação. Todavia, da forma que ela está implementada, ela
-sofre de uma severa limitação: uma vez que um domínio tenha entrado na
-lista de domínios ativos (Seção~\ref{sec:datastructures}), o valor do
-tamanho da sua fila de páginas pendentes não pode mais ser atualizado.
-Isso ocorre porque os algoritmos e estruturas disponíveis na STL, a
-bilbioteca padrão de tipos e algoritmos do C++, para lidar com listas de
-prioridades e \emph{heaps} não possuem métodos para decrementar ou
-incrementar um o valor atribuído a um ítem interno ao \emph{heap}. Essa
-limitação dificulta e limita também a implementação de políticas de
-escalonamento de domínios ou de páginas baseados na quantidade de
-\emph{links} que apontam para os mesmos.
-
-Um solução seria implementar \emph{heaps} binários e de Fibonacci do
-zero, de tal forma que esses possuíssem métodos para decrementar o valor
-associado a um ítem ou atualizá-lo dinamicamente. Foi cogitada a
-implementação uma estrutura similar a um \emph{heap} de Fibonacci mas
-com custos assintóticos inferiores, conhecida como \emph{relaxed heap},
-mas, por questões de tempo, essa implementação não foi
-possível~\cite{driscoll1988relaxed}.
-
-\subsubsection{Estrutura de diretórios}
-
-\subsubsection{UTF-8 vs Latin1}
-
-Considerando-se o fato de que o trabalho objetivava o uso de uma coleção
-de páginas da \emph{Web} brasileira e, por tanto, de conteúdo em língua
-portuguesa, as escolha de UTF-8 como mapa de caracteres utilizado após a
-normalização não parece mais um boa decisão. Considerando os problemas
-que UTF-8 causa no processo de parsing e normalização dos termos,
-percebe-se agora que o uso de Latin-1 seria um escolha mais sensata.
-Ainda mais considerando que, após a normalização de caso e de acentos
-nas palavras, tudo o que resta de útil é um conteúdo limitado de ASCII
-7-bits.
-
-
+%\section{Conclusões}
+%
+%Nesse relatório descrevemos a implementação do \emph{crawler}
+%especificado no TP1 da disciplina~\cite{tp1}, bem como os problemas
+%enfrentados e as decisões de projeto tomadas.
+%
+%Pudemos observar como a política de escalonamento possui um papel
+%fundamental no desempenho do coletor. Em nossos experimentos, o
+%uso da política ``\emph{largest site first}'' mostrou-se capaz de, em
+%50\% do tempo necessário, baixar 150\% do conteúdo desejado para um
+%único dia de coleta. Além disso, mostro-se quase duas vezes mais eficiente do que a
+%política ``\emph{breadth-first}''. Esses resultados, embora bastante
+%interessantes, estão longe de ser novidades, sendo bastante estudados na
+%literatura~\cite{baezayates2005crawling}.
+%
+%
+%Finalmente, foi também possível observar como que, a despeito de ser
+%aparentemente um problema simples, a elaboração de um \emph{crawler}
+%industrial é complicada.
+%
+%\subsection{Problemas encontrados e Melhorias
+%futuras}\label{sec:problemas}
+%
+%Durante a implementação do \emph{crawler}, diversos problema foram
+%observados mas, devido a problema relativos ao tempo de entrega do
+%trabalho, tiveram que ser deixados de lado. Todavia, esses problemas
+%merecem menção, uma vez que constituem limitações da implementação e
+%que, em TP's futuros podem se revelar como problemas cuja solução será
+%necessária.
+%
+%\subsubsection{Armadilhas para \emph{crawlers}}\label{dif:armadilhas}
+%
+%Um dos problemas de se lidar com a coleta de conteúdo dinâmico é que
+%sítios com esse tipo de página pode conter o que se chama e ``buracos
+%negros'', ou seja, é possível que o coletor possa se perder ou passar
+%mais tempo do que o necessário tentando coletar uma
+%infinidade de páginas geradas dinamicamente. Ignorar o conteúdo do
+%componente \emph{query} de URLs é uma forma de tentar contornar esse
+%problema mas está longe de ser uma solução eficaz, uma vez que existem
+%formas de se apresentar conteúdo dinâmico sem que esse envolva o uso de
+%URLs com componentes \emph{query}.
+%
+%Uma outra forma de gerar conteúdo ou URLs dinâmicas é através do
+%componente \emph{domainname} de URLs. Essa forma é particularmente
+%nociva à nossa implementação, sobretudo na que usa a política de
+%escalonamento BF. Isso deve-se a diversos fatores:
+%\begin{itemize}
+%\item Quando uma página em um domínio desses é encontrada pela primeira
+%vez, acaba-se descobrindo por tabela diversas páginas em diversos
+%domínios dinâmicos pertencentes ao mesmo sítio;
+%\item uma vez que cada novo domínio gerado
+%acarreta a criação de uma instância de gerente de domínio em nossa
+%implementação, ao visitar apenas uma única página num sítio desses
+%diversas instâncias de gerentes de domínios terão de ser geradas
+%instantaneamente,
+%\item finalmente,  como nessa política os domínios são visitados por ordem de
+%descoberta, o inicio da coleta do primeiro domínio dinâmico de um sítio
+%desses acarretará diversas requisições DNS, uma para cada um dos outros
+%domínios dinâmicos encontrados em seqüência.
+%\end{itemize}
+%
+%Nessas circunstâncias o desempenho do coletor cai para patamares
+%baixíssimos, como pode-se observam em alguns vales na
+%Figura~\ref{fig:bf}. A política de escalonamento LSF contorna isso de
+%maneira elegante, mas até que ponto? Se tivessemos deixado o coletor com
+%LSF rodando por mais tempo teríamos encontrado esse tipo de
+%comportamento?
+%
+%%Buracos negros - nossa abordagem de escalonamento foi baseada em domínios. Isso
+%%permitia não somente controlar o tempo mínimo de intervalo entre acessos
+%%consecutívos a um mesmo domínio, limitar o uso de memória (já que nao era mais
+%%necesári armazenar o nome de domínio em cada URL pertencente a ele) e armazenar
+%%a lista de URLs pendentes. Todavia, para a nossa implementação, sítios que
+%%fazem uso extensivo de sub-domínios para sua organização são torna um problema.
+%%Isso deve-se ao fato de que, custumeiramente, a obtenção e \emph{parsing} de
+%%uma unica página de um sítio destes acarreta na ``descoberta'' de vários
+%%sub-domínos desse sítio, o que por sua vez acarreta no acréscimo de cada um
+%%destes na lista de domínios conhecidos e de domínios pendentes. Além desses
+%%domínios serem costumeriramente rasos, ou seja, sem muitos links para
+%%documentos internos, a sua adição limitará a capacidade do crawler de baixar
+%%páginas de conteúdo, uma vez que, antes de que qualquer conteúdo possa ser
+%%obtido desses domínios, os arquivos \texttt{robots.txt} dele terá de ser
+%%obtido.
+%
+%\subsubsection{Esgotamento da memória primária}
+%
+%Todas as estruturas de controle de nossa implementação são deixadas em
+%memória primária. Em questão de horas isso começa a se tornar um
+%problema, quando o S.O. inicia um processo de colocar algumas das
+%páginas de memória de nosso sistema em  memória secundária. A medida que
+%o tempo passa, vai se tornando cada vez mais difícil não ser afetado
+%pela troca de páginas entre a memória principal e o \emph{swap}, fruto
+%do consumo de memória de nossa aplicação.
+%
+%Uma forma de contornar o uso de memória seria fazer um uso mais
+%agressivo de identificadores numéricos para as páginas. Isso será útil
+%não somente para a contenção dos gastos com memória mas também quando
+%estivermos realizando a indexação dos documentos.
+%
+%Encontrar mecanismos que nos permitam determinar a lista de URLs
+%pendentes em um dominio além de rapidamente determinar se uma
+%determinada URL já foi encontrada antes ou não sem depender tanto de
+%memória primária é um problema não resolvido de nossa implementação.
+%O uso de soluções como \emph{hashtables} distribuídas foi cogitado, mas
+%não chegamos a implementá-lo.
+%
+%\subsubsection{Melhores implementações de listas de prioridades}
+%
+%A adoção da política de escalonamento LSF mostrou-se bastante benéfica à
+%nossa implementação. Todavia, da forma que ela está implementada, ela
+%sofre de uma severa limitação: uma vez que um domínio tenha entrado na
+%lista de domínios ativos (Seção~\ref{sec:datastructures}), o valor do
+%tamanho da sua fila de páginas pendentes não pode mais ser atualizado.
+%Isso ocorre porque os algoritmos e estruturas disponíveis na STL, a
+%bilbioteca padrão de tipos e algoritmos do C++, para lidar com listas de
+%prioridades e \emph{heaps} não possuem métodos para decrementar ou
+%incrementar um o valor atribuído a um ítem interno ao \emph{heap}. Essa
+%limitação dificulta e limita também a implementação de políticas de
+%escalonamento de domínios ou de páginas baseados na quantidade de
+%\emph{links} que apontam para os mesmos.
+%
+%Um solução seria implementar \emph{heaps} binários e de Fibonacci do
+%zero, de tal forma que esses possuíssem métodos para decrementar o valor
+%associado a um ítem ou atualizá-lo dinamicamente. Foi cogitada a
+%implementação uma estrutura similar a um \emph{heap} de Fibonacci mas
+%com custos assintóticos inferiores, conhecida como \emph{relaxed heap},
+%mas, por questões de tempo, essa implementação não foi
+%possível~\cite{driscoll1988relaxed}.
+%
+%\subsubsection{Estrutura de diretórios}
+%
+%\subsubsection{UTF-8 vs Latin1}
+%
+%Considerando-se o fato de que o trabalho objetivava o uso de uma coleção
+%de páginas da \emph{Web} brasileira e, por tanto, de conteúdo em língua
+%portuguesa, as escolha de UTF-8 como mapa de caracteres utilizado após a
+%normalização não parece mais um boa decisão. Considerando os problemas
+%que UTF-8 causa no processo de parsing e normalização dos termos,
+%percebe-se agora que o uso de Latin-1 seria um escolha mais sensata.
+%Ainda mais considerando que, após a normalização de caso e de acentos
+%nas palavras, tudo o que resta de útil é um conteúdo limitado de ASCII
+%7-bits.
+%
+%
 %%%%%%%%%%%%%%%%%%%%%%%%%% Bibliografia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \bibliographystyle {plain}
