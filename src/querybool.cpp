@@ -156,16 +156,6 @@ struct QueryResolver {
 		data.read(entry.pos);
 
 		ByteWiseCompressor::decompress(entry.ft, data,ilist);
-
-		//FIXME
-		inverted_list_vec_t::const_iterator i;
-		std::cout << termid << " " << ilist.size() << " ; ";
-		for(i = ilist.begin(); i != ilist.end(); ++i){
-			std::cout << i->first << "," << i->second << " ";
-		}
-		std::cout << std::endl;
-		//FIXME
-
 	}
 
 	void ilist2docset(const inverted_list_vec_t& ilist, docset& ids )
@@ -206,13 +196,12 @@ struct QueryResolver {
 		getTermDocvet(*w,result);
 		++w; //Continue at the second term (if it exists)...
 		for(; w != words.end(); ++w) {
+
 			// Is this an query operator? if so, handle it.
 			if (*w == "AND" ) {
-				std::cout << "AND" << std::endl;
 				conjunctive = true;
 				continue;
 			} else if ( *w == "OR") {
-				std::cout << "OR" << std::endl;
 				conjunctive = false;
 				continue;
 			}
@@ -222,7 +211,6 @@ struct QueryResolver {
 			docvet prev(result);	// previous result
 			result.clear();
 
-			std::cout << "processing " << *w << std::endl;
 			getTermDocvet(*w, cur);
 
 			if (conjunctive) {
@@ -234,9 +222,7 @@ struct QueryResolver {
 					cur.begin(), cur.end(),
 				 	std::inserter(result,result.begin()));
 			}
-
-
-		}
+		} //end for
 	}
 
 
@@ -247,48 +233,8 @@ struct QueryResolver {
 				      MAIN
  ***********************************************************************/
 
-void show_usage()
+void do_query(QueryResolver& resolver, std::string query)
 {
-        std::cout << 	"Usage:\n"
-			"dump_index <-a|-o> store_dir\n"
-			"\t-a\tquery using AND\n"
-			"\t-o\tquery using OR\n"
-			"\tstore_dir\twhere the index is."<< std::endl;
-}
-
-int main(int argc, char* argv[])
-{
-	bool is_and_query = true;
-
-	// Parse command line
-	if(argc != 4) {
-		std::cerr << "Wrong number of arguments." << std::endl;
-		show_usage();
-		exit(EXIT_FAILURE);
-	}
-
-	std::string option(argv[1]);
-	std::string store_dir(argv[2]);
-	std::string query(argv[3]);
-
-
-	if (option == "-a") {
-		is_and_query = true;
-	}else if(option == "-o" ) {
-		is_and_query = false;
-	} else {
-		std::cerr << "Unknown option '" << option << "'." << std::endl;
-		show_usage();
-		exit(EXIT_FAILURE);
-	}
-
-	// Ok, let's start the show.
-
-	std::cout << "Loading vocabulary and inverted file ... ";
-	std::cout.flush();
-	QueryResolver resolver(store_dir.c_str());
-	std::cout << "done" << std::endl;
-
 	docvet d_ids;
 	resolver.processQuery(query,d_ids);
 
@@ -306,13 +252,50 @@ int main(int argc, char* argv[])
 		std::cout << std::endl;
 	}
 
+}
 
-//        IntStrMap::const_iterator i;
-//        
-//        for(i = id2t.begin(); i != id2t.end(); ++i){
-//                std::cout << i->first << " " <<
-//                                i->second << std::endl;
-//        }
+void show_usage()
+{
+        std::cout << 	"Usage:\n"
+			"dump_index store_dir\n"
+			"\tstore_dir\twhere the index is."<< std::endl;
+}
+
+int main(int argc, char* argv[])
+{
+	// Parse command line
+	if(argc < 2) {
+		std::cerr << "Wrong number of arguments." << std::endl;
+		show_usage();
+		exit(EXIT_FAILURE);
+	}
+
+	std::string store_dir(argv[1]);
+	std::string query;
+
+	// Ok, let's start the show.
+
+	std::cout << "Loading vocabulary and inverted file ... ";
+	std::cout.flush();
+	QueryResolver resolver(store_dir.c_str());
+	std::cout << "done" << std::endl;
+
+	std::cout <<"Type your query using AND, OR and spaces to split terms."<<std::endl;
+	std::cout <<"Default operation is AND (conjunctive)."<<std::endl;
+	std::cout <<"Notice: a AND b c OR d == (((a AND b) AND c) OR d )"<<std::endl;
+
+	// Prompt
+	std::cout << "> ";
+	std::cout.flush();
+	while(getline(std::cin,query)) {
+
+		do_query(resolver, query);
+
+		// Prompt
+		std::cout << "> ";
+		std::cout.flush();
+	}
+
 
 	exit(EXIT_SUCCESS);
 

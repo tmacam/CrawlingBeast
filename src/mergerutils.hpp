@@ -31,6 +31,8 @@ typedef std::priority_queue< BaseSlidingReader*,
 			     ReadersPtrVec,
 			     GetSmallestQueue >		RunPriorityQueue;
 
+/**Structure for inverted file index.
+ */
 struct hdr_entry_t {
 	uint32_t ft;	//!< Count of documents containint term t
 	uint32_t pos;	/**< Position of the inverted list in data file

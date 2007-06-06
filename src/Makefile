@@ -5,7 +5,7 @@ CURL_LDFLAGS = #`priv_curl/bin/curl-config --libs`
 #CURL_CFLAGS = `curl-config --cflags`
 #CURL_LDFLAGS = `curl-config --libs`
 
-TARGETS	 = runner crawlingbeast
+TARGETS	 = runner crawlingbeast indexer merger querybool
 CC	 = g++
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS)
 LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
