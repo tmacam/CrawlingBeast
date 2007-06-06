@@ -3,9 +3,11 @@
 #include <iostream>
 #include "mergerutils.hpp"
 #include "mmapedfile.h"
+#include "indexcompression.hpp"
 
 /* We are assuming that the whole vocabulary fits in the memory
  * and is in a single file.
+ *
  */
 void dump_inverted_file(IntStrMap& id2term, const char* store_dir)
 {
@@ -17,21 +19,24 @@ void dump_inverted_file(IntStrMap& id2term, const char* store_dir)
 			BaseInvertedFileDumper::mk_data_filename(prefix,0);
 
 	MMapedFile _hdr(hdr_filename);
-	MMapedFile _data(data_filename);
+	MMapedFile data(data_filename);
 
 	hdr_entry_t* _header = (hdr_entry_t*) _hdr.getBuf().start;
-	const char* data = _data.getBuf().start;
-	const d_fdt_t* ilist = NULL;
+	
 
 	for(i = id2term.begin(); i != id2term.end(); ++i){
 		hdr_entry_t& header = _header[i->first];
 
-		std::cout << i->first << " " <<
-				i->second << ": <" <<
+		std::cout << i->first << " " << 
+				i->second << " pos " << header.pos << " " << ": <" <<
 			header.ft << "; ";
-		ilist = (d_fdt_t*)(data + header.pos);
-		for(uint32_t doc = 0; doc < header.ft; ++doc){
-			std::cout << ilist[doc].first << ", ";
+		filebuf comp_list = data.getBuf();
+		comp_list.read(header.pos);
+		inverted_list_vec_t ilist;
+		inverted_list_vec_t::const_iterator doc;
+		ByteWiseCompressor::decompress(header.ft,comp_list,ilist);
+		for(doc = ilist.begin(); doc != ilist.end(); ++doc){
+			std::cout << "<" << doc->first << "," << doc->second << "> ";
 		}
 		std::cout << ">" << std::endl;
 

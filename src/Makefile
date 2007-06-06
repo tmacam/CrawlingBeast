@@ -49,6 +49,8 @@ dump_index: dump_index.o $(OBJFILES)
 
 slidingreader: slidingreader.o mmapedfile.o
 
+querybool: querybool.cpp $(OBJFILES)
+
 
 __testa_parser: __testa_parser.o $(OBJFILES)
 
