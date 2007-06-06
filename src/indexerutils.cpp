@@ -195,7 +195,7 @@ void load_vocabulary(StrIntMap& vocabulary, const char* store_dir)
 
 
 void index_files(const char* store_dir, const std::vector<docid_t> docids_list,
-		const char* output_dir)
+		const char* output_dir, unsigned int run_size)
 {
 	docid_t docid;
 
@@ -206,8 +206,7 @@ void index_files(const char* store_dir, const std::vector<docid_t> docids_list,
 	time_t last_broadcast = time(NULL);
 	time_t time_started = time(NULL);
 
-	const unsigned int KB = 1<<10;
-	run_inserter runs(output_dir, 100*KB );
+	run_inserter runs(output_dir, run_size );
 
 	StrIntMap vocabulary; // term -> term_id
 	StrIntMap wfreq; // term -> frequency in current doc

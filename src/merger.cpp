@@ -26,7 +26,7 @@ int main(int argc, char* argv[])
 {
 	const int MB =  1<<20;
 
-	int max_mem = 1<<30; // 1GB
+	int max_mem = 1<<29; // 0.5GB
 
 	/*
 	 * parse comand line
@@ -40,7 +40,8 @@ int main(int argc, char* argv[])
 
 	// Create index
 	RunMerger merger(n_runs, output_dir, max_mem);
-	ByteWiseCompressedInvertedFileDumper ifile(output_dir, merger, MB);
+	ByteWiseCompressedInvertedFileDumper ifile(output_dir, merger, 256*MB);
+	std::cout << "Setup complete. Staring the merging process." <<std::endl;
 	ifile.dump();
 
 }

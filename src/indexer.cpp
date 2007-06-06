@@ -30,6 +30,8 @@ int main(int argc, char* argv[])
 	docid_list = argv[2];
 	output_dir = argv[3];
 
+	unsigned int run_size = 1<<28;
+
 	std::cout << "# Reading docid list ... "<< std::endl;
 	std::vector<docid_t> ids;
 	ids.reserve(1<<20);
@@ -41,7 +43,7 @@ int main(int argc, char* argv[])
 	}
 	std::cout << "# Reading docid list ... done." << std::endl;
 
-	index_files(store_dir, ids, output_dir);
+	index_files(store_dir, ids, output_dir, run_size);
 	exit(0);
 }
 
