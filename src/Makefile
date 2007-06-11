@@ -43,6 +43,9 @@ merger.o: merger.cpp mergerutils.?pp indexerutils.?pp
 merger: merger.o mergerutils.o 
 	g++  -lz -pthread   merger.o mergerutils.o -o merger
 
+mkstore: mkstore.o mmapedfile.o filebuf.o 
+	g++  -lz mkstore.o mmapedfile.o filebuf.o -o mkstore
+
 test_indexer: test_indexer.o $(OBJFILES)
 
 dump_index: dump_index.o $(OBJFILES)
