@@ -309,58 +309,62 @@ void StoreBuilder::buildStore()
 
 	// For every docid / retrieved document
 	for(unsigned int i = 0; i < ids.size(); ++i){
+		try {
 
-		docid = ids[i];
+			docid = ids[i];
 
-		// read document
-		std::string filename = make_crawler_filename(docid);
-		MMapedFile file(filename.c_str());
-		filebuf contents = file.getBuf();
-		data_header.docid = docid;
-		data_header.len = contents.len();
+			// read document
+			std::string filename = make_crawler_filename(docid);
+			MMapedFile file(filename.c_str());
+			filebuf contents = file.getBuf();
+			data_header.docid = docid;
+			data_header.len = contents.len();
 
-		total_needed = data_header.len + sizeof(store_data_entry_t);
-		out = outputer.getDataOutputBuffer(total_needed, fileno, pos);
+			total_needed = data_header.len + sizeof(store_data_entry_t);
+			out = outputer.getDataOutputBuffer(total_needed, fileno, pos);
 
-		// Store information about this document in the document store 
-		// index
-		outputer.putIndexEntry(store_hdr_entry_t(docid,fileno,pos));
-
-
-		//FIXME
-//                std::cout << "Data id=" << data_header.docid <<
-//                                 " len=" << data_header.len <<
-//                                 " pos=" << pos << 
-//                                 std::endl;
-
-		// Copy file contents to store
-		// WARNING - filebuf idioms
-		//	data header
-		size_t n = sizeof(data_header);
-		void* dest = (void*)out.read(n);
-		memcpy(dest, &data_header, n);
-		//	data contents
-		n = data_header.len;
-		dest = (void*) out.read(n);
-		memcpy(dest, contents.start, n);
-		assert(out.eof());
+			// Store information about this document in the document store 
+			// index
+			outputer.putIndexEntry(store_hdr_entry_t(docid,fileno,pos));
 
 
-		// Statistics
-		++d_count;
-		byte_count += contents.len();
-		if (d_count  % 1000 == 0) {
-			time_t now = time(NULL);
+			//FIXME
+			//                std::cout << "Data id=" << data_header.docid <<
+			//                                 " len=" << data_header.len <<
+			//                                 " pos=" << pos << 
+			//                                 std::endl;
 
-			uint64_t byte_amount = byte_count - last_byte_count;
-			std::cout << "# docs: " << d_count << " bytes: " <<
-				byte_amount << " / " << byte_count << " bps: "<<
-				byte_amount/(now - last_broadcast) << 
-				" elapsed " << now - time_started << std::endl;
+			// Copy file contents to store
+			// WARNING - filebuf idioms
+			//	data header
+			size_t n = sizeof(data_header);
+			void* dest = (void*)out.read(n);
+			memcpy(dest, &data_header, n);
+			//	data contents
+			n = data_header.len;
+			dest = (void*) out.read(n);
+			memcpy(dest, contents.start, n);
+			assert(out.eof());
 
-			last_broadcast = now;
-			last_byte_count = byte_count;
-		} // stats
+
+			// Statistics
+			++d_count;
+			byte_count += contents.len();
+			if (d_count  % 1000 == 0) {
+				time_t now = time(NULL);
+
+				uint64_t byte_amount = byte_count - last_byte_count;
+				std::cout << "# docs: " << d_count << " bytes: " <<
+					byte_amount << " / " << byte_count << " bps: "<<
+					byte_amount/(now - last_broadcast) << 
+					" elapsed " << now - time_started << std::endl;
+
+				last_broadcast = now;
+				last_byte_count = byte_count;
+			} // stats
+		} catch(MMapedFileException& e) {
+			std::cerr << "ERROR with docid " << docid << " " << e.what() << std::endl;
+		}
 	} // end for each document
 }
 
