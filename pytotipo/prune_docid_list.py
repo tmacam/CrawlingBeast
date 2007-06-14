@@ -10,6 +10,7 @@ downloaded.
 
 import sys
 import os
+import stat
 
 def print_usage():
     print """prune_docid_list.py [store_dir] [docid_lst] [output]
@@ -26,8 +27,8 @@ def docidDownloaded(store_dir, docid):
     id_path = "/".join([id_hex[0:2], id_hex[2:4], id_hex[4:6], id_hex[6:8]])
     filename = store_dir + "/" + id_path + "/" + "data.gz"
     try:
-        os.stat(filename)
-        return True
+        res=os.stat(filename)
+        return (res[stat.ST_SIZE] > 0)
     except OSError:
         return False
     

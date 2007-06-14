@@ -315,8 +315,8 @@ class BaseEntityParser(BaseParser):
 
         except (InvalidCharError, UnknownEntityReferenceError):
             # Invalid or unexpected character found? Unknown entity?
-            # Just turn everything we had from previous_start to _end into
-            # text content.
+            # Just turn everything we had from previous_start to the current
+            # read position into text content.
             self.handlePureText( self._text[ previous_start : self._start])
         except ParserEOFError:
             self.handlePureText( self._text[ previous_start : self._end +1])
