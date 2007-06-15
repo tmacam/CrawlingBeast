@@ -72,6 +72,7 @@ void BaseInvertedFileDumper::dump()
 	const char* data = (char*) &header_data[0];
 	size_t len = header_data.size() * sizeof(hdr_entry_t);
 	hdr_file.write(	data, len);
+	hdr_file.flush();
 }
 
 
