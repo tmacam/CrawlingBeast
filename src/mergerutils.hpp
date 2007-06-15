@@ -287,7 +287,12 @@ public:
 			size_t _max_data_size, size_t header_reserve=1<<22);
 
 
-	virtual ~BaseInvertedFileDumper(){}
+	virtual ~BaseInvertedFileDumper()
+	{
+		if( hdr_file.is_open() ) { hdr_file.flush(); hdr_file.close() ;}
+		if( data_file.is_open() ) { data_file.flush(); data_file.close() ;}
+	}
+
 
 	//! Generate the inverted index.
 	void dump();
