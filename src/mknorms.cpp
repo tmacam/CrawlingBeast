@@ -1,9 +1,9 @@
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
 
 #include <iostream>
+#include <strings.h>
+
 #include "mergerutils.hpp"
-#include "mmapedfile.h"
-#include "indexcompression.hpp"
 
 #include <ext/hash_map>
 #include <tr1/functional>
@@ -37,6 +37,24 @@ struct wdmaxfdt_t {
 }__attribute__((packed));
 
 typedef __gnu_cxx::hash_map < docid_t, wdmaxfdt_t> wdmfdt_map_t;
+
+/**Structure for document's norm store index's entries.
+ */
+struct norm_hdr_entry_t {
+	uint32_t docid;	//!< DocId of the document
+	uint16_t fileno; /**< Number of the store data file holding the contents
+			 *   of the document with id @p docid
+			 */
+	uint32_t pos;	/**< Position of the document in the document store 
+			 *   data file with number @c fileno
+			 */
+
+
+	norm_hdr_entry_t(uint32_t id = 0, uint8_t n=0, uint32_t position=0)
+	: docid(id), fileno(n),  pos(position)
+	{}
+} __attribute__((packed));
+
 
 
 /***********************************************************************
@@ -134,9 +152,6 @@ public:
 
 
 
-//void get_norms_mf(const char* store_dir, wdmfdt_map_t& WdMap, _visitor_t visitor)
-
-
 void show_usage()
 {
 	std::cout << "Usage:" << std::endl;
@@ -175,16 +190,23 @@ int main(int argc, char* argv[])
 	wdmfdt_map_t WFMap;
 
 	read_docid_list(docid_list, docids);
-
-	GetNormsVisitor visitor(docids.size(), WFMap);
+	const uint32_t N = docids.size();
+	GetNormsVisitor visitor(N, WFMap);
 
 	VisitIndexedStore<hdr_entry_t>(list_dir, "index", visitor);
-
 	visitor.finishWdCalc();
 
+	uint32_t pos;
+	uint16_t fileno;
 	docid_vec_t::const_iterator d;
+	IndexedStoreOutputer<norm_hdr_entry_t> normout(list_dir, "norm", N);
 	for(d = docids.begin(); d != docids.end(); ++d){
-		std::cout << *d << " Wd " << WFMap[*d].wd << " max_fdt " << WFMap[*d].maxfdt << std::endl;
+		filebuf out = normout.getDataOutputBuffer( sizeof(wdmaxfdt_t),
+							   fileno,
+							   pos);
+		normout.putIndexEntry(norm_hdr_entry_t(*d,fileno,pos));
+		memcpy((void*)out.start,&WFMap[*d],sizeof(wdmaxfdt_t));
+		std::cout << *d << " Wd " << WFMap[*d].wd << " max_fdt " << WFMap[*d].maxfdt << std::endl; // FIXME
 	}
 
 }

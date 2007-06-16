@@ -46,8 +46,8 @@ merger: merger.o mergerutils.o
 mkstore: mkstore.o mmapedfile.o filebuf.o 
 	g++  -lz mkstore.o mmapedfile.o filebuf.o -o mkstore
 
-mknorms: mknorms.o mmapedfile.o filebuf.o mergerutils.o
-	g++  -lm mknorms.o mmapedfile.o filebuf.o mergerutils.o -o mknorms
+mknorms: mknorms.o mmapedfile.o filebuf.o
+	g++  -lm mknorms.o mmapedfile.o filebuf.o -o mknorms
 
 httpserver: httpserver.o strmisc.o filebuf.o
 	g++  httpserver.o strmisc.o filebuf.o -o httpserver
