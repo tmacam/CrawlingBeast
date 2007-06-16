@@ -20,6 +20,7 @@
  */
 #include "mmapedfile.h"
 #include "common.h"
+#include "isamutils.hpp"
 
 #include <time.h>
 
@@ -64,165 +65,6 @@ struct store_data_entry_t {
 
 
 /***********************************************************************
-			      IndexedStoreOutputer
- ***********************************************************************/
-
-/**Save items into a Indexed Storange.
- *
- * A indexed storage. It is sort of a ISAM but records can be of
- * arbitrary length.
- *
- * - Index
- *   
- *   Direct acess by key is not garanteed and is the programer's
- *   responsabilty to store @e pointer-to-record information
- *   inside the index entry.
- *
- *
- * - data files.
- *
- *   Holds the records.
- *
- *   the record data may spread over multiple data files
- *   if a the aggregate size of the records @c S exceed the
- *   pre-determined maximum length of @p max_data_size.
- *
- * Data files are automatically rotated.
- *
- */
-template <class idx_hdr_t, size_t max_data_size=512*1024*1024>
-class IndexedStoreOutputer {
-	std::vector<char> _real_arena; // bugger!
-	char* arena;
-	std::vector<idx_hdr_t> header_data;
-
-	// Memory I/O management counters and "pointers"
-	size_t n_files;	//!< Number of data files issued so far.
-	filebuf data_buf;	/**< Controls the current reading position
-				 *   and the ammount of space left in the
-				 *   arena.
-				 */
-
-	// File I/O related things
-	std::string output_path;
-	std::string store_name;
-
-	std::ofstream header_file;	//!< The document store index writer
-	std::ofstream data_file;	//!< Data file writer
-
-	// Auxiliary functions
-	size_t getCurOffset() const {return data_buf.current - data_buf.start;}
-
-	/** (forcibily) Rotate data files.
-	 *
-	 * @warning This is different from BaseInvertedFileDumper's rotate.
-	 */
-	void rotateDataFile();
-
-	static std::string mk_data_filename(std::string path,
-					    std::string name,
-					    int n)
-	{
-		std::ostringstream filename_stream;
-		filename_stream << path << "/" << name << ".data_" <<
-			std::hex <<  std::setw(4) << std::setfill('0') <<
-			n; //"%s/%s.data_%04x"
-		return filename_stream.str();
-	}
-
-	//! Turn on excetions and unbuffering on this stream.
-	static void setupFStream(std::ofstream& out)
-	{
-		out.exceptions( std::ios::badbit|std::ios::failbit);
-		out.rdbuf()->pubsetbuf(0, 0); // unbuffering output
-	}
-
-public:
-	IndexedStoreOutputer(	const char* output_dir,
-				const char* name,
-				size_t index_reserve)
-	: _real_arena(max_data_size),
-	  arena(&_real_arena[0]),
-	  n_files(0),
-	  data_buf(arena,max_data_size),
-	  output_path(output_dir),
-	  store_name(name)
-	{
-		// Prepare files for I/O
-		setupFStream(header_file);
-		header_file.open(
-			std::string(output_path+"/"+store_name+".hdr").c_str(),
-			std::ios::binary | std::ios::out);
-		
-		setupFStream(data_file);
-		data_file.open(
-			mk_data_filename(output_path,store_name,n_files).c_str(),
-			std::ios::binary | std::ios::out);
-
-		header_data.reserve(index_reserve);
-	}
-
-	~IndexedStoreOutputer()
-	{
-		// Flush remaining data file - if any;
-		if ( getCurOffset() > 0 ) {
-			data_file.write( data_buf.start, getCurOffset());
-			data_file.flush();
-			data_file.close();
-		}
-
-		// Write store index file
-		const char* hdr = (char*) &header_data[0];
-		size_t len = header_data.size() * sizeof(idx_hdr_t);
-		header_file.write(hdr, len);
-		header_file.flush();
-		header_file.close();
-
-
-	}
-
-	void putIndexEntry(idx_hdr_t entry) { header_data.push_back(entry); }
-
-	/**Reserve and retrive some space in the output buffer.
-	 *
-	 * It is the caller responability to copy date into the
-	 * returned filebuf.
-	 */
-	filebuf getDataOutputBuffer(uint32_t bytes_needed,
-				    uint16_t& file_no,
-				    uint32_t& pos)
-	{
-		if ( bytes_needed > data_buf.len() ) {
-			assert(bytes_needed < max_data_size);
-			rotateDataFile();
-		}
-
-		file_no = n_files;
-		pos = getCurOffset();
-		//std::cout << "need " << bytes_needed << " pos = " << pos << std::endl; // FIXME
-		return data_buf.readf(bytes_needed);
-	}
-
-};
-
-template <class idx_hdr_t, size_t max_data_size>
-void IndexedStoreOutputer<idx_hdr_t,max_data_size>::rotateDataFile()
-{
-
-	data_file.write( data_buf.start, getCurOffset());
-	data_file.flush();
-	data_file.close();
-	// New index file in the house!
-	++n_files; 
-	data_file.open(
-		mk_data_filename(output_path,store_name,n_files).c_str(),
-		std::ios::binary | std::ios::out);
-	// Reset data buffer and file
-	data_buf.current = data_buf.start; // Reset data buffer
-	setupFStream(data_file); // Turning exceptions and unbuffering - again!
-}
-
-/***********************************************************************
 				  StoreBuilder
  ***********************************************************************/
 
@@ -251,6 +93,9 @@ struct StoreBuilder {
 	std::string make_crawler_filename(docid_t docid);
 
 	
+	/**
+	 * @todo Move the contents of this function to a common file.
+	 */
 	void readDocids();
 
 	void buildStore();

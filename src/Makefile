@@ -7,7 +7,7 @@ CURL_LDFLAGS = #`priv_curl/bin/curl-config --libs`
 
 TARGETS	 = runner crawlingbeast indexer merger querybool
 CC	 = g++
-CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS)
+CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS) -D_GLIBCXX_DEBUG
 LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
 AR	 = ar cr
 OBJFILES = filebuf.o parser.o htmlparser.o urltools.o strmisc.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a robotshandler.o entityparser.o htmliterators.o indexerutils.o mergerutils.o zfilebuf.o 
@@ -45,6 +45,12 @@ merger: merger.o mergerutils.o
 
 mkstore: mkstore.o mmapedfile.o filebuf.o 
 	g++  -lz mkstore.o mmapedfile.o filebuf.o -o mkstore
+
+mknorms: mknorms.o mmapedfile.o filebuf.o mergerutils.o
+	g++  -lm mknorms.o mmapedfile.o filebuf.o mergerutils.o -o mknorms
+
+httpserver: httpserver.o strmisc.o filebuf.o
+	g++  httpserver.o strmisc.o filebuf.o -o httpserver
 
 test_indexer: test_indexer.o $(OBJFILES)
 

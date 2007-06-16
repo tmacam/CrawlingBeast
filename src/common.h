@@ -7,6 +7,7 @@
 #include <sys/types.h>
 #include <set>
 #include <utility>
+#include <assert.h>
 
 typedef uint32_t docid_t;
 
