@@ -43,17 +43,6 @@ typedef std::vector<uint32_t> docvet;
  ***********************************************************************/
 
 
-inline std::string& normalize_term(std::string& word)
-{
-	WideCharConverter wconv;
-
-	std::wstring w_word = wconv.mbs_to_wcs(word);
-	normalize_term(w_word);
-	word = wconv.wcs_to_mbs(w_word);
-
-	return word;
-}
-
 struct QueryResolver {
 	std::string store_dir;
 	StrIntMap voc;

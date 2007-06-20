@@ -3,6 +3,8 @@
 #define __CONFIG_H__
 /**@file config.h
  * @brief Defines, configuration constants and such.
+ *
+ * @TODO Mover constantes do crawler, indexador e merger para cá.
  */
 
 //! Port used the the HTTP server.

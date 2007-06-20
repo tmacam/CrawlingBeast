@@ -30,6 +30,33 @@ typedef __gnu_cxx::hash_map < std::string, std::string,
 
 
 /******************************************************************************
+				Misc. Functions
+				 and Constants
+ ******************************************************************************/
+
+namespace http {
+
+const std::string CRLF =  "\x0d\x0a";
+const std::string CRLF_CRLF =  "\x0d\x0a\x0d\x0a";
+
+/**Make a propper HTTP response header.
+ *
+ * The response header includes the blank-line
+ * (CR LF CR LF) the splits the request header
+ * from the body.
+ *
+ * @param msg Status message sent in the HTTP response header.
+ * @param code Status code sent in the HTTP response hader.
+ * @param type The contents of the Content-Type header sent in the response.
+ *
+ */
+std::string mk_response_header(std::string msg="OK", int code=200,
+		std::string type="text/html; charset=utf-8");
+
+};
+
+
+/******************************************************************************
 				   Exceptions
  ******************************************************************************/
 
@@ -258,6 +285,10 @@ struct BaseHTTPServer : public AbstractRequestHandler {
 	/**Handle a new client.
 	 *
 	 * You can re-define this class if you want to make it multithreading.
+	 * 
+	 * @note This function controls the lifetime of the client instance.
+	 * 	 Remember this if you plan to use it in a multithread
+	 * 	 enviroment.
 	 *
 	 */
 	virtual void handleNewClient(int cli_fd, struct sockaddr_in cli_addr);

@@ -10,6 +10,27 @@
 
 #include <iostream>		// FIXME temporary
 
+
+/******************************************************************************
+				Misc. Functions
+ ******************************************************************************/
+
+std::string http::mk_response_header(std::string msg, int code, std::string type)
+{
+	std::ostringstream buf;
+	const std::string& CRLF = http::CRLF;
+
+	buf <<	"HTTP/1.0 " << code <<  msg << CRLF <<
+		"Server: ProcastinationBroadcaster/0.1" << CRLF <<
+		"Connection: close" << CRLF << 
+		"Content-Type: " << type << CRLF << 
+		CRLF;
+	
+	return buf.str();
+
+}
+
+
 /******************************************************************************
 				   Exceptions
  ******************************************************************************/
@@ -17,13 +38,9 @@
 std::string HTTPException::make_error_page(std::string msg, int code)
 {
 	std::ostringstream buf;
-	const std::string CRLF = "\x0d\x0a";
+	const std::string& CRLF = http::CRLF;
 
-	buf <<	"HTTP/1.0 " << code <<  msg << CRLF <<
-		"Server: ProcastinationBroadcaster/0.1" << CRLF <<
-		"Connection: close" << CRLF << 
-		"Content-Type: text/html; charset=iso-8859-1" << CRLF << 
-		CRLF << 
+	buf <<	http::mk_response_header(msg,code) <<
 		"<!DOCTYPE HTML PUBLIC \"-//IETF//DTD HTML 2.0//EN\">" << CRLF << 
 		"<html><head>" << CRLF << 
 		"<title>" << code << " " << msg << "</title>" << CRLF << 
@@ -67,14 +84,14 @@ void HTTPClientHandler::parseRequest()
 	while( 0 < (n = recv(fd,buf, BUF_LEN, 0)) ) {
 		msg.append(buf, n);
 		// Get out if found the request end
-		if (msg.find(CRLF_CRLF)) break;
+		if (msg.find(http::CRLF_CRLF)) break;
 	}
 
 	// parse request
 	if (msg.empty()) {
 		throw BadRequestHTTPException();
 	}
-	strvec_t fullreq_lines(split(msg,CRLF));
+	strvec_t fullreq_lines(split(msg,http::CRLF));
 	strvec_t::iterator line = fullreq_lines.begin();
 	strvec_t request_fields(split(*line," ",2));
 	if (request_fields.size() != 3) {
@@ -125,9 +142,6 @@ void HTTPClientHandler::loseConnection()
 		fd = 0;
 	}
 }
-
-const std::string HTTPClientHandler::CRLF =  "\x0d\x0a";
-const std::string HTTPClientHandler::CRLF_CRLF =  "\x0d\x0a\x0d\x0a";
 
 
 /******************************************************************************

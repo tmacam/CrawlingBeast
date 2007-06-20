@@ -250,6 +250,25 @@ inline std::wstring& normalize_term(std::wstring& word)
 	return word;
 }
 
+/**Normalize a term or word - overloaded for strings.
+ *
+ * It just converts a string in a wstring, calls the normalize_term
+ * version for wstring and convert the wstring back into a string.
+ *
+ */
+inline std::string& normalize_term(std::string& word)
+{
+	WideCharConverter wconv;
+
+	std::wstring w_word = wconv.mbs_to_wcs(word);
+	normalize_term(w_word);
+	word = wconv.wcs_to_mbs(w_word);
+
+	return word;
+}
+
+
+
 
 /**Retrieve the term or word frequency for a given document.
  *

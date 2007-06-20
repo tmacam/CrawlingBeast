@@ -1,7 +1,7 @@
 
 
-CURL_CFLAGS = 
-CURL_LDFLAGS = #`priv_curl/bin/curl-config --libs` 
+CURL_CFLAGS = `priv_curl/bin/curl-config --cflags` 
+CURL_LDFLAGS = `priv_curl/bin/curl-config --libs` 
 #CURL_CFLAGS = `curl-config --cflags`
 #CURL_LDFLAGS = `curl-config --libs`
 
@@ -14,7 +14,7 @@ OBJFILES = filebuf.o parser.o htmlparser.o urltools.o strmisc.o mmapedfile.o uni
 
 
 
-all: $(TARGETS) tags test crawlingbeast
+all: $(TARGETS) tags test crawlingbeast mkstore indexer merger mknorms myserver
 
 crawlingbeast: $(OBJFILES) crawlingbeast.o
 
