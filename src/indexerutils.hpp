@@ -347,7 +347,7 @@ void load_vocabulary(StrIntMap& vocabulary, const char* store_dir);
  *
  */
 void index_files(const char* store_dir, std::vector<docid_t> docids_list,
-		const char* output_dir);
+		const char* output_dir, unsigned int run_size= 100*1024);
 
 
 void prefetchDocs(const char* store_dir, std::vector<docid_t>& ids);
