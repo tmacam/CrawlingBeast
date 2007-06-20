@@ -49,8 +49,8 @@ mkstore: mkstore.o mmapedfile.o filebuf.o
 mknorms: mknorms.o mmapedfile.o filebuf.o
 	g++  -lm mknorms.o mmapedfile.o filebuf.o -o mknorms
 
-httpserver: httpserver.o strmisc.o filebuf.o
-	g++  httpserver.o strmisc.o filebuf.o -o httpserver
+myserver: myserver.o httpserver.o strmisc.o filebuf.o
+	g++  myserver.o httpserver.o strmisc.o filebuf.o -o myserver
 
 test_indexer: test_indexer.o $(OBJFILES)
 
