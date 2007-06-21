@@ -21,6 +21,7 @@
 #include "mmapedfile.h"
 #include "common.h"
 #include "isamutils.hpp"
+#include "crawlerutils.hpp"
 
 #include <time.h>
 
@@ -124,13 +125,7 @@ std::string StoreBuilder::make_crawler_filename(docid_t docid)
 void StoreBuilder::readDocids()
 {
 	std::cout << "# Reading docid list ... "<< std::endl;
-	ids.reserve(1<<20);
-	std::ifstream known_docids(docid_list.c_str());
-	std::string url;
-	docid_t docid;
-	while(known_docids >> docid >> url){
-		ids.push_back(docid);
-	}
+	read_docid_list(docid_list.c_str(), ids);
 	std::cout << "# Reading docid list ... done." << std::endl;
 }
 

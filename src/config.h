@@ -10,6 +10,12 @@
 //! Port used the the HTTP server.
 const int SERVER_PORT =  8090;
 
+/**Amount of entries to reserve during a docid reading
+ *
+ * @see read_docid_list
+ */
+const size_t DOCIDLIST_RESERVE = 1<<20;
+
 
 
 #endif //__CONFIG_H__
