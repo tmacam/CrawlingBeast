@@ -5,7 +5,8 @@ CURL_LDFLAGS = `priv_curl/bin/curl-config --libs`
 #CURL_CFLAGS = `curl-config --cflags`
 #CURL_LDFLAGS = `curl-config --libs`
 
-TARGETS	 = runner crawlingbeast indexer merger querybool
+TARGETS	 = runner crawlingbeast indexer merger querybool queryvec mkstore\
+	   mknorms myserver
 CC	 = g++
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS) -D_GLIBCXX_DEBUG
 LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
@@ -14,7 +15,7 @@ OBJFILES = filebuf.o parser.o htmlparser.o urltools.o strmisc.o mmapedfile.o uni
 
 
 
-all: $(TARGETS) tags test crawlingbeast mkstore indexer merger mknorms myserver
+all: $(TARGETS) tags test
 
 crawlingbeast: $(OBJFILES) crawlingbeast.o
 
@@ -59,6 +60,8 @@ dump_index: dump_index.o $(OBJFILES)
 slidingreader: slidingreader.o mmapedfile.o
 
 querybool: querybool.cpp $(OBJFILES)
+
+queryvec: queryvec.o $(OBJFILES)
 
 
 __testa_parser: __testa_parser.o $(OBJFILES)
