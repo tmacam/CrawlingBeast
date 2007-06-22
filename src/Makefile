@@ -63,6 +63,8 @@ querybool: querybool.cpp $(OBJFILES)
 
 queryvec: queryvec.o $(OBJFILES)
 
+dumb_indexer2: dumb_indexer2.o $(OBJFILES)
+
 
 __testa_parser: __testa_parser.o $(OBJFILES)
 
