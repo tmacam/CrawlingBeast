@@ -45,9 +45,10 @@
 //!A vectorial query result entry
 typedef std::pair<docid_t,double> vec_res_t;
 
-bool operator<(const vec_res_t& a, const vec_res_t& b)
+//! In descending order.
+inline bool VecResComparator(const vec_res_t& a, const vec_res_t& b)
 {
-	return a.second < b.second;
+	return !(a.second < b.second);
 }
 
 //!Vector of results of a vectorial query
@@ -252,7 +253,7 @@ struct VectorialQueryResolver {
 		// Copy result to output
 		result.reserve(acc.size());
 		result.assign(acc.begin(), acc.end());
-		std::sort(result.begin(), result.end());
+		std::sort(result.begin(), result.end(), VecResComparator);
 	}
 
 };
