@@ -50,8 +50,10 @@ mkstore: mkstore.o mmapedfile.o filebuf.o
 mknorms: mknorms.o mmapedfile.o filebuf.o
 	g++  -lm mknorms.o mmapedfile.o filebuf.o -o mknorms
 
-myserver: myserver.o httpserver.o strmisc.o filebuf.o
-	g++  myserver.o httpserver.o strmisc.o filebuf.o -o myserver
+MYSERVEROBJS = myserver.o httpserver.o strmisc.o filebuf.o parser.o urltools.o mmapedfile.o
+
+myserver: $(MYSERVEROBJS)
+	g++  $(MYSERVEROBJS) -o myserver
 
 test_indexer: test_indexer.o $(OBJFILES)
 

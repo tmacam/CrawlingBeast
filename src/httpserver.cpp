@@ -7,6 +7,10 @@
 #include <strings.h>		// bzero
 
 #include "strmisc.h"
+#include "urltools.h"
+
+#include <sys/sendfile.h>	// For StaticFileHandler
+#include "mmapedfile.h"		// For StaticFileHandler
 
 #include <iostream>		// FIXME temporary
 
@@ -35,7 +39,14 @@ std::string http::mk_response_header(std::string msg, int code, std::string type
 				   Exceptions
  ******************************************************************************/
 
+
 std::string HTTPException::make_error_page(std::string msg, int code)
+{
+	return make_error_page(msg,code,msg);
+}
+
+std::string HTTPException::make_error_page(std::string msg, int code,
+						std::string text)
 {
 	std::ostringstream buf;
 	const std::string& CRLF = http::CRLF;
@@ -45,7 +56,7 @@ std::string HTTPException::make_error_page(std::string msg, int code)
 		"<html><head>" << CRLF << 
 		"<title>" << code << " " << msg << "</title>" << CRLF << 
 		"</head><body>" << CRLF << 
-		"<h1>" << msg <<  "</h1>" << CRLF << 
+		"<h1>" << text <<  "</h1>" << CRLF << 
 		"</body></html>" << CRLF;
 	
 	return buf.str();
@@ -67,6 +78,7 @@ void HTTPClientHandler::go()
 	} catch (HTTPException& e) {
 		try {
 			this->write(e.what());
+			this->loseConnection();
 		} catch (...){
 			// Errors in write are ignored
 		}
@@ -150,6 +162,7 @@ void HTTPClientHandler::loseConnection()
 
 void BaseHTTPServer::process(HTTPClientHandler& req)
 {
+
 	std::cout << "Method: " << req.method << " URI: " <<
 		req.uri << " version:" << req.proto_version << std::endl;
 	StrStrMap& headers = req.headers;
@@ -159,7 +172,17 @@ void BaseHTTPServer::process(HTTPClientHandler& req)
 			hdr->second << std::endl;
 	}
 
-	throw NotFoundHTTPException();
+	BaseURLParser uri(req.uri);
+	
+	TReqHandlerMap::iterator han = handlers.find(uri.path);
+	std::cout << "Requested path" << uri.path <<  std::endl; // FIXME
+	if (han == this->handlers.end()) {
+		throw NotFoundHTTPException();
+	} else {
+		han->second->process(req);
+	}
+
+
 
 	req.loseConnection();
 }
@@ -230,6 +253,39 @@ void BaseHTTPServer::handleNewClient(int cli_fd, struct sockaddr_in cli_addr)
 	}
 }
 
+void BaseHTTPServer::putChild(std::string path, AbstractRequestHandler* handler)
+{
+	TReqHandlerMap::iterator h = this->handlers.find(path);
+	// Remove previouos handler for this path, if any.
+	if ( h != this->handlers.end()) {
+		delete h->second;
+	}
+	this->handlers[path] = handler;
+	std::cout << "Registered " << path << " w " << handler << std::endl; // FIXME
+}
+
+
+/******************************************************************************
+			     Some Request Handlers
+ ******************************************************************************/
+
+
+void StaticFileHandler::process(HTTPClientHandler& req)
+{
+	using http::mk_response_header;
+
+	std::string response;
+
+	try {
+		response = mk_response_header("OK", 200, ctype);
+		ManagedFilePtr file(name.c_str());
+		req.write(response);
+		sendfile( req.fd, file.getFileno(),
+			  NULL, file.filesize());
+	} catch (ErrnoSysException& e) {
+		throw InternalServerErrorHTTPException(e.what());
+	}
+}
 
 
 // EOF

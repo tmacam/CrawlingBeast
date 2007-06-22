@@ -84,8 +84,17 @@ public:
 	 */
 	static std::string make_error_page(std::string msg, int code);
 
+	static std::string make_error_page(std::string msg, int code,
+					std::string text);
+
+	//!HTTPException Constructor
 	HTTPException(std::string msg, int code)
 	: std::runtime_error( make_error_page(msg,code))
+	{}
+
+	//!HTTPException Constructor w/ explanation text
+	HTTPException(std::string msg, int code, std::string text)
+	: std::runtime_error( make_error_page(msg,code, text))
 	{}
 };
 
@@ -111,6 +120,10 @@ public:
 	InternalServerErrorHTTPException()
 	: HTTPException("Internal Server Error", 500)
 	{}
+
+	InternalServerErrorHTTPException(std::string text)
+	: HTTPException("Internal Server Error", 500, text)
+	{}
 };
 
 //!@}
@@ -124,11 +137,17 @@ class HTTPClientHandler; // Forward declaration
 
 /**This "thing" knows how to handle a HTTP request from a client.
  *
+ *
  * Besides BaseHTTPServer, any other object implementing this
- * interface can handle HTTP requests. 
+ * interface can handle HTTP requests.  The concept of this class
+ * is loosely based on Twisted twisted.web.resource.Resouce, i.e.,
+ * you can add/build a hierarchy or Resources with instances of this
+ * class. See @c BaseHTTPServer::putChild() for more information.
  *
  * Errors during a request processing should be signaled by throwing an
  * HTTPException or one of it's descendents.
+ *
+ * @see BaseHTTPServer::putChild()
  */
 struct AbstractRequestHandler{
 	virtual void process(HTTPClientHandler& req) = 0;
@@ -254,9 +273,15 @@ public:
  * This class constructor will only setup the listening socket. You must
  * call its @c run() method to make it do what it is supposed to do.
  *
+ * You can build a path hierarchy of paths/resouces with
+ * @c BaseHTTPServer::putChild() and instances of @c AbstractRequestHandler().
  *
  */
 struct BaseHTTPServer : public AbstractRequestHandler {
+
+	typedef __gnu_cxx::hash_map < std::string, AbstractRequestHandler*,
+				std::tr1::hash<std::string> > TReqHandlerMap;
+	TReqHandlerMap handlers;
 
 	int server_fd; //!< Server socket file-descriptor.
 
@@ -264,7 +289,16 @@ struct BaseHTTPServer : public AbstractRequestHandler {
 	: server_fd(setupServerSocket(server_port, backlog))
 	{}
 
-	virtual ~BaseHTTPServer(){}
+	virtual ~BaseHTTPServer()
+	{
+		// Destroy previously registered request handlers.
+		TReqHandlerMap::iterator i;
+		for(i = handlers.begin(); i != handlers.end(); ++i){
+			delete i->second;
+			i->second = 0;
+		}
+
+	}
 
 	static int setupServerSocket(uint16_t server_port, int backlog = 10);
 
@@ -292,7 +326,48 @@ struct BaseHTTPServer : public AbstractRequestHandler {
 	 *
 	 */
 	virtual void handleNewClient(int cli_fd, struct sockaddr_in cli_addr);
+
+	/**Associate a request handler to a given path.
+	 *
+	 * This method allows one to delegate the handling of a given path
+	 * inside the current request handler path-space to another request
+	 * handler.
+	 *
+	 * Request handling will be delegated only on exact matches. The
+	 * lifetime of the new request handler will be controled by this
+	 * instance after registration
+	 *
+	 * If there's already an registered handler for a given path it will
+	 * be removed and destroyed.
+	 *
+	 */
+	void putChild(std::string path, AbstractRequestHandler* handler);
 };
+
+
+/******************************************************************************
+			     Some Request Handlers
+ ******************************************************************************/
+
+
+/**A simple handle capable of serving static files.
+ *
+ * Each instance of this file can serve a give file  using sendfile.
+ * It's possible to configure the file's content-type.
+ *
+ */
+struct StaticFileHandler : public AbstractRequestHandler {
+
+	std::string name;
+	std::string ctype;
+
+	StaticFileHandler(std::string filename, std::string contenttype)
+	: name(filename), ctype(contenttype)
+	{}
+
+	void process(HTTPClientHandler& req);
+};
+
 
 #endif // __HTTPSERVER_H__
 
