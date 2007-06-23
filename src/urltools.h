@@ -339,11 +339,28 @@ protected:
 	 * 
 	 * Dot segments ("./..///a/b/../c" -> /a/c) and Percent-encoding
 	 * normalization is handled here as well.
+	 *
+	 * Dot segments normalization is only done for absolute paths, 
+	 * as per  RFC 3986, section 6.2.2.3. - Path Segment Normalization.
 	 * 
 	 * Observe: empty URLs doesn't mean undefined paths, but empty paths!
 	 * This is per algorithm from RFC 3986, Section 5.3
 	 */
 	void readPath(std::string& path);
+
+
+	/**Read a query component.
+	 *
+	 * Query contents is percent-decoded.
+	 *
+	 */
+	void readQuery(std::string& query);
+
+	/**Read a fragment component.
+	 *
+	 * Fragment contents is percent-decoded.
+	 */
+	void readFragment(std::string& fragment);
 
 	//@}
 	

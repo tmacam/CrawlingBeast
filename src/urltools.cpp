@@ -116,10 +116,10 @@ void BaseURLParser::parse()
             // Paths are taken to be not empty when part of authority is set
 	    normalizeTrailingSlashAfterAuthority();
 
-/*
-            self.query = self._readQuery()
-            self.fragment = self._readFragment()
- */
+            readQuery(this->query);
+
+            readFragment(this->fragment);
+
         } catch (ParserEOFError) {
             // If there isn't what to read, there is not what to do either
 	}
@@ -177,6 +177,10 @@ BaseURLParser BaseURLParser::operator+(const BaseURLParser& R) const
 		T.scheme = Base.scheme;
 	}// endif R.scheme
 	T.fragment = R.fragment;
+
+	// This may seem like a hack but, perhaps, this may end up being
+	// right way anyway
+	T.normalizeTrailingSlashAfterAuthority();
 
 	return T;
 }
@@ -352,9 +356,14 @@ void BaseURLParser::validatePort(const std::string& port)
 void BaseURLParser::readPath(std::string& path)
 {
         path = readUntilDelimiter("?#").str();
-        path = removeDotSegments(path);
 
-	/* We cannot fix percent encoding before
+	// Per RFC 3986, section 6.2.2.3. - Path Segment Normalization,
+	// we should not remove dot segments of relative URLs
+	if (!isRelative()) {
+		path = removeDotSegments(path);
+	}
+
+	/* Ideally, we cannot fix percent encoding before
 	 * removing dot-segments.
 	 *
 	 * For instance, after fixing-PE
@@ -370,6 +379,44 @@ void BaseURLParser::readPath(std::string& path)
 	 * we are following here.
 	 */
         path = fixPercentEncoding(path);
+
+	// Quite a small method, ain't?
+}
+
+
+void BaseURLParser::readQuery(std::string& query)
+{
+	/* We may or may not have a valid query component to read.
+	 * If there _is_ one, them we should consume it's starting
+	 * "?" character
+	 */
+	if ( !text.eof() && *text == '?') {
+		consumeToken('?');
+	}
+        query = readUntilDelimiter("#").str();
+
+        query = fixPercentEncoding(query);
+
+	// Quite a small method, ain't?
+}
+
+void BaseURLParser::readFragment(std::string& fragment)
+{
+	/* We may or may not have a valid fragment component to read.
+	 * If there _is_ one, i.e., if we haven't reached the EOF of this
+	 * text then there is a fragment-starting "#" that must be consumed.
+	 */
+	if ( !text.eof()) {
+		consumeToken('#');
+	};
+
+	// OK. Is there something left to read?
+	if ( !text.eof()) {
+		fragment = text.str();
+		fragment = fixPercentEncoding(fragment);
+	} else {
+		fragment.clear();
+	}
 
 	// Quite a small method, ain't?
 }

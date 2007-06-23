@@ -47,6 +47,19 @@ public:
 		BaseURLParser u = BaseURLParser("://www.exemple.tld/");
 		TS_ASSERT_EQUALS(u.getScheme(), "");
 	}
+
+	void test_ComponentDecoding()
+	{
+		BaseURLParser u("http://user:pass@server:8080/path?query#frag");
+		TS_ASSERT_EQUALS ( u.scheme, "http");
+		TS_ASSERT_EQUALS ( u.userinfo, "user:pass");
+		TS_ASSERT_EQUALS ( u.host, "server");
+		TS_ASSERT_EQUALS ( u.port, "8080");
+		TS_ASSERT_EQUALS ( u.path, "/path");
+		TS_ASSERT_EQUALS ( u.query, "query");
+		TS_ASSERT_EQUALS ( u.fragment, "frag");
+	}
+
 };
 
 class AuthorityParsingTests : public CxxTest::TestSuite {
@@ -167,22 +180,20 @@ public:
 
 	void testPathNormalizationOne()
 	{
+		FriendBaseURLParser u;
 
-		TS_ASSERT_EQUALS(
-			BaseURLParser("./..///a/b/../c"),
-			BaseURLParser("/a/c"));
+		TS_ASSERT_EQUALS( u.removeDotSegments("./..///a/b/../c"),"/a/c");
 	}
 	
 	void testRemoveDotSegments()
 	{
-		BaseURLParser u("/a/b/c/./../../g");
-		TS_ASSERT_EQUALS(u.getPath(), "/a/g");
+		FriendBaseURLParser u;
 
-		BaseURLParser v("mid/content=5/../6");
-		TS_ASSERT_EQUALS(v.getPath(), "mid/6");
+		TS_ASSERT_EQUALS(u.removeDotSegments("/a/b/c/./../../g"), "/a/g");
 
-		BaseURLParser x("mid/content=5////../6");
-		TS_ASSERT_EQUALS(x.getPath(), "mid/6");
+		TS_ASSERT_EQUALS(u.removeDotSegments("mid/content=5/../6"), "mid/6");
+
+		TS_ASSERT_EQUALS(u.removeDotSegments("mid/content=5////../6"), "mid/6");
 	}
 
 	void testdecodeAndFixPe()
@@ -252,8 +263,8 @@ public:
 
 		TS_ASSERT_EQUALS("/p4", urls[0].getPath());
 		TS_ASSERT_EQUALS("p4/", urls[1].getPath());
-		TS_ASSERT_EQUALS("", urls[2].getPath());
-		TS_ASSERT_EQUALS("isso.html", urls[3].getPath());
+		TS_ASSERT_EQUALS("../blah/..", urls[2].getPath());
+		TS_ASSERT_EQUALS("./isso.html", urls[3].getPath());
 		TS_ASSERT_EQUALS("file.html", urls[4].getPath());
 	}
 
@@ -269,7 +280,7 @@ public:
 
 		TS_ASSERT_EQUALS( urls[0], BaseURLParser("http://a.com/p4"));
 		TS_ASSERT_EQUALS( urls[1], BaseURLParser("http://a.com/base/p4/"));
-		TS_ASSERT_EQUALS( urls[2], BaseURLParser("http://a.com/base/index.html"));
+		TS_ASSERT_EQUALS( urls[2], BaseURLParser("http://a.com/"));
 		TS_ASSERT_EQUALS( urls[3], BaseURLParser("http://a.com/base/isso.html"));
 		TS_ASSERT_EQUALS( urls[4], BaseURLParser("http://a.com/base/file.html"));
 	}
@@ -281,6 +292,58 @@ public:
 
 		BaseURLParser x = u + v;
 		TS_ASSERT_EQUALS(x,v);
+	}
+
+	void test_Section5_4_examples()
+	{
+		BaseURLParser x("http://a/b/c/d;p?q");
+
+		/* Section 5.4.1 examples */
+
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g")), BaseURLParser("http://a/b/c/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("./g")), BaseURLParser("http://a/b/c/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g/")), BaseURLParser("http://a/b/c/g/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("/g")), BaseURLParser("http://a/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("//g")), BaseURLParser("http://g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("?y")), BaseURLParser("http://a/b/c/d;p?y") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g?y")), BaseURLParser("http://a/b/c/g?y") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("#s")), BaseURLParser("http://a/b/c/d;p?q#s") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g#s")), BaseURLParser("http://a/b/c/g#s") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g?y#s")), BaseURLParser("http://a/b/c/g?y#s") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser(";x")), BaseURLParser("http://a/b/c/;x") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g;x")), BaseURLParser("http://a/b/c/g;x") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g;x?y#s")), BaseURLParser("http://a/b/c/g;x?y#s") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("")), BaseURLParser("http://a/b/c/d;p?q") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser(".")), BaseURLParser("http://a/b/c/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("./")), BaseURLParser("http://a/b/c/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("..")), BaseURLParser("http://a/b/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("../")), BaseURLParser("http://a/b/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("../g")), BaseURLParser("http://a/b/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("../..")), BaseURLParser("http://a/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("../../")), BaseURLParser("http://a/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("../../g")), BaseURLParser("http://a/g") );
+
+		/* Section 5.4.2 examples */
+
+
+		TS_ASSERT_EQUALS( (x + BaseURLParser("../../../g")), BaseURLParser("http://a/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("../../../../g")), BaseURLParser("http://a/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("/./g")), BaseURLParser("http://a/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("/../g")), BaseURLParser("http://a/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g.")), BaseURLParser("http://a/b/c/g.") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser(".g")), BaseURLParser("http://a/b/c/.g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g..")), BaseURLParser("http://a/b/c/g..") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("..g")), BaseURLParser("http://a/b/c/..g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("./../g")), BaseURLParser("http://a/b/g") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("./g/.")), BaseURLParser("http://a/b/c/g/") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g/./h")), BaseURLParser("http://a/b/c/g/h") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g/../h")), BaseURLParser("http://a/b/c/h") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g;x=1/./y")), BaseURLParser("http://a/b/c/g;x=1/y") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g;x=1/../y")), BaseURLParser("http://a/b/c/y") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g?y/./x")), BaseURLParser("http://a/b/c/g?y/./x") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g?y/../x")), BaseURLParser("http://a/b/c/g?y/../x") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g#s/./x")), BaseURLParser("http://a/b/c/g#s/./x") );
+		TS_ASSERT_EQUALS( (x + BaseURLParser("g#s/../x")), BaseURLParser("http://a/b/c/g#s/../x") );
 	}
 };
 
