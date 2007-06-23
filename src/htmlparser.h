@@ -48,6 +48,17 @@ const std::string TAGLIKE_START_INVALID_CHARS = "<&>";
 //!found it's end.
 const std::string TAGLIKE_ATTR_LIST_END_CHARS = "?/>";
 
+inline bool is_a_NAME_START_CHARS(char c)
+{
+	return is_a_LETTER(c) || c == '_' || c == ':'; 
+}
+
+inline bool is_a_NAME_CHARS(char c)
+{
+	return is_a_NAME_START_CHARS(c) || is_a_DIGIT(c) || c == '.' ||
+		c == '-';
+}
+
 //@}
 
 //!@name Extra String Constants

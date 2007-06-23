@@ -76,13 +76,13 @@ std::string BaseHTMLParser::readName()
 	std::string name;
 
 	// First character must be in NAME_START_CHARS
-	if (not is_in(*text, NAME_START_CHARS)){
+	if (not is_a_NAME_START_CHARS(*text)){
 		throw InvalidCharError("Error parsing 'Name' rule.");
 	}
 	++text; // go to next char in name
 	++length;
         // Find the end of this name
-        while ( (not text.eof()) && is_in(*text, NAME_CHARS) ){
+        while ( (not text.eof()) && is_a_NAME_CHARS(*text) ){
                 ++text;
 		++length;
 	}
