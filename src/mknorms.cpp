@@ -145,7 +145,6 @@ int main(int argc, char* argv[])
 							   pos);
 		normout.putIndexEntry(norm_hdr_entry_t(*d,fileno,pos));
 		memcpy((void*)out.start,&WFMap[*d],sizeof(wdmaxfdt_t));
-		std::cout << *d << " Wd " << WFMap[*d].wd << " max_fdt " << WFMap[*d].maxfdt << std::endl; // FIXME
 	}
 
 }
