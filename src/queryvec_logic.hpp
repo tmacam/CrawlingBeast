@@ -275,9 +275,9 @@ struct VectorialQueryResolver {
 	 *
 	 * It will obtain the intersectino between previously known docids
 	 * and the new ones in @p ilist. After that it will prune the list
-	 * in @p ilist to match this intersection.
+	 * in @p ilist and the accumulators @p acc to match this intersection.
 	 *
-	 * We assume both lists are sorted and have no duplicates.
+	 * We assume that @p ilist is sorted and have no duplicates.
 	 *
 	 * @param[in,out] acc The current accumulators.
 	 * @param[in,out] ilist The list of new docids. It will be pruned to
