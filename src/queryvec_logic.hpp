@@ -296,6 +296,7 @@ struct VectorialQueryResolver {
 		for (a = acc.begin(); a != acc.end(); ++a){
 			cur.push_back(a->first);
 		}
+		std::sort(cur.begin(), cur.end());
 
 		// list of new document ids
 		docidvec_t new_ids;
