@@ -147,6 +147,9 @@ void StoreBuilder::buildStore()
 			if (d_count  % 1000 == 0) {
 				time_t now = time(NULL);
 
+				// Avoid FPExceptions
+				if (now == last_broadcast) continue;
+
 				uint64_t byte_amount = byte_count - last_byte_count;
 				std::cout << "# docs: " << d_count << " bytes: " <<
 					byte_amount << " / " << byte_count << " bps: "<<
