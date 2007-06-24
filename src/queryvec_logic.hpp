@@ -66,6 +66,7 @@ struct VectorialQueryResolver {
 	typedef hdr_entry_t*	ifile_idx;
 	typedef __gnu_cxx::hash_map < docid_t, double> accumulator_t;
 	typedef std::vector<uint32_t> termvec_t;
+	typedef std::vector<uint32_t> docidvec_t;
 
 	std::string store_dir;
 
@@ -220,6 +221,9 @@ struct VectorialQueryResolver {
 		inverted_list_vec_t ilist;
 		inverted_list_vec_t::const_iterator d;
 
+		// For "AND" semmantics
+		bool first_list = true;
+
 		// Variables used for calculating per-document
 		// and per-term weight
 		double idf;		// term weight
@@ -230,6 +234,13 @@ struct VectorialQueryResolver {
 			getTermIdInvertedList(*t, ilist);
 			ft = ilist.size();
 			idf = log(double(N)/double(ft));
+
+			// Apply "AND" semmantics
+			if (first_list) {
+				first_list = false;
+			} else {
+				pruneToIntersection(acc,ilist);
+			}
 
 			for(d=ilist.begin(); d != ilist.end(); ++d) {
 				// Syntatic sugar - cause you known
@@ -257,6 +268,77 @@ struct VectorialQueryResolver {
 		result.reserve(acc.size());
 		result.assign(acc.begin(), acc.end());
 		std::stable_sort(result.begin(), result.end(), VecResComparator); // FIXME
+	}
+
+	/**Prune ilist and accummulators to the intersection of current and
+	 * new docids.
+	 *
+	 * It will obtain the intersectino between previously known docids
+	 * and the new ones in @p ilist. After that it will prune the list
+	 * in @p ilist to match this intersection.
+	 *
+	 * We assume both lists are sorted and have no duplicates.
+	 *
+	 * @param[in,out] acc The current accumulators.
+	 * @param[in,out] ilist The list of new docids. It will be pruned to
+	 * 			match the intersection between its contents and
+	 * 			@p acc contents.
+	 *
+	 * @todo Do it properly! This code is an ugly hack!
+	 */
+	void pruneToIntersection(accumulator_t& acc,
+			inverted_list_vec_t& ilist)
+	{
+		// Current set of document ids
+		docidvec_t cur;
+		cur.reserve(acc.size());
+		accumulator_t::iterator a;
+		for (a = acc.begin(); a != acc.end(); ++a){
+			cur.push_back(a->first);
+		}
+
+		// list of new document ids
+		docidvec_t new_ids;
+		ilist2docvet(ilist, new_ids);
+
+		// The resulting intersection
+		std::set<uint32_t> inter;
+
+		std::set_intersection(cur.begin(), cur.end(),
+                                        new_ids.begin(), new_ids.end(),
+                                        std::inserter(inter,inter.begin()));
+
+		// Prune the inverted list - the lazy way FIXME
+		inverted_list_vec_t result;
+		result.reserve(new_ids.size());
+		inverted_list_vec_t::iterator i;
+		for(i = ilist.begin(); i != ilist.end(); ++i) {
+			// If it is in inter, add to the results..
+			if ( inter.find(i->first) != inter.end() ) {
+				result.push_back(*i);
+			}
+		}
+
+		// Prune the accumulators
+		for(a = acc.begin(); a!= acc.end(); ++a) {
+			// Remove any acc if it's document is not in inter...
+			if( inter.find(a->first) == inter.end()) {
+				acc.erase(a);
+			}
+		}
+
+		ilist = result;
+	}
+
+	inline void ilist2docvet(const inverted_list_vec_t& ilist, docidvec_t& ids)
+	{
+		inverted_list_vec_t::const_iterator d;
+
+		ids.reserve(ilist.size());
+		for(d = ilist.begin(); d != ilist.end(); ++d ){
+			ids.push_back(d->first);
+		}
+
 	}
 
 };
