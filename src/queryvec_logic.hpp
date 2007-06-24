@@ -35,7 +35,7 @@ typedef std::pair<docid_t,double> vec_res_t;
 //! In descending order.
 inline bool VecResComparator(const vec_res_t& a, const vec_res_t& b)
 {
-	return !(a.second < b.second);
+	return (a.second > b.second);
 }
 
 //!Vector of results of a vectorial query
@@ -102,8 +102,23 @@ struct VectorialQueryResolver {
 		N = WFMap.size();
 	}
 
-	//!@name Query and vocabulary conversion methods
+	//!@name Query and vocabulary conversion methods and utils
 	//@{
+	
+	//!Just to signal that a word is not in vocabulary
+	struct NotInVocabulary : public std::runtime_error {
+		static std::string mkErrMsg(std::string term)
+		{
+			std::string err_msg("Term '");
+			err_msg +=  term + "' not in vocabulary";
+
+			return err_msg;
+		}
+
+		NotInVocabulary(std::string term)
+		: std::runtime_error(mkErrMsg(term))
+		{}
+	};
 
 	/**Return the TermID associated with a given word.
 	 *
@@ -115,10 +130,7 @@ struct VectorialQueryResolver {
 
 		StrIntMap::const_iterator wpos = voc.find(word);
 		if (wpos == voc.end()){
-			std::string err_msg("Term '");
-			err_msg +=  term + "' (" +  word +
-				") not in vocabulary";
-			throw std::runtime_error(err_msg);
+			throw NotInVocabulary(term);
 		}
 
 		return wpos->second;
@@ -186,9 +198,21 @@ struct VectorialQueryResolver {
 	 */
 	void processQuery(std::string query, vec_res_vec_t& result)
 	{
+
+		result.clear();
+
 		// Convert the query to term-ids
-		termvec_t terms = query2termids(query);
+		termvec_t terms;
 		termvec_t::const_iterator t;
+		try {
+			terms = query2termids(query);
+		} catch (NotInVocabulary& e) {
+			std::cerr << e.what();
+			terms.clear();
+		};
+
+		// We may end with an empty term list either due to
+		// a empty query or to words that were not found.
 		if(terms.empty()) return;
 
 		accumulator_t acc;
@@ -200,8 +224,6 @@ struct VectorialQueryResolver {
 		// and per-term weight
 		double idf;		// term weight
 		uint32_t ft;		// n documents w/ term
-
-		result.clear();
 
 		for(t = terms.begin(); t != terms.end(); ++t) {
 
