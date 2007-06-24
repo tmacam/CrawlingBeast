@@ -51,8 +51,6 @@ struct DumbIndexerVisitor {
 
 		if (now == last_broadcast) return; // Avoid FPErr
 
-		std::cout << "In stats" << d_count << std::endl;
-
 		uint64_t byte_amount = byte_count - last_byte_count;
 		std::cout << "# docs: " << d_count << " bytes: " <<
 			byte_amount << " / " << byte_count << " bps: "<<
