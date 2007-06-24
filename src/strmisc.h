@@ -155,6 +155,25 @@ filebuf& lstrip(filebuf& s);
  */
 std::string unichr(unsigned int uv);
 
+//!Convert string @p msg to instance of @p T.
+template<class T>
+inline T fromString(std::string msg)
+{
+	T ret;
+	std::istringstream reader(msg);
+	reader >> ret;
+	return ret;
+}
+
+//!Convert @p T into a string.
+template<class T>
+inline std::string toString(T v)
+{
+	std::ostringstream writer;
+	writer << v;
+	return writer.str();
+}
+
 //@}
 
 /* ********************************************************************** *

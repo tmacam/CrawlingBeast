@@ -7,7 +7,8 @@
 #include "mmapedfile.h"
 
 #include <fstream>
-#include <iomanip>
+#include "crawlerutils.hpp"
+
 
 /***********************************************************************
 				 RUN ITERATORS
@@ -99,19 +100,9 @@ void getWordFrequency(filebuf f, StrIntMap& wfreq,
 
 std::string make_filename(std::string store_dir, docid_t docid)
 {
-	std::ostringstream id_hex;
-
-	id_hex << std::uppercase << std::hex << std::setw(8) <<
-                std::setfill('0') << docid;
-	std::string id_hex_str = id_hex.str();
-
-	std::string id_path =  store_dir + "/" + 
-				id_hex_str.substr(0,2) + "/" +
-				id_hex_str.substr(2,2) + "/" +
-				id_hex_str.substr(4,2) + "/" +
-				id_hex_str.substr(6,2) + "/data.gz"; // FIXME data.gz constant
-	return id_path;
+	return make_crawler_filename(store_dir,docid);
 }
+
 
 void mapIdToTerms(const StrIntMap& term2id, IntStrMap& id2term)
 {
