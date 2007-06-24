@@ -310,25 +310,28 @@ struct VectorialQueryResolver {
                                         std::inserter(inter,inter.begin()));
 
 		// Prune the inverted list - the lazy way FIXME
-		inverted_list_vec_t result;
-		result.reserve(new_ids.size());
+		inverted_list_vec_t result_ilist;
+		result_ilist.reserve(new_ids.size());
 		inverted_list_vec_t::iterator i;
 		for(i = ilist.begin(); i != ilist.end(); ++i) {
 			// If it is in inter, add to the results..
 			if ( inter.find(i->first) != inter.end() ) {
-				result.push_back(*i);
+				result_ilist.push_back(*i);
 			}
 		}
+		ilist = result_ilist;
 
 		// Prune the accumulators
+		accumulator_t result_acc;
 		for(a = acc.begin(); a!= acc.end(); ++a) {
-			// Remove any acc if it's document is not in inter...
-			if( inter.find(a->first) == inter.end()) {
-				acc.erase(a);
+			// If it is in inter, add to the results..
+			if( inter.find(a->first) != inter.end()) {
+				// XXX Silly but erase was causing problems
+				result_acc[a->first] = a->second;
 			}
 		}
+		acc = result_acc;
 
-		ilist = result;
 	}
 
 	inline void ilist2docvet(const inverted_list_vec_t& ilist, docidvec_t& ids)
