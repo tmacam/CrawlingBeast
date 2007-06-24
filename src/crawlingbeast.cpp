@@ -9,8 +9,8 @@
 #include "deepthought.h"
 #include "paranoidandroid.h"
 #include "sauron.h"
+#include "config.h"
 
-const int N_OF_WORKERS = 100;
 
 int main(int argc, char* argv[])
 {
@@ -27,7 +27,9 @@ int main(int argc, char* argv[])
 	seeds.insert(BaseURLParser("http://www.unicamp.br/"));
 	
 
-	std::string store_dir = "/tmp/down/";
+	seeds.insert(BaseURLParser("http://www.terra.com.br/"));
+	seeds.insert(BaseURLParser("http://www.ufmg.br/"));
+	std::string store_dir = CRAWLER_STORE_DIR;
 
 	std::cout << "Starting things up..." << std::endl;
 	DeepThought boss(store_dir);

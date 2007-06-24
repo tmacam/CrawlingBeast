@@ -17,6 +17,12 @@ const int SERVER_PORT =  8090;
 const size_t DOCIDLIST_RESERVE = 1<<20;
 
 
+//! Number of crawler's working threads 
+const int N_OF_WORKERS = 100;
+
+const char* CRAWLER_STORE_DIR = "/ri/tmacam/down/";
+
+
 
 #endif //__CONFIG_H__
 
