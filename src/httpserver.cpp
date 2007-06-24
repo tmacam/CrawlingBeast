@@ -19,7 +19,8 @@
 				Misc. Functions
  ******************************************************************************/
 
-std::string http::mk_response_header(std::string msg, int code, std::string type)
+std::string http::mk_response_header(std::string msg, int code,
+			std::string type, std::string extra_hdrs)
 {
 	std::ostringstream buf;
 	const std::string& CRLF = http::CRLF;
@@ -28,6 +29,7 @@ std::string http::mk_response_header(std::string msg, int code, std::string type
 		"Server: ProcastinationBroadcaster/0.1" << CRLF <<
 		"Connection: close" << CRLF << 
 		"Content-Type: " << type << CRLF << 
+		extra_hdrs <<  // They should contain line-ending CRLFs
 		CRLF;
 	
 	return buf.str();
@@ -172,10 +174,19 @@ void BaseHTTPServer::process(HTTPClientHandler& req)
 			hdr->second << std::endl;
 	}
 
-	BaseURLParser uri(req.uri);
+	// XXX HACK
+	// Just to force dot segment normalization in the request path.
+	// and avoid "path hacks" like "../../../../etc/passwd"
+	BaseURLParser uri("http://localhost/" + req.uri);
+
+	// Get the first path segment
+	std::vector<std::string> path_segs = split(uri.path,"/");
+	assert(path_segs.size() > 1);
 	
-	TReqHandlerMap::iterator han = handlers.find(uri.path);
-	std::cout << "Requested path" << uri.path <<  std::endl; // FIXME
+	std::cout << "Requested path " << uri.path << " selector segment: "<<
+		path_segs[1] << std::endl; // FIXME
+
+	TReqHandlerMap::iterator han = handlers.find(path_segs[1]);
 	if (han == this->handlers.end()) {
 		throw NotFoundHTTPException();
 	} else {

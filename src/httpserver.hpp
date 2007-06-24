@@ -51,7 +51,8 @@ const std::string CRLF_CRLF =  "\x0d\x0a\x0d\x0a";
  *
  */
 std::string mk_response_header(std::string msg="OK", int code=200,
-		std::string type="text/html; charset=utf-8");
+		std::string type="text/html; charset=utf-8",
+		std::string extra_hdrs="");
 
 };
 
@@ -333,13 +334,13 @@ struct BaseHTTPServer : public AbstractRequestHandler {
 	 * inside the current request handler path-space to another request
 	 * handler.
 	 *
-	 * Request handling will be delegated only on exact matches. The
-	 * lifetime of the new request handler will be controled by this
-	 * instance after registration
+	 * You can only add request handers to the first path segment of the
+	 * path-space of this request handler - that's how delegation is done.
+	 * The lifetime of the new request handler will be controled by this
+	 * instance after registration.
 	 *
 	 * If there's already an registered handler for a given path it will
 	 * be removed and destroyed.
-	 *
 	 */
 	void putChild(std::string path, AbstractRequestHandler* handler);
 };

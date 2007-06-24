@@ -11,7 +11,7 @@ CC	 = g++
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS) -D_GLIBCXX_DEBUG
 LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
 AR	 = ar cr
-OBJFILES = filebuf.o parser.o htmlparser.o urltools.o strmisc.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a robotshandler.o entityparser.o htmliterators.o indexerutils.o mergerutils.o zfilebuf.o 
+OBJFILES = filebuf.o parser.o htmlparser.o urltools.o strmisc.o mmapedfile.o unicodebugger.o urlretriever.o pagedownloader.o threadingutils.o domains.o deepthought.o paranoidandroid.o libgzstream.a sauron.o libcurl.a robotshandler.o entityparser.o htmliterators.o indexerutils.o mergerutils.o zfilebuf.o httpserver.o
 
 
 
@@ -50,10 +50,7 @@ mkstore: mkstore.o mmapedfile.o filebuf.o
 mknorms: mknorms.o mmapedfile.o filebuf.o
 	g++  -lm mknorms.o mmapedfile.o filebuf.o -o mknorms
 
-MYSERVEROBJS = myserver.o httpserver.o strmisc.o filebuf.o parser.o urltools.o mmapedfile.o
-
-myserver: $(MYSERVEROBJS)
-	g++  $(MYSERVEROBJS) -o myserver
+myserver: myserver.o $(OBJFILES)
 
 test_indexer: test_indexer.o $(OBJFILES)
 
