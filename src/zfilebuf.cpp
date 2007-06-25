@@ -154,7 +154,7 @@ filebuf decompress(filebuf data)
 
 	/* Ugly and lazy copy to an array */
 	char* final_buffer = new char[accbuf.size()];
-	memcpy(final_buffer, &accbuf[0], accbuf.size());
+	std::copy(accbuf.begin(), accbuf.end(), final_buffer);
 
 	return filebuf(final_buffer, accbuf.size());
 
