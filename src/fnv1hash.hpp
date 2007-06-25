@@ -1,7 +1,6 @@
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
 #ifndef __FNV1HASH_H__
 #define __FNV1HASH_H__
-
 /**@file fnv1hash.h
  * @brief FNV-1 hash function implementations.
  *
@@ -16,8 +15,13 @@
  */
 
 #include <string>
-
 using std::string;
+
+
+/*******************************************************************************
+			      FNV-1 Hasn function
+ *******************************************************************************/
+
 
 /**FNV-1 hash function implementations.
  *
@@ -76,6 +80,11 @@ namespace FNV {
 		}
 	}
 };
+
+
+/*******************************************************************************
+				   Ugly Hack
+ *******************************************************************************/
 
 //! Dirty hack to force a uint64_t fit into a size_t.
 struct UInt64Hasher {

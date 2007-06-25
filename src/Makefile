@@ -6,7 +6,7 @@ CURL_LDFLAGS = `priv_curl/bin/curl-config --libs`
 #CURL_LDFLAGS = `curl-config --libs`
 
 TARGETS	 = runner crawlingbeast indexer merger querybool queryvec mkstore\
-	   mknorms myserver
+	   mknorms mkprepr myserver
 CC	 = g++
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS) -D_GLIBCXX_DEBUG
 LDFLAGS	 = -L. -lgzstream -lz -pthread $(CURL_LDFLAGS)
@@ -63,6 +63,8 @@ querybool: querybool.cpp $(OBJFILES)
 queryvec: queryvec.o $(OBJFILES)
 
 dumb_indexer2: dumb_indexer2.o $(OBJFILES)
+
+mkprepr: mkprepr.o $(OBJFILES)
 
 
 __testa_parser: __testa_parser.o $(OBJFILES)
