@@ -3,6 +3,18 @@
 #include <deque>
 #include <iomanip>
 
+BaseURLParser::BaseURLParser():
+	BaseParser( filebuf() ), // Empty filebuf
+	scheme(""), 
+	userinfo(""),
+	host(""),
+	port(""),
+	path(""),
+	query(""),
+	fragment("")
+{
+	// Nothing to parse!
+}
 
 BaseURLParser::BaseURLParser(const std::string _url):
 	BaseParser( filebuf(_url.c_str(), _url.size()) ),
@@ -128,7 +140,7 @@ void BaseURLParser::parse()
 
 BaseURLParser BaseURLParser::operator+(const BaseURLParser& R) const
 {
-	BaseURLParser T = BaseURLParser();
+	BaseURLParser T;
 	const BaseURLParser& Base = *this;
 
 	if ( R.hasScheme() ) {
@@ -220,14 +232,17 @@ std::string BaseURLParser::readScheme()
 		checkForEOF();
 
 		// Read scheme's first char (ALPHA)
-		if (not is_in(*text, LETTERS)){
+		if (not is_a_LETTER(*text)){
 			return empty_scheme;
 		}
 		++text; // go to next char in scheme
 		++length;
 		// Find the end of this scheme
 		while ( (not text.eof()) 
-			and is_in( *text, LETTERS + DIGITS + "+-.") )
+			and ( is_a_LETTER(*text) || 
+			      is_a_DIGIT(*text) ||
+			      is_in( *text, "+-.") 
+			    ) )
 		{
 			++text;
 			++length;
@@ -275,6 +290,12 @@ void BaseURLParser::readAuthority(std::string& userinfo, std::string& host,
 	port.clear();
 
 	try {
+		// Save the exceptions campain!
+		if (text.len()> 2 ) {
+			// Ugly Code in exchange for performance here...
+			const char* peek = text.current;
+			if (peek[0] != '/' || peek[1] != '/') return;
+		}
 		consumeToken("//");
 
 		// The authority component is preceded by a double slash ("//")

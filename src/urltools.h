@@ -400,16 +400,15 @@ public:
         std::string fragment;
 	//@}
 	
+	//!Constructor - default.
+	BaseURLParser();
 
-	/**Default constructor.
-	 *
-	 * By default, this URL defaults to "", i.e., and empty
-	 * path.
+	/**Constructor - from string.
 	 *
 	 * @param _url The string representation of the URL.
 	 *
 	 */
-	BaseURLParser(const std::string _url="");
+	BaseURLParser(const std::string _url);
 
 	BaseURLParser(const filebuf _buf);
 
