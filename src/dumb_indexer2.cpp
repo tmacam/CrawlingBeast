@@ -35,7 +35,8 @@ struct DumbIndexerVisitor {
 
 
 		// read document ( no decompressing)
-		filebuf f(store_data.readf(*len));
+		AutoFilebuf dec(decompress(store_data.readf(*len)));
+		filebuf f = dec.getFilebuf();
 
 		// Statistics and prefetching
 		++d_count;
