@@ -49,7 +49,9 @@ struct LinkExtractorVisitor {
 	  last_broadcast(time(NULL)), time_started(time(NULL)),
 	  nlinks(0), // FIXME
 	  id2url(urls)
-	{}
+	{
+		sleep(2);
+	}
 
 	void operator()(uint32_t count, const store_hdr_entry_t* hdr,
 			filebuf store_data)
@@ -88,7 +90,8 @@ struct LinkExtractorVisitor {
 		std::cout << "# docs: " << d_count << " bytes: " <<
 			byte_amount << " / " << byte_count << " bps: "<<
 			byte_amount/(now - last_broadcast) << 
-			" elapsed " << now - time_started << std::endl;
+			" elapsed " << now - time_started << " nlinks "<<
+			nlinks << std::endl;
 
 		last_broadcast = now;
 		last_byte_count = byte_count;
@@ -108,6 +111,7 @@ TURLFingerprintVec LinkExtractorVisitor::getLinks(uint32_t docid,
 	TURLFingerpritSet links;
 
 	LinkExtractor parser(data);
+	parser.parse();
 	if (not parser.base.empty()) {
 		base = BaseURLParser(parser.base);
 	}
@@ -120,6 +124,10 @@ TURLFingerprintVec LinkExtractorVisitor::getLinks(uint32_t docid,
 		try {
 			BaseURLParser l(*li);
 			std::string link =  (base_url + l).strip().str();
+			if ((base + l).isRelative()) {
+				std::cerr << link << " : " << base.str() << std::endl; // FIXME
+				throw std::runtime_error("Problems?");
+			}
 			uint64_t fp = FNV::hash64(link);
 			links.insert(fp);
 		} catch (NotSupportedSchemeException) {
@@ -190,8 +198,6 @@ int main(int argc, char* argv[])
 
 	std::cout << "# Extracting links ..." << std::endl;
 	VisitIndexedStore<store_hdr_entry_t>(store_dir, "store", visitor);
-
-	sleep(1);
 	visitor.print_stats();
 
 	exit(EXIT_SUCCESS);
