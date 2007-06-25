@@ -1,6 +1,11 @@
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
 #ifndef __CONFIG_H__
 #define __CONFIG_H__
+
+#include <sys/types.h>
+#include <string>
+
+
 /**@file config.h
  * @brief Defines, configuration constants and such.
  *
@@ -21,6 +26,9 @@ const size_t DOCIDLIST_RESERVE = 1<<20;
 const int N_OF_WORKERS = 100;
 
 const std::string CRAWLER_STORE_DIR = "/ri/tmacam/down/";
+
+//!Number of bytes to pre-allocate in decompress() zfilebuf.
+const size_t DECOMPRESS_RESERVE = 100*1024;
 
 
 

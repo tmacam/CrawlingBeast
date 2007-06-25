@@ -1,4 +1,7 @@
+#include "config.h"
 #include "zfilebuf.h"
+
+#include <string.h> // for memcpy
 
 #include <iostream>
 #include <list>
@@ -74,9 +77,11 @@ filebuf decompress(filebuf data)
 	z_stream strm;
 	unsigned int have;
 	// Outputing stuff
-	size_t OUTBUF_LEN = 10*1024; // FIXME move this down in the code
+	size_t OUTBUF_LEN = DECOMPRESS_RESERVE; 
 	char outbuf[OUTBUF_LEN];
-	std::deque<char> accbuf; // accumulator buffer
+	std::vector<char> accbuf; // accumulator buffer
+	accbuf.reserve(DECOMPRESS_RESERVE);
+
 	
 	if (data.len() == 0) {
 		// Empty filebufs result in empty filebufs.
@@ -149,7 +154,7 @@ filebuf decompress(filebuf data)
 
 	/* Ugly and lazy copy to an array */
 	char* final_buffer = new char[accbuf.size()];
-	std::copy(accbuf.begin(), accbuf.end(), final_buffer);
+	memcpy(final_buffer, &accbuf[0], accbuf.size());
 
 	return filebuf(final_buffer, accbuf.size());
 
