@@ -113,9 +113,18 @@ TURLFingerprintVec LinkExtractorVisitor::getLinks(uint32_t docid,
 	LinkExtractor parser(data);
 	parser.parse();
 	if (not parser.base.empty()) {
-		base = BaseURLParser(parser.base);
+		BaseURLParser doc_base(parser.base);
+		// Sanity check
+		if ( not doc_base.isRelative() ) {
+			base = doc_base;
+		}
 	}
 	// XXX we are ignoring nofollow
+
+	// Sanity check
+	if( base.isRelative() ) {
+		return TURLFingerprintVec();
+	}
 
 	// Prepare to get all the links from the page
 	const BaseURLParser base_url(base);
@@ -124,10 +133,6 @@ TURLFingerprintVec LinkExtractorVisitor::getLinks(uint32_t docid,
 		try {
 			BaseURLParser l(*li);
 			std::string link =  (base_url + l).strip().str();
-			if ((base + l).isRelative()) {
-				std::cerr << link << " : " << base.str() << std::endl; // FIXME
-				throw std::runtime_error("Problems?");
-			}
 			uint64_t fp = FNV::hash64(link);
 			links.insert(fp);
 		} catch (NotSupportedSchemeException) {
