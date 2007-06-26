@@ -301,7 +301,7 @@ void BaseURLParser::readAuthority(std::string& userinfo, std::string& host,
 		// The authority component is preceded by a double slash ("//")
 		// and is terminated by the next slash ("/"), question mark ("?"),
 		// or number sign ("#") character, or by the end of the URI.
-		authority = this->readUntilDelimiter("/?//").str();
+		authority = this->readUntilDelimiter("/?#").str();
 
 		// Parse userinfo
 		if ( authority.find("@") != authority.npos ) {
@@ -350,7 +350,7 @@ void BaseURLParser::validateHostName(const std::string& hostname)
 				this->text.str() + "'");
 	}
 	for( c = hostname.begin(); c != hostname.end(); ++c) {
-		if ( not is_in(*c, DOMAINNAME_CHARS) ) {
+		if ( not is_a_DOMAINNAME_CHARS(*c) ) {
 			throw InvalidURLException(
 				std::string("Invalid character '") +
 				*c + "' in hostname '"+ hostname +

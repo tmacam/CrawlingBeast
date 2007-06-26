@@ -37,6 +37,22 @@ filebuf BaseParser::readUntilDelimiter(const std::string& delimiters)
 	// remember: data doesn't include the delimiter
         return filebuf(data_start, length);
 }
+
+filebuf BaseParser::readUntilDelimiter(char delimiter)
+{
+	int length = 0;
+	const char* data_start = text.current;
+
+	while( (not text.eof()) and not (*text == delimiter) ) {
+		++text;
+		++length;
+	}
+        // Parsing restart after the end of this rule
+
+	// remember: data doesn't include the delimiter
+        return filebuf(data_start, length);
+}
+
     
 filebuf BaseParser::readUntilDelimiterMark(const std::string& mark)
 {

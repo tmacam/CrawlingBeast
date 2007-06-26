@@ -152,6 +152,12 @@ protected:
 	 */
 	filebuf readUntilDelimiter(const std::string& delimiters);
 
+	/**Returns whatever exists until the one of the delimiters is found.
+	 *
+	 * Overloaded for a single char
+	 */
+	filebuf readUntilDelimiter(char delimiter);
+
 	/**Returns whatever exists until the delimiter mark is found.
 	 *
 	 * After callig this function the reading position is located one

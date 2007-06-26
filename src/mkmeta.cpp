@@ -228,7 +228,7 @@ void show_usage()
 		"\n"
 		"\tdocid_list\tList of docid-url for all documents in store.\n"
 		"\tstore_dir\tWhere the crawled data (in store) is.\n"
-		"\tstore_dir\tWhere the metadata ISAM will be written.\n"
+		"\toutput_dir\tWhere the metadata ISAM will be written.\n"
 		<< std::endl;
 }
 

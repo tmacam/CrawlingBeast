@@ -85,7 +85,7 @@ std::string strip(const std::string _s)
 
 filebuf& lstrip(filebuf& s)
 {
-	while( !s.eof() && is_in(*s, WHITESPACE) ){
+	while( !s.eof() && is_a_WHITESPACE(*s) ){
 		++s;
 	}
 

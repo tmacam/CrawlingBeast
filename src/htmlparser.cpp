@@ -25,11 +25,11 @@ bool BaseHTMLParser::readSpace(bool optional)
 {
         bool found = false;
 
-        if ( (not optional) and (not is_in(*text,WHITESPACE)) ) {
+        if ( (not optional) and (not is_a_WHITESPACE(*text)) ) {
             throw InvalidCharError("Error parsing 'Name' rule.");
 	}
         // Find the end of this space
-        while ( (not text.eof()) and is_in(*text,WHITESPACE) ) {
+        while ( (not text.eof()) and is_a_WHITESPACE(*text) ) {
                 ++text;
                 found = true;
 	}
@@ -103,7 +103,7 @@ filebuf BaseHTMLParser::readAttValue()
 
 	filebuf previous_start(this->text); // Just in case we need to go back
 	filebuf value;
-	std::string token;
+	char token;
 
 	this->readSpace();
 	if (*text != '=') {
@@ -117,13 +117,13 @@ filebuf BaseHTMLParser::readAttValue()
 
 		switch (*text) {
 		case '\'':
-			token = "'";
+			token = '\'';
 			this->consumeToken(token);  // Get past the starting '
 			value =  this->readUntilDelimiter(token);
 			this->consumeToken(token);    // Get past the ending '
 			break;
 		case '"':
-			token = "\"";
+			token = '"';
 			this->consumeToken(token);    // Get past the starting "
 			value =  this->readUntilDelimiter(token);
 			this->consumeToken(token);    // Get past the ending "
@@ -162,7 +162,7 @@ bool BaseHTMLParser::tagFollows(filebuf start)
 	// not a &, not another < and not a >
 	// Besides, there must be at least a third character to form the
 	// smallest tag possible
-	if ( (next_pos >= end) or is_in(*next_pos, WHITESPACE) or 
+	if ( (next_pos >= end) or is_a_WHITESPACE(*next_pos) or 
 			is_in(*next_pos,TAGLIKE_START_INVALID_CHARS) )
 	{
 		// not a tag, actually
@@ -293,7 +293,7 @@ void BaseHTMLParser::readEndTag()
         this->readSpace();
         // Mozilla just ignores whatever comes after the 'Name S?' sequence
         // but before a '>' Let's just do the same!
-        this->readUntilDelimiter(std::string(">"));
+        this->readUntilDelimiter('>');
         this->consumeToken('>');  // go past the '>'
         
         this->handleEndTag(name);
@@ -339,7 +339,7 @@ void BaseHTMLParser::readGenericTagConstruction()
 
         // just get the text between < and >
 	this->consumeToken("<"); // go past the '<'
-	buf = this->readUntilDelimiter(">");
+	buf = this->readUntilDelimiter('>');
 	this->consumeToken(">"); // go past the '>'
 
 	contents = std::string(buf.current, buf.len());
@@ -358,7 +358,7 @@ void BaseHTMLParser::readGenericTagConstruction()
 
 static const char* __TROUBLESOME_TAGS[] = {"script", "style", "textarea"};
 
-const std::set<std::string> SloppyHTMLParser::TROUBLESOME_TAGS(
+const hash_set<std::string> SloppyHTMLParser::TROUBLESOME_TAGS(
 	__TROUBLESOME_TAGS, __TROUBLESOME_TAGS + 3);
 
 bool SloppyHTMLParser::skipTagIfTroublesome(std::string tag_name,
@@ -395,7 +395,7 @@ static const std::pair<std::string, std::string> __LINK_TAGS[] = {
 }; 
 
 
-const std::map<std::string, std::string> LinkExtractor::LINK_TAGS(
+const hash_map<std::string, std::string> LinkExtractor::LINK_TAGS(
 	__LINK_TAGS, __LINK_TAGS + 5);
 
 void LinkExtractor::handleStartTag(const std::string& tag_name,

@@ -47,6 +47,11 @@ inline bool is_a_DIGIT(char c)
 	return ((c >= '0') && (c <= '9'));
 }
 
+inline bool is_a_WHITESPACE(char c)
+{
+	return (c == 0x00) || (c == 0x09) || (c == 0x0A) || (c == 0x0B) || (c == 0x0C) || (c == 0x0D) || (c == 0x20);
+}
+
 //@}
 
 

@@ -22,8 +22,7 @@
 #include "common.h"
 #include "parser.h"
 
-#include <map>
-#include <set>
+#include "fnv1hash.hpp"
 
 #include "filebuf.h"
 
@@ -77,7 +76,7 @@ const unsigned int COMMENT_START_LEN = 4;
 
 /**Abstract base class for HTML parsers*/
 struct AbstractHTMLParser {
-	typedef std::map< std::string, filebuf> attr_list_t;
+	typedef hash_map< std::string, filebuf> attr_list_t;
 
 	virtual void handleText(filebuf text) = 0;
 
@@ -276,7 +275,7 @@ public:
  */
 class SloppyHTMLParser: public BaseHTMLParser {
 protected:
-	static const std::set<std::string> TROUBLESOME_TAGS;
+	static const hash_set<std::string> TROUBLESOME_TAGS;
 
 public:
    /**Skip content inside a tag if it is a troublesome one.
@@ -317,7 +316,9 @@ public:
 	typedef BaseHTMLParser::attr_list_t attr_list_t;
 	
 	//FIXME metainformation outside the page's head should be ignored
-	typedef std::map<std::string, std::string> link_tag_map_t;
+	typedef hash_map<std::string, std::string> link_tag_map_t;
+
+	typedef hash_set<std::string> link_set_t;
 
 	/**Map of TAGS that contain LINKS to other pages/objects and the
 	 * name of their ATTRIBUTES that holds the LINKs.
@@ -328,7 +329,7 @@ public:
 	 * */
 	static const link_tag_map_t  LINK_TAGS;
 
-	std::set<std::string> links;
+	link_set_t links;
 	std::string base;
 	bool index;
 	bool follow;

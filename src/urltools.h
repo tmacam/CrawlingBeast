@@ -66,6 +66,11 @@ const std::string UNRESERVED  = LETTERS + DIGITS +  "-._~";
  */
 const std::string DOMAINNAME_CHARS = LETTERS + DIGITS + ".-";
 
+inline bool is_a_DOMAINNAME_CHARS(char c)
+{
+	return is_a_LETTER(c) || is_a_DIGIT(c) || c == '.' || c == '-';
+}
+
 //@}
 
 

@@ -53,7 +53,7 @@ PageDownloader&  PageDownloader::download()
 
 PageDownloader&  PageDownloader::parse()
 {
-	std::set<std::string>::const_iterator li;
+	LinkExtractor::link_set_t::const_iterator li;
 	// Converting to unicode
 	UnicodeBugger unicoder(contents.getFilebuf());
 	unicode_contents.reset(unicoder.convert());

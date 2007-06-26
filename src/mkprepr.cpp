@@ -17,7 +17,7 @@
 				    Typedefs
  *******************************************************************************/
 
-typedef hash_map < int, std::string> TIdUrlMap;
+typedef hash_map <uint32_t, std::string> TIdUrlMap;
 
 //!@name URL Fingerprint containers
 //!@{
@@ -128,7 +128,7 @@ TURLFingerprintVec LinkExtractorVisitor::getLinks(uint32_t docid,
 
 	// Prepare to get all the links from the page
 	const BaseURLParser base_url(base);
-	std::set<std::string>::const_iterator li;
+	LinkExtractor::link_set_t::const_iterator li;
 	for(li = parser.links.begin(); li != parser.links.end(); ++li){
 		try {
 			BaseURLParser l(*li);
