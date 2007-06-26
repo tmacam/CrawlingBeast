@@ -39,7 +39,7 @@ struct store_hdr_entry_t {
 			 */
 
 
-	store_hdr_entry_t(uint32_t id = 0, uint8_t n=0, uint32_t position=0)
+	store_hdr_entry_t(uint32_t id = 0, uint16_t n=0, uint32_t position=0)
 	: docid(id), fileno(n),  pos(position)
 	{}
 } __attribute__((packed));

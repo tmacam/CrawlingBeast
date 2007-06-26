@@ -178,6 +178,10 @@ public:
 	 *
 	 * It is the caller responability to copy date into the
 	 * returned filebuf.
+	 *
+	 * @param[in] bytes_needed
+	 * @param[out] file_no Use this to fill _hdr_
+	 * @param[out] pos Use this to fill _hdr_
 	 */
 	filebuf getDataOutputBuffer(uint32_t bytes_needed,
 				    uint16_t& file_no,
@@ -297,6 +301,30 @@ struct NullISAMVisitor {
 	{
 	}
 };
+
+/***********************************************************************
+			     Misc Helper Functions
+ ***********************************************************************/
+
+template<class _T>
+filebuf& dumpToFilebuf(_T t, filebuf& out)
+{
+	size_t len =  sizeof(_T);
+	void* pos = (void*) out.read(len);
+	memcpy(pos,&t,len);
+	
+	return out;
+}
+
+filebuf& dumpStrToFilebuf(const std::string& t, filebuf& out)
+{
+	size_t len = t.size();
+	void* pos = (void*) out.read(len);
+	memcpy(pos,t.c_str(),len);
+	
+	return out;
+}
+
 
 
 
