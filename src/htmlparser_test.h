@@ -20,12 +20,22 @@ std::ostream& operator<<(std::ostream& out, const filebuf& f)
 
 std::ostream& operator<<(std::ostream& out,const BaseHTMLParser::attr_list_t& m)
 {
+	// Sort the list of attributes
+	std::vector<std::string> attr_names;
+	std::vector<std::string>::const_iterator name;
 	BaseHTMLParser::attr_list_t::const_iterator i;
-	out << "{";
 	for(i = m.begin(); i != m.end(); ++i){
-		out << "'" << (*i).first << "'";
+		attr_names.push_back(i->first);
+	}
+	std::sort(attr_names.begin(), attr_names.end());
+
+	BaseHTMLParser::attr_list_t m_copy(m);
+
+	out << "{";
+	for(name = attr_names.begin(); name != attr_names.end(); ++name){
+		out << "'" << *name << "'";
 		out << ":";
-		out << "'" << (*i).second << "'";
+		out << "'" << m_copy[*name] << "'";
 		out << ", ";
 	}
 	out << "}";
