@@ -27,6 +27,12 @@ class LinkExtractorVisitor {
 
 	TIdUrlMap& id2url;
 	IndexedStoreOutputer<prepr_hdr_entry_t>& outputer;
+
+	//!@name To filter found FPs
+	//!{
+	TURLFingerprintSet valid_fps;
+	IsInMap<TURLFingerprintSet> is_a_valid_fp;
+	//!}
 public:
 
 	LinkExtractorVisitor(TIdUrlMap& urls,
@@ -34,9 +40,15 @@ public:
 	: d_count(0), byte_count(0), last_byte_count(0),
 	  last_broadcast(time(NULL)), time_started(time(NULL)),
 	  nlinks(0), // FIXME
-	  id2url(urls), outputer(out)
+	  id2url(urls), outputer(out), valid_fps(),
+	  is_a_valid_fp(valid_fps)
 	{
-		sleep(2);
+		// Populate the list of valid fingerprints
+		TIdUrlMap::const_iterator i;
+		for(i = id2url.begin(); i != id2url.end(); ++i){
+			const std::string& url = i->second;
+			valid_fps.insert(FNV::hash64(url));
+		}
 	}
 
 	void operator()(uint32_t count, const store_hdr_entry_t* hdr,
@@ -55,10 +67,17 @@ public:
 		uint64_t fp =  FNV::hash64(id2url[data_header->docid]);
 
 		// Out out-links
-		TURLFingerprintVec links(getLinks(data_header->docid, f));
-		nlinks += links.size(); // FIXME
+		TURLFingerprintVec page_links(getLinks(data_header->docid, f));
+		// Filter for valid out-links
+		TURLFingerprintVec valid_links;
+		valid_links.reserve(page_links.size());
+		copy_if( page_links.begin(), page_links.end(),
+			 std::back_inserter(valid_links),
+			 is_a_valid_fp);
 
-		outputLinkdata(data_header->docid, fp, links);
+		nlinks += valid_links.size(); // FIXME
+
+		outputLinkdata(data_header->docid, fp, valid_links);
 
 		// Statistics and prefetching
 		++d_count;
@@ -99,7 +118,7 @@ TURLFingerprintVec LinkExtractorVisitor::getLinks(uint32_t docid,
 	assert( id2url.find(docid) != id2url.end() );
 	BaseURLParser base(id2url[docid]);
 
-	TURLFingerpritSet links;
+	TURLFingerprintSet links;
 
 	LinkExtractor parser(data);
 	parser.parse();

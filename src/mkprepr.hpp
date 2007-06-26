@@ -17,7 +17,7 @@ typedef hash_map <uint32_t, std::string> TIdUrlMap;
 
 //!@name URL Fingerprint containers
 //!@{
-typedef hash_set < uint64_t > TURLFingerpritSet;
+typedef hash_set < uint64_t > TURLFingerprintSet;
 
 typedef std::vector<uint64_t> TURLFingerprintVec;
 //!@}
@@ -54,6 +54,38 @@ struct prepr_data_entry_t {
 } __attribute__((packed));
 
 //!@}
+
+
+/***********************************************************************
+			       Auxiliary Functors
+ ***********************************************************************/
+
+// Stroustrup, chap. 18.6.1
+template<class In,class Out,class Pred>
+Out copy_if(In first,In last,Out res,Pred p)
+{
+	while(first!=last){
+		if(p(*first))*res++=*first;
+		++first;
+	}
+	return res;
+}
+
+template<class T>
+struct IsInMap {
+	T& m;
+	typedef typename T::key_type key_type;
+
+	IsInMap(T& _m)
+	: m(_m)
+	{}
+
+	inline bool operator()(const key_type& val)
+	{
+		return (m.find(val) != m.end());
+	}
+};
+
 
 
 #endif // __MKPREPR_HPP__
