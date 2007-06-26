@@ -325,6 +325,16 @@ filebuf& dumpStrToFilebuf(const std::string& t, filebuf& out)
 	return out;
 }
 
+template<class _T>
+filebuf& dumpVecToFilebuf(const std::vector<_T>& t, filebuf& out)
+{
+	size_t len = t.size() * sizeof(_T);
+	_T* pos = (_T*) out.read(len);
+	std::copy(t.begin(), t.end(), pos);
+	
+	return out;
+}
+
 
 
 

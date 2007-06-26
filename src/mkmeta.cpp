@@ -3,7 +3,6 @@
 #include "zfilebuf.h"
 #include "strmisc.h"
 #include "isamutils.hpp"
-#include "mkstore.hpp"
 #include "htmlparser.h"
 #include "fnv1hash.hpp"
 
@@ -32,8 +31,8 @@ typedef store_data_entry_t meta_data_entry_t;
  *
  */
 struct meta_contents_entry_t {
-	uint32_t url;	//!< url of the document
-	uint32_t title;	//!< title of the document
+	uint32_t url;	//!< document's url length
+	uint32_t title;	//!< document's title length
 
 	meta_contents_entry_t(uint32_t _u=0, uint32_t _t=0)
 	: url(_u), title(_t)
@@ -128,9 +127,9 @@ public:
 	void operator()(uint32_t count, const store_hdr_entry_t* hdr,
 			filebuf store_data)
 	{
-		const size_t len = sizeof(store_data_entry_t);
-		store_data_entry_t* data_header = 0;
-		data_header = (store_data_entry_t*)store_data.read(len);
+		const size_t len = sizeof(meta_data_entry_t);
+		meta_data_entry_t* data_header = 0;
+		data_header = (meta_data_entry_t*)store_data.read(len);
 
 		assert(data_header->docid == hdr->docid);
 
@@ -247,7 +246,7 @@ void go(char* argv[])
 	TIdUrlMap id2url;
 	read_ids_and_urls(docids_list, id2url);
 
-	// Setup result outputter // FIXME
+	// Setup result outputter
 	IndexedStoreOutputer<meta_hdr_entry_t> metaout(	output_dir,
 							"meta",
 							id2url.size() );
