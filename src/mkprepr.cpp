@@ -31,10 +31,7 @@ typedef std::vector<uint64_t> TURLFingerprintVec;
 //!To read the header of an entry in the header file
 typedef store_hdr_entry_t prepr_hdr_entry_t;
 
-//!To read the header of an entry in a data file
-typedef store_data_entry_t prepr_data_entry_t;
-
-/**To read the contents of an data entry.
+/**To read header and contents of an entry in a data entry.
  *
  * The idea is that a data entry has an header and contents
  * and that the header @p len is the length of the data entry
@@ -44,12 +41,18 @@ typedef store_data_entry_t prepr_data_entry_t;
  * follows.
  *
  */
-struct prepr_contents_entry_t {
-	uint64_t fp;	//!< fingerprint
-	uint32_t n_outlinks;//!< title of the document
+struct prepr_data_entry_t {
+	uint32_t docid;	//!< DocId regarding this data entry.
+	uint32_t len;   /**< Length of the data inside this ISAM data entry
+			 *   after this header.
+			 */
+	uint64_t fp;		//!< fingerprint
+	uint32_t n_outlinks;	//!< title of the document
 
-	prepr_contents_entry_t(uint32_t fingerprint=0, uint32_t n=0)
-	: fp(fingerprint), n_outlinks(n)
+	prepr_data_entry_t( uint32_t _id=0, uint32_t _len=0,
+				uint32_t fingerprint=0, uint32_t n=0)
+	: docid(_id), len(_len),
+	  fp(fingerprint), n_outlinks(n)
 	{}
 
 } __attribute__((packed));
@@ -90,9 +93,8 @@ public:
 	void operator()(uint32_t count, const store_hdr_entry_t* hdr,
 			filebuf store_data)
 	{
-		const size_t len = sizeof(prepr_data_entry_t);
-		prepr_data_entry_t* data_header = 0;
-		data_header = (prepr_data_entry_t*)store_data.read(len);
+		store_data_entry_t* data_header = NULL;
+		data_header = readFromFilebuf<store_data_entry_t>(store_data);
 
 		assert(data_header->docid == hdr->docid);
 
@@ -191,18 +193,16 @@ void LinkExtractorVisitor::outputLinkdata(uint32_t docid, uint64_t fp,
 	uint16_t fileno;
 	uint32_t pos;
 
-	size_t cont_len = sizeof(prepr_contents_entry_t) +
-				(fingerprints.size() * sizeof(uint64_t) );
+	size_t cont_len = (fingerprints.size() * sizeof(uint64_t) );
 	size_t needed =	sizeof(prepr_data_entry_t) + cont_len;
 
 	filebuf data = outputer.getDataOutputBuffer(needed,fileno,pos);
 	outputer.putIndexEntry(prepr_hdr_entry_t(docid,fileno,pos));
 
-	prepr_data_entry_t data_header(docid, cont_len);
-	prepr_contents_entry_t contents_header(fp,fingerprints.size());
+	prepr_data_entry_t data_header(docid, cont_len, fp,
+					fingerprints.size() );
 
 	dumpToFilebuf(data_header, data);
-	dumpToFilebuf(contents_header, data);
 	dumpVecToFilebuf(fingerprints, data);
 
 	assert(data.eof());

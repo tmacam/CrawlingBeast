@@ -335,6 +335,12 @@ filebuf& dumpVecToFilebuf(const std::vector<_T>& t, filebuf& out)
 	return out;
 }
 
+template<class _T>
+_T* readFromFilebuf(filebuf& source)
+{
+	return (_T*) source.read(sizeof(_T));
+}
+
 
 
 

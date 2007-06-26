@@ -20,22 +20,25 @@ typedef hash_map <uint32_t, std::string> TIdUrlMap;
 //!To read the header of an entry in the header file
 typedef store_hdr_entry_t meta_hdr_entry_t;
 
-//!To read the header of an entry in a data file
-typedef store_data_entry_t meta_data_entry_t;
-
-/**To read the contents of an data entry.
+/**To read header and contents of an data entry.
  *
  * The idea is that a data entry has an header and contents
  * and that the header @p len is the length of the data entry
  * contents.
  *
  */
-struct meta_contents_entry_t {
+struct meta_data_entry_t {
+	uint32_t docid;	//!< DocId regarding this data entry.
+	uint32_t len;   /**< Length of the data inside this ISAM data entry
+			 *   after this header.
+			 */
 	uint32_t url;	//!< document's url length
 	uint32_t title;	//!< document's title length
 
-	meta_contents_entry_t(uint32_t _u=0, uint32_t _t=0)
-	: url(_u), title(_t)
+	meta_data_entry_t( uint32_t _id=0, uint32_t _len=0,
+			   uint32_t _u=0, uint32_t _t=0)
+	: docid(_id), len(_len),
+	  url(_u), title(_t)
 	{}
 
 } __attribute__((packed));
@@ -127,9 +130,8 @@ public:
 	void operator()(uint32_t count, const store_hdr_entry_t* hdr,
 			filebuf store_data)
 	{
-		const size_t len = sizeof(meta_data_entry_t);
-		meta_data_entry_t* data_header = 0;
-		data_header = (meta_data_entry_t*)store_data.read(len);
+		store_data_entry_t* data_header = NULL;
+		data_header = readFromFilebuf<store_data_entry_t>(store_data);
 
 		assert(data_header->docid == hdr->docid);
 
@@ -180,19 +182,16 @@ public:
 		uint16_t fileno;
 		uint32_t pos;
 
-		size_t cont_len = sizeof(meta_contents_entry_t) +
-					url.size() +
-					title.size();
+		size_t cont_len = url.size() + title.size();
 		size_t needed =	sizeof(meta_data_entry_t) + cont_len;
 
 		filebuf data = outputer.getDataOutputBuffer(needed,fileno,pos);
 		outputer.putIndexEntry(meta_hdr_entry_t(docid,fileno,pos));
 
-		meta_data_entry_t data_header(docid, cont_len);
-		meta_contents_entry_t contents_header(url.size(),title.size());
+		meta_data_entry_t data_header(docid, cont_len,
+						url.size(), title.size());
 
 		dumpToFilebuf(data_header, data);
-		dumpToFilebuf(contents_header, data);
 		dumpStrToFilebuf(url, data);
 		dumpStrToFilebuf(title, data);
 
