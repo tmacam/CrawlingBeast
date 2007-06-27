@@ -46,7 +46,7 @@ struct prepr_data_entry_t {
 	uint32_t n_outlinks;	//!< title of the document
 
 	prepr_data_entry_t( uint32_t _id=0, uint32_t _len=0,
-				uint32_t fingerprint=0, uint32_t n=0)
+				uint64_t fingerprint=0, uint32_t n=0)
 	: docid(_id), len(_len),
 	  fp(fingerprint), n_outlinks(n)
 	{}
@@ -85,6 +85,20 @@ struct IsInMap {
 		return (m.find(val) != m.end());
 	}
 };
+
+inline TIdUrlMap& read_ids_and_urls(const char * docid_list, TIdUrlMap& id2url)
+{
+	std::ifstream known_docids(docid_list);
+	std::string url;
+	docid_t docid;
+	while(known_docids >> docid >> url){
+		id2url[docid] = url;
+	}
+
+	return id2url;
+
+}
+
 
 
 

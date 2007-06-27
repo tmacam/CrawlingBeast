@@ -183,19 +183,6 @@ void LinkExtractorVisitor::outputLinkdata(uint32_t docid, uint64_t fp,
  ***********************************************************************/
 
 
-inline TIdUrlMap& read_ids_and_urls(const char * docid_list, TIdUrlMap& id2url)
-{
-	std::ifstream known_docids(docid_list);
-	std::string url;
-	docid_t docid;
-	while(known_docids >> docid >> url){
-		id2url[docid] = url;
-	}
-
-	return id2url;
-
-}
-
 void show_usage()
 {
 	std::cout <<
