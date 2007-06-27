@@ -1,0 +1,26 @@
+% Copyright 2006 by Patrick Pletscher <pat _at_ pletscher.org>
+%
+% This program can be redistributed and/or modified under the terms
+% of the GNU Public License, version 2.
+
+\DeclareOptionBeamer{compress}{\beamer@compresstrue}
+\ProcessOptionsBeamer
+
+
+\mode<presentation>
+
+\setbeamertemplate{items}[circle]
+\setbeamertemplate{sections/subsections in toc}[circle]
+
+\setbeamerfont{block title}{size={}}
+
+\setbeamertemplate{navigation symbols}{}
+
+
+\mode<beamer>
+
+\setbeamercolor*{palette tertiary}{use=structure,fg=white,bg=black}
+\useoutertheme[subsection=false]{miniframes}
+
+
+\mode<all>
