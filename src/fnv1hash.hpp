@@ -73,11 +73,7 @@ namespace FNV {
 
 	inline size_t hash32(const string& key)
 	{
-		if (key.empty()) {
-			return hash32("",0);
-		} else {
-			return hash32(&key[0],key.size());
-		}
+		return hash32(key.c_str(),key.size());
 	}
 };
 
