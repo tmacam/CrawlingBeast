@@ -14,15 +14,15 @@
 
 % Informações sobre o documento
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-\title[Modelos de Reputação]{Modelos de Reputação Baseados em Redes Sociais}
-%\subtitle{UOL Bolsa Pesquisa 2006 - Workshop}
-\author[Tiago Macambira]{Tiago Alves Macambira \\ Orientador: Dorgival
-Olavo Guedes}
+\title[Language Modeling Approach]{A Language Modeling Approach to
+information Retrieval}
+\subtitle{Jay M. Ponte and W. Bruce Croft}
+\author[Tiago Macambira]{Tiago Alves Macambira }
 \institute{e-Speed \\ Departamento de Ciência da Computação \\ Universidade Federal de Minas Gerais}
 \date{
-UOL Bolsa Pesquisa 2006 - Workshop \\
-4--5 de Abril de 2007}
-\subject{Apresentação para o Workshop do UOL Bolsa Pesquisa 2006}
+Apresentação para a Disciplina de RI - 2007.1 \\
+27 de junho de 2007}
+\subject{Apresentação para a disciplina de Recuperação de Informação}
 \logo{\includegraphics[scale=0.25]{speed}}
 
 
@@ -32,307 +32,230 @@ UOL Bolsa Pesquisa 2006 - Workshop \\
 
 \frame{ \frametitle{Roteiro} \tableofcontents}
 
+
 \section{Introdução}
-\subsection{Conceitos Iniciais}
+\subsection{Sobre o que se trata esse artigo}
 
-    \begin{frame}{Conceitos Iniciais}
-    \framesubtitle{Redes Sociais e Conceitos correlatos}
-	\begin{block}{Redes Sociais}
-	    Redes que modelam ou são produto da \alert{interação} humana.
+    \begin{frame}{Sobre o que se trata esse artigo}
+    \framesubtitle{20 minutos em 10 segundos}
+	\begin{block}{Resumo}
+            Modelo único de indexação e de recuperação utilizando modelagem probabilística
+            de linguagem.
 	\end{block}
     \end{frame}
 
-    \begin{frame}{Conceitos Iniciais}
-    \framesubtitle{Redes Sociais e Conceitos correlatos}
-	Como exemplo podemos citar diversos sistemas de comunicação
-	\emph{on-line}:
-	\begin{itemize}
-	    \item Sítios tais como o Orkut, Friendster e UOL K
-	    \item Listas de Discussão
-	    \item Fóruns \emph{on-line}
-	    \item Salas de bate-papo
-	    \item Sistemas de \emph{Instant Messaging} (IRC, MSQ, Jabber)
-	\end{itemize}
-	
-    \end{frame}
+\subsection{Modelos}
 
     \begin{frame}{Conceitos Iniciais}
-    \framesubtitle{Mecanismos de auto-regulação}
-	Nem todas as \alert{interações} entre seres humanos são benéficas para
-	eles mesmos e para a comunidade.
-        \pause
-
-	Em comunidades reais, diversos mecanismos atuam
-	para evitar que a própria comunidade se deteriore:
-	\begin{itemize}[<alert@+|+->]
-	    \item Identidade
-	    \item Reputação
-	    \item Regulamentação
-	\end{itemize}
-    \end{frame}
-
-
-\subsection{Reputação e Moderação em Comunidades Virtuais}
-
-    \begin{frame}{Reputação e Moderação em Comunidades Virtuais}
-    \framesubtitle{Problemas no mapeamento do mundo real}
-	Esses mecanismos não atuam em ambientes virtuais da
-	mesma forma.
-	\begin{itemize}
-	    \item Identidade \pause
-	        \begin{itemize}
-                    \item Anonimato é muito comum em ambientes virtuais
-
-		    \item Pessoas podem usar várias ``identidades
-                    virtuais''
-		\end{itemize}
-	    \pause
-
-	    \item Reputação \pause
-	        \begin{itemize}
-                    \item Nem todas as comunidades implementam
-		    mecanismos de reputação
-
-                    \item Anonimato pode tornar tais mecanismos inócuos
-		\end{itemize}
-	    \pause
-
-	    \item Regulamentação (Moderação) \pause
-	        \begin{itemize}
-		    \item Regulamentação automatizada é muito limitada
-		    \note{Riqueza semântica das interações humanas}
-
-		    \item Regulamentação manual não escala com o tamanho
-		    do número de usuários e corre o risco de se tornar
-		    muito autoritária.
-		\end{itemize}
-	\end{itemize}
-    \end{frame}
-
-    \begin{frame}{Reputação e Moderação em Comunidades Virtuais}
-    \framesubtitle{Mecanismos de Controle}
-
-        Existem vários mecanismos para regulação em comunidades
-        virtuais:
-        \begin{itemize}
-            \item \emph{Karma}
-            \item \emph{White-listing}
-            \item \emph{Grey-listing}
-            \item Moderação simples (IRC, Salas de Bate-Papo)
-            \item Convite
-        \end{itemize}
-        \pause
-
-        Mas\ldots\pause
-        \begin{itemize}[<|+->]
-            \item se comunidades formam \alert{redes sociais}\ldots
-
-            \item por que não usar \alert{informações da rede social} como parte
-            do processo de \alert{regulamentação}\ldots
-
-            \item de maneira \alert{automatizada}?
-        \end{itemize}
-    \end{frame}
-
-\section{O Projeto}
-\subsection{Objetivos}
-
-    \begin{frame}{Objetivos}
-	\begin{block}{Objetivos}
-            Investigar mecanismos de \alert{moderação e reputação} que
-            se aproveitem das características das \alert{redes sociais}
-            que emergem de sistemas colaborativos \emph{on-line}.
-	\end{block}
-        \vspace{1em}
-	\pause
-
-        Proposta:
-        \begin{itemize}
-            \item Análise de \alert{interações} entre usuários e a comunidade e
-            suas repercussões
-
-	    \item Limitando-se à \alert{análise estrutural} das interações.
-
-            \item Foco inicial limitado a fóruns \emph{on-line}
-        \end{itemize}
-    \end{frame}
-
-
-\subsection{Aplicabilidade}
-
-    \begin{frame}{Aplicabilidade}
-	Isso pode ser usado para\ldots
-        \begin{itemize}[<|+->]
-            \item \alert{Atribuição automática de \emph{karma} em
-            fóruns on-line}
-
-            \item Indicação de \emph{flame-wars}, interações relevantes
-            à moderação
-
-	    \item \emph{Clipping} de notícias ou comentários em listas de discussão
-
-            \item Detecção de ``robôs'' em bate-papos
-
-            \item Indicação e promoção de editores em Wikis e outras
-            mídias de edição colaborativa
-	\end{itemize}
-    \end{frame}
-
-\subsection{Trabalhos Relacionados}
-
-    \begin{frame}{Trabalhos Relacionados}
-        Apesar de possuir um \alert{foco diferente}, nosso trabalho apresenta
-	relação com as seguintes áreas e atividades:
-	\begin{itemize}
-	    \item Identificação de \emph{spam}
-	    \item Classificação de texto
-	\end{itemize}
-    \end{frame}
-
-\section{Metodologia}
-\subsection{Visão de alto nível}
-
-    \begin{frame}{Metodologia}
-    \framesubtitle{Visão geral}
-        Quais são os passos?
-        \begin{itemize}
-            \item Análise e seleção de sistemas de comunicação e
-            comunidades \emph{on-line}
-            \pause
-
-            \item Monitoração e coleta de dados dos sistemas
-            selecionados
+    \framesubtitle{O que chamamos de modelo nesse trabalho}
             \begin{itemize}
-                \item Coleta de dados
-                \item \emph{Crawling}
-                \item Análise passiva de tráfego
+                \item De indexação
+                \begin{itemize}
+                    \item Lida com o problema de determinar \emph{indexing terms} a documentos
+                    \item Modelo 2-Poisson
+                \end{itemize}
+
+                \item De recuperação
+                \begin{itemize}
+                    \item Lida com formas de estimar a probabilidade da relevância de documentos
+                    dado uma consulta do usuário
+                    \item Modelo de espaço vetorial
+                \end{itemize}
+
+                \item Modelos de linguagem
+                \begin{itemize}
+                    \item Usados, por exemplo, em sistemas de reconhecimento de fala, OCRs etc.
+                \end{itemize}
             \end{itemize}
-            \pause
-
-            \item Análise dos dados coletados
-            \pause
-
-            \item Simulação do modelo proposto
-            \pause
-
-            \item Implantação do modelo em um \emph{software}
-        \end{itemize}
     \end{frame}
 
-\subsection{Estudo de Caso: Slashdot}
 
-    \begin{frame}{Estudo de Caso: Slashdot} %FIXME
-        \begin{columns}
-        \begin{column}{0.5\textwidth}
-            \pgfdeclareimage[width=\textwidth]{cover}{snap_slashdot_cover}
-            \pgfdeclareimage[width=\textwidth]{news}{snap_slashdot_news}
-            \pgfdeclareimage[width=\textwidth]{comments}{snap_slashdot_comments}
-            \pgfuseimage<2,5-|handout:1->{cover}
-            \pgfuseimage<3|handout:0>{news}
-            \pgfuseimage<4|handout:0>{comments}
-        \end{column}
 
-        \begin{column}{0.5\textwidth}
-            O que é a Slashdot \pause
-            \begin{itemize}[<alert@+|+->]
-                \item Fórum
-                \item Notícias
-                \item Comentários
-            \end{itemize}
-            \pause
+\subsection{Motivação}
 
-            Por que ela foi selecionada? \pause
+    \begin{frame}{Motivação}
+            Problemas das Abordagens Tradicionais:
             \begin{itemize}
-                \item Popularidade
-
-                \item Relevância
-
-                \item Forma das interações
-
-                \item Existência de mecanismos de Identificação, Reputação e
-                Moderação
-                \item Interações (comentários) são avaliadas e classificadas
+            \item Separação entre os modelos de indexação e os modelos de recuperação
+            \item Suposições comumente usadas no modelo de indexação causam problemas:
+                \begin{itemize}
+                    \item Parametrização do modelo dos dados
+                    \item Suposição de que documentos pertencem a classes pré-definidas e bem
+                    definidas.
+                \end{itemize}
+            \item Estatísticas da coleção e dos documentos são utilizados de maneira
+            \emph{ad-hoc} (heurísticas).
             \end{itemize}
-        \end{column}
-        \end{columns}
     \end{frame}
 
-\subsection{Coleta de Dados}
+\subsection{Proposta}
 
-    \begin{frame}{Coleta de Dados}
-        Complicações:
-        \begin{itemize}
-            \item Mecanismos de prevenção contra ataques de DDoS complicaram o
-            processo
-            \item 100+ nós do PlanetLab utilizados para realizar
-            \emph{crawling} distribuído
-        \end{itemize}
-
-        Dados:
-        \begin{itemize}
-            \item 2 anos de notícias e comentários coletados
-            \item 20 mil artigos
-            \item 140 mil usuários
-            \item 5 milhões de comentários
-        \end{itemize}
-    \end{frame}
-
-\subsection{Resultados atuais}
-
-    \begin{frame}{Resultados atuais}
-        Slashdot:
-        \begin{itemize}
-            \item A rede de interações de seus usuários é uma rede
-            com característica social
+    \begin{frame}{Proposta}
             \begin{itemize}
-                \item Coeficiente de Agrupamento (CC): 0.13
-                \item Diâmetro: 75
-                \item Caminho Mínimo Médio ($l$): 3.13
-            \end{itemize}
-            \pause
+            \item Estimar modelos de linguagem (LM) para cada documento individualmente
 
-            \item Sim, isso é esperado --- mas precisava ser comprovado.
-        \end{itemize}
-
-	Artigos:
-        \begin{itemize}
-            \item Dados utilizados em artigo para a ICWSM'07
-            \item Artigo em elaboração (JBCS,?)
-        \end{itemize}
-    \end{frame}
-
-\section{Conclusão}
-\subsection{Estágio Atual}
-
-    \begin{frame}{Conclusão}
-    \framesubtitle{Estágio Atual}
-        \begin{itemize}
-            \item Algoritmos seqüenciais de análise social estão se
-            mostrando ineficientes
-            \pause
             \begin{itemize}
-                \item Paralelizando vários dos algoritmos utilizados
+            \item Para que parametrizar quando você tem os dados!
             \end{itemize}
-            \pause
-
-            \item Estimativa de reputação dos usuários\pause
-
-            \item Teste de hipóteses\pause
-        \end{itemize}
+            \item Documentos são \emph{rankeados} de acordo com a probabilidade do modelo estimado
+            gerar a consulta
+            \end{itemize}
+            \[
+            \hat{p}(Q|M_{d})\]
     \end{frame}
 
-\subsection{Passos Futuros}
 
-    \begin{frame}{Conclusão}
-    \framesubtitle{Passos futuros}
-        \begin{itemize}
-            \item Técnicas para avaliação das mensagens utilizando
-            reputação dos usuários na vizinhança do contexto da
-            mensagem.
 
-            \item Averiguação da técnica em Wikis.
-        \end{itemize}
+\section{O modelo proposto}
+
+\subsection{Definições iniciais}
+
+    \begin{frame}{Definições iniciais}
+            \begin{itemize}
+            \item A distribuição de probabilidade do termo $t$ no documento $d$é:
+            \end{itemize}
+            \[
+            \hat{p}_{ml}(t|M_{d})=\frac{tf_{(t,d)}}{dl_{d}}\]
+
+
+            \begin{itemize}
+            \item Assume-se independência dos termos
+            \end{itemize}
     \end{frame}
+
+\subsection{Definindo a função de ranking}
+
+    \begin{frame}{A função de \emph{ranking}}
+    \framesubtitle{Primeira proposta}
+            A função de \emph{ranking} ficaria assim:
+            \[
+            \prod_{t\in Q}\hat{p}_{ml}(t,d)\]
+    \end{frame}
+
+
+
+    \begin{frame}{Melhorando a função de \emph{ranking}}
+            Problema:
+
+            \begin{itemize}
+                \item Se um documento não possuir um dos termos da consulta então a sua
+            probabilidade será 0!!!
+            \end{itemize}
+
+            Solução: 
+
+            \begin{itemize}
+                \item termos que não ocorrem serão tão provéveis no documento como são em
+            média na coleção.
+            \end{itemize}
+            \[
+            \frac{cf_{t}}{cs}\]
+    \end{frame}
+
+
+    \begin{frame}{Melhorando a função de \emph{ranking}}
+            Problema:
+
+            \begin{itemize}
+                \item Para estimar o ML de um dado documento, só podemos tirar estimativas
+            dos dados do próprio documento!
+            \end{itemize}
+
+            Solução:
+
+            \begin{itemize}
+                \item Estimar de bases dados maiores!
+                \item Obter a probabilidade média de $t$ nos documentos que o contêm.
+            \end{itemize}
+            \[
+            p_{avg}=\frac{\left(\sum_{d_{(t\in d)}}p_{ml}(t|M_{d})\right)}{df_{t}}\]
+
+    \end{frame}
+
+    \begin{frame}{Melhorando a função de \emph{ranking}}
+
+            Solução anterior ainda possui problemas:
+
+            \begin{itemize}
+                \item Nem todo documento que contêm $t$ segue o mesmo modelo
+                \item Existe um risco em se usar a média para estimar $p(t|M_{d})$
+            \end{itemize}
+
+            Solução:
+
+            \begin{itemize}
+                \item Modelar o risco
+            \end{itemize}
+    \end{frame}
+
+\subsection{Fórmula final}
+
+    \begin{frame}{Melhorando a função de \emph{ranking}}
+            Seja:
+
+            \[
+            \hat{p}(t|M_{d})=\begin{array}{cc}
+            p_{ml}\left(t,d\right)^{(1.0-\hat{R}_{t,d})}\cdot p_{avg}\left(t\right)^{\hat{R}_{t,d}} & \quad if\; tf_{\left(t,d\right)}>0\\
+            \frac{cf_{t}}{cs} & otherwise\end{array}\]
+
+
+            Então
+
+            \[
+            p\left(Q|M_{d}\right)=\prod_{t\in Q}\hat{p}\left(t|M_{d}\right)\times\prod_{t\notin Q}1-\hat{p}\left(t|M_{d}\right)\]
+
+
+            Ou seja, o produto entre a probabilidade de se produzir termos da
+            consulta e a probabilidade de não se produzir outros termos.
+
+    \end{frame}
+
+\section{Experimentos e Resultados}
+
+
+    \begin{frame}{Experimentos e Resultados}
+            \begin{itemize}
+            	\item Protótipo implementado e comparado com um modelo
+                \emph{tf-idf} tradicional.
+                \item Testes com a TREC (discos 2 e 4), conjuntos de
+                consultas 202-205 e 51-100
+                \item Houveram melhorias para todos os 11 pontos de
+                precisão.
+                \item Em vários casos os resultados possuem
+                significância  estatística.
+            \end{itemize}
+    \end{frame}
+
+
+    \begin{frame}{Experimentos e Resultados}
+                \pgfdeclareimage[width=\textwidth]{tabela}{result1}
+                \pgfuseimage{tabela}
+    \end{frame}
+
+
+\section{Conclusões}
+
+
+\subsection{Pontos Fortes}
+
+    \begin{frame}{Pontos Fortes}
+            \begin{itemize}
+                \item Argumentação e modelo coerente
+                \item Ganhos em relação ao modelo de referência (vetorial)
+                \item Mostrar que outras abordagens para o problema de recuperação de documentos
+                são possíveis e viáveis
+            \end{itemize}
+    \end{frame}
+
+\subsection{Pontos Fracos}
+
+    \begin{frame}{Pontos Fortes}
+            \begin{itemize}
+                \item Muito denso - mais do que o necessário
+                \item Nenhum questionamento sobre a complexidade computacional do modelo
+            \end{itemize}
+    \end{frame}
+
 
 
 \section{Perguntas}
@@ -348,7 +271,7 @@ UOL Bolsa Pesquisa 2006 - Workshop \\
     \pause
 
     \begin{block}{Contato}
-    \texttt{\{tmacam,dorgival\}@dcc.ufmg.br}
+    \texttt{tmacam@dcc.ufmg.br}
     \end{block}
 
 \end{frame}
