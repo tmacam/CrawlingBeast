@@ -1,4 +1,10 @@
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
+/**@file myserver.cpp
+ * @brief My Search Engine Web interface - Vector-Space Model.
+ *
+ * @see myserver2.cpp for the VSM+PageRank implementation.
+ *
+ */
 
 #include "httpserver.hpp"
 #include "config.h"
