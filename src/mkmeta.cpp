@@ -2,47 +2,19 @@
 
 #include "zfilebuf.h"
 #include "strmisc.h"
-#include "isamutils.hpp"
 #include "htmlparser.h"
-#include "fnv1hash.hpp"
 
 #include <fstream>
 #include <sstream>
 
-#include "mkstore.hpp" // For store_hdr_entry_t and store_data_entry_t
+#include "mkmeta.hpp"
+
 
 /***********************************************************************
                              Typedefs and constants
  ***********************************************************************/
 
 typedef hash_map <uint32_t, std::string> TIdUrlMap;
-
-//!To read the header of an entry in the header file
-typedef store_hdr_entry_t meta_hdr_entry_t;
-
-/**To read header and contents of an data entry.
- *
- * The idea is that a data entry has an header and contents
- * and that the header @p len is the length of the data entry
- * contents.
- *
- */
-struct meta_data_entry_t {
-	uint32_t docid;	//!< DocId regarding this data entry.
-	uint32_t len;   /**< Length of the data inside this ISAM data entry
-			 *   after this header.
-			 */
-	uint32_t url;	//!< document's url length
-	uint32_t title;	//!< document's title length
-
-	meta_data_entry_t( uint32_t _id=0, uint32_t _len=0,
-			   uint32_t _u=0, uint32_t _t=0)
-	: docid(_id), len(_len),
-	  url(_u), title(_t)
-	{}
-
-} __attribute__((packed));
-
 
 /***********************************************************************
 				 TitleExtractor

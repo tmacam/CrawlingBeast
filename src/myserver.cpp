@@ -8,6 +8,8 @@
 #include <sys/sendfile.h>       // For CachedCrawledDataHandler
 #include "mmapedfile.h"         // For CachedCrawledDataHandler
 
+#include "mkmeta.hpp"		// Page Metadata information
+
 #include <map>
 
 #include "queryvec_logic.hpp"
@@ -22,9 +24,10 @@
 
 struct MatchLiOuputter {
 	std::ostringstream& out;
+	TMetaBase& metabase;
 
-	MatchLiOuputter(std::ostringstream& output)
-	: out(output)
+	MatchLiOuputter(std::ostringstream& output, TMetaBase& meta)
+	: out(output), metabase(meta)
 	{}
 
 
@@ -32,10 +35,13 @@ struct MatchLiOuputter {
 	{
 		const uint32_t& id = docweight.first;
 		const double& w = docweight.second;
+		TMetaBase::TUrlTitle ut = metabase.getMetaData(id);
 
 		out << "<li>";
-		out << "<a href='/cache/" << id << "' >Docid: " << id << "</a>";
-		out << " Weight: " << w;
+		out << "<a href=\"" << ut.first << "\">" << ut.second << "</a>";
+		out << "<br />";
+		out << "DocId: " << id << " - Weight: " << w << " - ";
+		out << "<a href='/cache/" << id << "' >(Cached version)</a>";
 		out << "</li>\n";
 	}
 };
@@ -102,10 +108,12 @@ struct VectorialQueryHandler : public AbstractRequestHandler {
 	vec_res_vec_t matches;
 
 	TQueryMap _GET;
+	TMetaBase metabase;
 
 	VectorialQueryHandler(std::string dir)
 	: index_dir(dir),
-	  resolver(index_dir.c_str())
+	  resolver(index_dir.c_str()),
+	  metabase(index_dir)
 	{}
 
 	void process(HTTPClientHandler& req)
@@ -227,7 +235,7 @@ struct VectorialQueryHandler : public AbstractRequestHandler {
 		} else {
 			out << "# matches: " << matches.size() << "<br />\n"; 
 			out << "<ol>";
-			MatchLiOuputter li(out);
+			MatchLiOuputter li(out, metabase);
 			std::for_each(matches.begin(),matches.end(),li);
 			out << "</ol>";
 		}
