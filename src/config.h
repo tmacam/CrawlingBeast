@@ -35,7 +35,7 @@ const float PAGERANK_SEED_VALUE = 1.0;
 
 const float PAGERANK_RESIDUAL_LIMIT = 0.001; 
 
-const std::string PAGERANK_HDR_SUFIX = "pagerank.hdr";
+const std::string PAGERANK_HDR_SUFIX = "/pagerank.hdr";
 
 #endif //__CONFIG_H__
 
