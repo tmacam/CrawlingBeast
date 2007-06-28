@@ -45,6 +45,7 @@ struct prepr_data_entry_t {
 	uint64_t fp;		//!< fingerprint
 	uint32_t n_outlinks;	//!< title of the document
 
+	explicit
 	prepr_data_entry_t( uint32_t _id=0, uint32_t _len=0,
 				uint64_t fingerprint=0, uint32_t n=0)
 	: docid(_id), len(_len),

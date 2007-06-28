@@ -6,7 +6,7 @@ CURL_LDFLAGS = `priv_curl/bin/curl-config --libs`
 #CURL_LDFLAGS = `curl-config --libs`
 
 TARGETS	 = runner crawlingbeast indexer merger querybool queryvec mkstore\
-	   mknorms mkprepr myserver mkmeta
+	   mknorms mkprepr mkpagerank myserver mkmeta
 CC	 = g++
 #CXXFLAGS = -I. -ggdb -O3 -march=i686 -Wall -pthread  $(CURL_CFLAGS)
 CXXFLAGS = -I. -ggdb -O0 -Wall -pthread  $(CURL_CFLAGS) -D_GLIBCXX_DEBUG

@@ -30,7 +30,12 @@ const std::string CRAWLER_STORE_DIR = "/ri/tmacam/down/";
 //!Number of bytes to pre-allocate in decompress() zfilebuf.
 const size_t DECOMPRESS_RESERVE = 100*1024;
 
+//!Initial seed value used to bootstrap PageRank calculations
+const float PAGERANK_SEED_VALUE = 1.0;
 
+const float PAGERANK_RESIDUAL_LIMIT = 0.001; 
+
+const std::string PAGERANK_HDR_SUFIX = "pagerank.hdr";
 
 #endif //__CONFIG_H__
 
