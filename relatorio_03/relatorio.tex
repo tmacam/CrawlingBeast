@@ -105,10 +105,10 @@ implementação do modelo de espaço vetorial(\emph{Vector-Space Model}).
 
 \subsection{Modelo de espaço vetorial}
 
-No modelo de vetorial vetorial tanto um documento \(D\) como uma busca
+No modelo de espaço vetorial tanto um documento \(D\) como uma busca
 \(Q\) são representados como vetores em um espaço \(t\)-dimensional,
 onde \(t\) é o número de termos no vocabulário da coleção. A
-similaridade entre o documento e a busca é dada pela ângulo entre esses
+similaridade entre um documento e a busca é dada pela ângulo entre esses
 dois vetores~\cite{berthier1999modern}.
 Esse ângulo é obtido através do cálculo do cosseno entre
 os vetores de \(D\) e \(Q\), apresentada na equação~\ref{eq:sim}:
@@ -183,7 +183,7 @@ seguinte:
 \end{equation}
 
 Essa fórmula é recursiva mas o calculo do \emph{PageRank} para alguns
-milhoes de páginas pode ser feito eficientemente em questão de horas
+milhões de páginas pode ser feito eficientemente em questão de horas
 utilizando um algoritmo iterativo~\cite{brin1998google}.
 
 %Nessa fórmula, \(d\)
@@ -195,16 +195,15 @@ utilizando um algoritmo iterativo~\cite{brin1998google}.
 Nessa seção comentaremos sobre alguns dos problemas que podem ser
 encontrados durante o processamento de consultas utilizando o modelo de
 espaço vetorial e realizando análise de \emph{links} usando o PageRank.
-de conteúdo HTML. Na
 seção~\ref{sec:implementation} comentaremos como lidamos com esses
 problemas na nossa implementação.
 
 \subsection{Escolha do modelo de TF-IDF}
 
-Além das fórmulas apresentadas na sessão~\ref{sec:retrieval}, existem
+Além das fórmulas apresentadas na seção~\ref{sec:retrieval}, existem
 outras fórmulas para o cálculo de TF-IDF. Apesar da similaridade em
 função de várias delas, é necessário observar que cada um possui
-pequenas particularidades que podem torná-las mais atraentes alguns
+pequenas particularidades que podem torná-las mais atraentes para alguns
 determinados tipos de documentos ou coleções mas não para os demais.
 
 \subsection{Valores pré-computados}
@@ -212,7 +211,7 @@ determinados tipos de documentos ou coleções mas não para os demais.
 Tanto o modelo de espaço vetorial como o PageRank assumem que alguns
 valores estão pré-computados ou que sua obtenção é fácil. Entre tais
 valores podemos citar a norma ou o módulo de vetores de cada documento,
-a freqüência do termo mais freqüente de cada documento e o valor de
+o número de ocorrências do termo mais freqüente de cada documento e o valor de
 PageRank de cada documento da coleção.
 
 Obter esses valores em tempo de consulta é inviável. Alguns podem ser
@@ -224,7 +223,7 @@ dosado.
 
 \subsection{Formas eficientes de calcular similaridade}
 
-Apesar da diferença entre os modelos booleanos e o modelo de espaço
+Apesar da diferença entre os modelos booleano e o modelo de espaço
 vetorial, a forma de se realizar processamento de consulta em ambos os
 modelos possui algumas similaridades. Uma das mais óbvias é o fato de
 que ambas utilizam as listas invertidas dos termos presentes na coleção
@@ -250,12 +249,12 @@ documentos~\cite{moffat1999managing, persin1996frequency}.
 
 Para a realização de \emph{link analysis} é necessário a obtenção da
 lista de \emph{links} existentes em um dado documento \emph{Web}.
-Apesar de ser uma atividade que já fora relizada durante o
+Essa atividade é relizada durante o
 \emph{crawling} dos documentos mas, caso essa informação não tenha sido
 armazenada nesse momento, será necessário realizar novamente o
 \emph{parsing} de todos os documentos. Sendo esse o caso, alguns dos
 problemas que têm que ser enfrentados ao se realizar o \emph{parsing} de
-documentos, muitos destes mencionados no TP1 e no TP2, terão de ser
+documentos durante o \emph{crawling}, muitos destes mencionados no TP1 e no TP2, terão de ser
 enfrentados novamente:
 \begin{itemize}
 \item Normalização de mapas de caracteres
@@ -528,6 +527,28 @@ PageRank viável utilizando somente memória primária, decidimos por
 realizar o cálculo do PageRank de tal forma que, a cada iteração, os
 valores são re-lidos do disco.
 
+\section{Determinação dos Pesos para o PageRank e para o Modelo de
+Espaço Vetorial}
+
+Outro problema enfrentado durante a elaboração do trabalho foi
+determinar pesos para utilizar durante a combinação dos resultados do
+PageRank com os resultados do modelo de espaço vetorial.
+
+Antes de ter esses dois valores combinados, normalizamos cada um deles
+pelo respectivo máximo valor retornado para uma dada busca e
+determinamos a pontuação final de um \emph{match} \(i\) como mostrado na
+equação~\ref{eq:combo}.
+
+\begin{equation}
+Score_i = c\times PageRank_i + (1-c)\times VectorSpace_i
+\label{eq:combo}
+\end{equation}
+
+Nos nossos experimentos, determinamos que o melhor valor de \(c\) era de
+\(0.6\). No entanto, é importante frisar que não realizamos testes
+extensivos nesses valores e existe uma boa margem para possíveis ganhos
+aí.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Testes e Resultados}
@@ -611,157 +632,40 @@ seu custo.
 
 \begin{equation}
 L_1(X) = \sum_{i=0}^{n}|x_i|
-\label{fig:li}
+\label{eq:l1}
 \end{equation}
 
 
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-%\section{Conclusões}
-%
-%Nesse relatório descrevemos a implementação do \emph{crawler}
-%especificado no TP1 da disciplina~\cite{tp1}, bem como os problemas
-%enfrentados e as decisões de projeto tomadas.
-%
-%Pudemos observar como a política de escalonamento possui um papel
-%fundamental no desempenho do coletor. Em nossos experimentos, o
-%uso da política ``\emph{largest site first}'' mostrou-se capaz de, em
-%50\% do tempo necessário, baixar 150\% do conteúdo desejado para um
-%único dia de coleta. Além disso, mostro-se quase duas vezes mais eficiente do que a
-%política ``\emph{breadth-first}''. Esses resultados, embora bastante
-%interessantes, estão longe de ser novidades, sendo bastante estudados na
-%literatura~\cite{baezayates2005crawling}.
-%
-%
-%Finalmente, foi também possível observar como que, a despeito de ser
-%aparentemente um problema simples, a elaboração de um \emph{crawler}
-%industrial é complicada.
-%
-%\subsection{Problemas encontrados e Melhorias
-%futuras}\label{sec:problemas}
-%
-%Durante a implementação do \emph{crawler}, diversos problema foram
-%observados mas, devido a problema relativos ao tempo de entrega do
-%trabalho, tiveram que ser deixados de lado. Todavia, esses problemas
-%merecem menção, uma vez que constituem limitações da implementação e
-%que, em TP's futuros podem se revelar como problemas cuja solução será
-%necessária.
-%
-%\subsubsection{Armadilhas para \emph{crawlers}}\label{dif:armadilhas}
-%
-%Um dos problemas de se lidar com a coleta de conteúdo dinâmico é que
-%sítios com esse tipo de página pode conter o que se chama e ``buracos
-%negros'', ou seja, é possível que o coletor possa se perder ou passar
-%mais tempo do que o necessário tentando coletar uma
-%infinidade de páginas geradas dinamicamente. Ignorar o conteúdo do
-%componente \emph{query} de URLs é uma forma de tentar contornar esse
-%problema mas está longe de ser uma solução eficaz, uma vez que existem
-%formas de se apresentar conteúdo dinâmico sem que esse envolva o uso de
-%URLs com componentes \emph{query}.
-%
-%Uma outra forma de gerar conteúdo ou URLs dinâmicas é através do
-%componente \emph{domainname} de URLs. Essa forma é particularmente
-%nociva à nossa implementação, sobretudo na que usa a política de
-%escalonamento BF. Isso deve-se a diversos fatores:
-%\begin{itemize}
-%\item Quando uma página em um domínio desses é encontrada pela primeira
-%vez, acaba-se descobrindo por tabela diversas páginas em diversos
-%domínios dinâmicos pertencentes ao mesmo sítio;
-%\item uma vez que cada novo domínio gerado
-%acarreta a criação de uma instância de gerente de domínio em nossa
-%implementação, ao visitar apenas uma única página num sítio desses
-%diversas instâncias de gerentes de domínios terão de ser geradas
-%instantaneamente,
-%\item finalmente,  como nessa política os domínios são visitados por ordem de
-%descoberta, o inicio da coleta do primeiro domínio dinâmico de um sítio
-%desses acarretará diversas requisições DNS, uma para cada um dos outros
-%domínios dinâmicos encontrados em seqüência.
-%\end{itemize}
-%
-%Nessas circunstâncias o desempenho do coletor cai para patamares
-%baixíssimos, como pode-se observam em alguns vales na
-%Figura~\ref{fig:bf}. A política de escalonamento LSF contorna isso de
-%maneira elegante, mas até que ponto? Se tivessemos deixado o coletor com
-%LSF rodando por mais tempo teríamos encontrado esse tipo de
-%comportamento?
-%
-%%Buracos negros - nossa abordagem de escalonamento foi baseada em domínios. Isso
-%%permitia não somente controlar o tempo mínimo de intervalo entre acessos
-%%consecutívos a um mesmo domínio, limitar o uso de memória (já que nao era mais
-%%necesári armazenar o nome de domínio em cada URL pertencente a ele) e armazenar
-%%a lista de URLs pendentes. Todavia, para a nossa implementação, sítios que
-%%fazem uso extensivo de sub-domínios para sua organização são torna um problema.
-%%Isso deve-se ao fato de que, custumeiramente, a obtenção e \emph{parsing} de
-%%uma unica página de um sítio destes acarreta na ``descoberta'' de vários
-%%sub-domínos desse sítio, o que por sua vez acarreta no acréscimo de cada um
-%%destes na lista de domínios conhecidos e de domínios pendentes. Além desses
-%%domínios serem costumeriramente rasos, ou seja, sem muitos links para
-%%documentos internos, a sua adição limitará a capacidade do crawler de baixar
-%%páginas de conteúdo, uma vez que, antes de que qualquer conteúdo possa ser
-%%obtido desses domínios, os arquivos \texttt{robots.txt} dele terá de ser
-%%obtido.
-%
-%\subsubsection{Esgotamento da memória primária}
-%
-%Todas as estruturas de controle de nossa implementação são deixadas em
-%memória primária. Em questão de horas isso começa a se tornar um
-%problema, quando o S.O. inicia um processo de colocar algumas das
-%páginas de memória de nosso sistema em  memória secundária. A medida que
-%o tempo passa, vai se tornando cada vez mais difícil não ser afetado
-%pela troca de páginas entre a memória principal e o \emph{swap}, fruto
-%do consumo de memória de nossa aplicação.
-%
-%Uma forma de contornar o uso de memória seria fazer um uso mais
-%agressivo de identificadores numéricos para as páginas. Isso será útil
-%não somente para a contenção dos gastos com memória mas também quando
-%estivermos realizando a indexação dos documentos.
-%
-%Encontrar mecanismos que nos permitam determinar a lista de URLs
-%pendentes em um dominio além de rapidamente determinar se uma
-%determinada URL já foi encontrada antes ou não sem depender tanto de
-%memória primária é um problema não resolvido de nossa implementação.
-%O uso de soluções como \emph{hashtables} distribuídas foi cogitado, mas
-%não chegamos a implementá-lo.
-%
-%\subsubsection{Melhores implementações de listas de prioridades}
-%
-%A adoção da política de escalonamento LSF mostrou-se bastante benéfica à
-%nossa implementação. Todavia, da forma que ela está implementada, ela
-%sofre de uma severa limitação: uma vez que um domínio tenha entrado na
-%lista de domínios ativos (Seção~\ref{sec:datastructures}), o valor do
-%tamanho da sua fila de páginas pendentes não pode mais ser atualizado.
-%Isso ocorre porque os algoritmos e estruturas disponíveis na STL, a
-%bilbioteca padrão de tipos e algoritmos do C++, para lidar com listas de
-%prioridades e \emph{heaps} não possuem métodos para decrementar ou
-%incrementar um o valor atribuído a um ítem interno ao \emph{heap}. Essa
-%limitação dificulta e limita também a implementação de políticas de
-%escalonamento de domínios ou de páginas baseados na quantidade de
-%\emph{links} que apontam para os mesmos.
-%
-%Um solução seria implementar \emph{heaps} binários e de Fibonacci do
-%zero, de tal forma que esses possuíssem métodos para decrementar o valor
-%associado a um ítem ou atualizá-lo dinamicamente. Foi cogitada a
-%implementação uma estrutura similar a um \emph{heap} de Fibonacci mas
-%com custos assintóticos inferiores, conhecida como \emph{relaxed heap},
-%mas, por questões de tempo, essa implementação não foi
-%possível~\cite{driscoll1988relaxed}.
-%
-%\subsubsection{Estrutura de diretórios}
-%
-%\subsubsection{UTF-8 vs Latin1}
-%
-%Considerando-se o fato de que o trabalho objetivava o uso de uma coleção
-%de páginas da \emph{Web} brasileira e, por tanto, de conteúdo em língua
-%portuguesa, as escolha de UTF-8 como mapa de caracteres utilizado após a
-%normalização não parece mais um boa decisão. Considerando os problemas
-%que UTF-8 causa no processo de parsing e normalização dos termos,
-%percebe-se agora que o uso de Latin-1 seria um escolha mais sensata.
-%Ainda mais considerando que, após a normalização de caso e de acentos
-%nas palavras, tudo o que resta de útil é um conteúdo limitado de ASCII
-%7-bits.
-%
-%
+\section{Conclusões}
+
+
+Nesse trabalho implementamos um processador de consultas utilizando o
+modelo de espaço-vetorial e acrescentamos a ele um algoritmo de análise
+de \emph{links}.
+
+O que pudemos observar nos nosso experimentos é que, ao contrário do que
+era de se esperar o uso de PageRank não melhorou as consultas. São duas
+as hipóteses formuladas para explicar isso:
+\begin{itemize}
+\item má escolha da constante de combinação, como apresentada na
+equação~\ref{eq:combo}.
+\item algum problema inerente com a nossa base.
+\end{itemize}
+
+Esse último ponto merece destaque uma vez praticamente dois terços de
+toda a coleção aparentam estar ligadas ao conteúdo e um único grande
+sítio e conjunto de sub-domínios (\texttt{letras.terra.com.br}). Como
+comentado mais acima, o conjunto de páginas desse grupo de domínios
+possui características que nos levam a crer que elas possuem um grande
+número de \emph{outlinks} e que estão fortemente ligadas. Desta forma, o
+algoritmo do PageRank acabará por privilegiar essas páginas mais do que
+quaisquer outras. Colocando de outra forma, nosso grafo não possui uma
+amostra significativa da \emph{Web} na qual as características do
+PageRank se sobressaem.
+
 
 \section{Agradecimentos}
 
