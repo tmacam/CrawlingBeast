@@ -8,6 +8,10 @@
 \usepackage{times}
 \usepackage{subfigure}
 \usepackage{graphicx}
+\usepackage[pdftex,colorlinks,%
+                   citecolor=black,%
+                   filecolor=black,%
+                   linkcolor=black]{hyperref}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Header  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -55,6 +59,11 @@ leitura desse relatório independente da leitura dos relatórios
 anteriores, sempre que necessário, utilizaremos fragmentos dos mesmos.
 Todavia, buscaremos não detalhar mais do que o necessário decisões
 de projeto e peculiaridades dos TPs anteriores.
+
+\framebox[0.45\textwidth]{
+A implementação atual de nossa solução se encontra operacional no
+enderço \texttt{http://mimosa.grad.dcc.ufmg.br:8090}.
+}
 
 \section{Recuperação de documentos}\label{sec:retrieval}
 
@@ -288,7 +297,7 @@ invertido. Além disso, esse arquivo é consideravelmente menor do que a
 coleção de documentos, e o processamento realizado para sua leitura bem
 inferior ao do \emph{parsing} de documentos.
 
-\texbf{A obtenção do grafo de vizinhança de páginas}, ou seja, da lista de
+\textbf{A obtenção do grafo de vizinhança de páginas}, ou seja, da lista de
 ligações entre documentos da nossa coleção, \textbf{ocorre após a coleta de
 todas as páginas}. Caso fôssemos realizar o uma nova coleta de páginas,
 repensaríamos esse ponto. Todavia, como o \emph{crawling} já foi feito, isso
@@ -308,7 +317,7 @@ função ou \emph{hash} FNV-1~\cite{fnv1}. Observamos essa função \textbf{não
 apresenta colisões mesmo para o conjunto de aproximadamente 9 milhões de
 URLs descobertas pelo nosso \emph{crawler}}.
 
-Removemos \emph{dangling links}, ou seja, \emph{links} para
+\textbf{Removemos \emph{dangling links}}, ou seja, \emph{links} para
 páginas-sumidouros em dois momentos:
 \begin{enumerate}
 \item durante a re-leitura da base, quando fazemos a extração das URLs
@@ -395,7 +404,7 @@ limitar a efetividade dos algoritmos utilizados.
 Em nossa solução, a exceção dos arquivos coletados pelo crawler, todas
 as outras estrutuas (vocabulário, arquivo invertido, metadados sobre as
 páginas, valores de PageRank) possuem uma estrutura
-de armazenamento similar e composta, de maneira geral, de dois
+de armazenamento similar (ISAM) e composta, de maneira geral, de dois
 elementos:
 \begin{description}
 
@@ -434,34 +443,26 @@ dados~\cite{cormen-algorithms}:
 
 \begin{itemize}
 
-\item Na indexação, utiliza-se uma \emph{hashtable} tanto para armazenar
-o vocabulário (termo\(\rightarrow t_{id}\)) como para obter a representação
-textual em UTF-8 de referências para entidades. No processamento de
-consulta, também se utiliza uma \emph{hashtable} como nos moldes acima
-para armazenar o vocabulário.  Busca e inserção nessa estrutura possui
-uma complexidade de tempo médio de \(O\left(1 \right)\).
+\item No processamento de consulta, também se utiliza uma
+\emph{hashtable} (termo\(\rightarrow t_{id}\)) para armazenar o
+vocabulário.  Busca e inserção nessa estrutura possui uma complexidade
+de tempo médio de \(O\left(1 \right)\). Uma \emph{hashtable} também é
+utilizado no processo de cálculo do PageRank (nossos identificadores não
+são seqüenciais) e, na coleta de página, para verificação se cada as
+novas páginas descobertas pertencem ao conjunto de páginas que foram
+efetivamente coletadas.
 
-\item Uma fila de prioridades é utilizada no processo de \emph{n-way
-merging}. Essa fila é implementada como uma \emph{heap} de ``leitores de
-\emph{runs}'' e os elementos dela são ordenados pelo valor da tripla
-\(<t_{id}, d_{id}, f_{d,t}>\) disponível para leitura em cada um dos
-``leitores de \emph{run}''.  Inserção, e remoção nessa estrutura possuem
-complexidades de tempo no pior caso de \(O\left(\log n\right)\). A
-localização do elemento de maior prioridade leva tempo constante.  O
-processo completo de intercalar as \emph{runs} é da ordem de \(O\left(
-n\times\log r\right)\) , onde \(r\) é o número de leitores de
-\emph{runs} em uso.
-
-\item Cada leitor de \emph{run} apresenta tempo constante para obtenção
-do seu próximo valor.
-
-\item Durante o processo de indexação e geração da \emph{runs}, várias
-triplas são armazenadas em memória até que se atinja um volume
-pré-determinado (512~MB). Atingido esse valor, essas triplas são
-ordenadas com um algoritmo \emph{introsort}\footnote{ D. R. Musser,
+\item Nos vários pontos em que é necessário realizar ordenação dos dados
+(geração do resultado do modelo de espaço vetorial, ordenação do
+resultado do casamento do modelo vetorial com o PageRank, etc) utilizamos
+o algoritmo \emph{introsort}\footnote{ D. R. Musser,
 "Introspective Sorting and Selection Algorithms", Software Practice and
 Experience 27(8):983, 1997.  } cuja complexidade de pior caso é
 \(O\left(n \log n\right)\)
+
+\item Na processamento da consulta no modelo de espaço vetorial a busca
+conjuntiva é feita pela interseção duas-a-duas das listas de documentos
+encontrados. Esse algoritmo possui custo liner.
 
 \end{itemize}
 
