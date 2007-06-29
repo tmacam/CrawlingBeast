@@ -333,7 +333,7 @@ saída (\emph{outlinks}).
 
 Devido ao tamanho de nossa base e às características de ligação dos
 nossos documentos, \textbf{o processamento do \emph{PageRank} envolverá
-memória secundária}. Não como armazenento secundário, mas simplesmente
+memória secundária}. Não como armazenamento secundário, mas simplesmente
 \textbf{pelo fato de que o grafo não cabe na memória primária}. Mais a
 frente discutiremos isso e o desempenho dessa etapa.
 
@@ -386,7 +386,7 @@ como um componente usado em por esse servidor.
 Todo o nosso código foi escrito em C++
 e utiliza a biblioteca de gabaritos padrões (STL) dessa
 linguagem~\cite{stroustrup97}.
-Não foi utilizada nenhuma nova liblioteca em comparação às já utilizadas
+Não foi utilizada nenhuma nova biblioteca em comparação às já utilizadas
 no TP1.
 
 Além disso, nosso código faz uso extensivo de uma técnica para controle
@@ -406,7 +406,7 @@ pelo nosso indexador. As estruturas de armazenamento podem ditar ou
 limitar a efetividade dos algoritmos utilizados.
 
 Em nossa solução, a exceção dos arquivos coletados pelo crawler, todas
-as outras estrutuas (vocabulário, arquivo invertido, metadados sobre as
+as outras estruturas (vocabulário, arquivo invertido, metadados sobre as
 páginas, valores de PageRank) possuem uma estrutura
 de armazenamento similar (ISAM) e composta, de maneira geral, de dois
 elementos:
@@ -430,7 +430,7 @@ No caso do vocabulário, o arquivo de dados consiste na concatenação das
 palavras do vocabulário em ordem ascendente de seus \(t_{id}\).
 
 As listas invertidas podem, quando concatenadas, podem vir a atingir um tamanho
-superior ao tamanho máximo de um arquivo no SO utilizador. Para evitar
+superior ao tamanho máximo de um arquivo no SO utilizado. Para evitar
 problemas, os dados das listas invertidas e de outras estruturas de
 dados grandes, são distribuídos entre vários
 arquivos de dados, cada um de aproximadamente 256~MB. A localização de
@@ -447,7 +447,7 @@ dados~\cite{cormen-algorithms}:
 
 \begin{itemize}
 
-\item No processamento de consulta, também se utiliza uma
+\item No processamento de consulta, se utiliza uma
 \emph{hashtable} (termo\(\rightarrow t_{id}\)) para armazenar o
 vocabulário.  Busca e inserção nessa estrutura possui uma complexidade
 de tempo médio de \(O\left(1 \right)\). Uma \emph{hashtable} também é
@@ -478,22 +478,22 @@ elaboração e teste da nossa implementação.
 
 \subsubsection{Obtenção das normas, etc}
 
-Como já mencinado anteriormente, um dos problemas que enfrentamos foi o
+Como mencionado anteriormente, um dos problemas que enfrentamos foi o
 cálculo das normas dos documentos e de outros valores que são utilizados
 pelo processador de consulta. Boa parte desse trabalho poderia ter sido
 feito durante o TP1, que tratava da construção do arquivo invertido.
 
-\subsubsection{Número de Links}
+\subsubsection{Número de \emph{Links}}
 
 Durante a elaboração do código responsável pelo cálculo do PageRank nos
 defrontamos com o seguinte problema: nosso arquivo contendo a lista de
 \emph{outlinks}, essencialmente uma representação do grafo de ligação
 entre páginas como uma lista de adjacências, estava atingindo a marca de
 aprox. 2,5~GB. Esse arquivo possuía apenas as \emph{fingerprints} de
-cada URL, cada um ocupando 8 bytes. Mesmo levando em considerando o
-número de documentos baixados pelo \emph{crawler} e mesmo o número de
+cada URL, cada um ocupando 8 bytes. Mesmo considerando o
+número de documentos baixados pelo \emph{crawler}, o número de
 URLs descobertas pelo mesmo ( aprox. 1,5 milhões e 9 milhões) e número
-médio de links por páginas Web como 11~\cite{page98pagerank}, ainda
+médio de \emph{links} por páginas \emph{Web} como 11~\cite{page98pagerank}, ainda
 assim verifica-se que o volume de 2,5 GB está muito longe do esperado.
 
 
