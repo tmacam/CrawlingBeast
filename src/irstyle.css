@@ -1,0 +1,27 @@
+.head {
+	margin: 4em 1em;
+}
+.head h1, .head h2, .head form {
+	text-align: center;
+        margin: 0px auto;
+	font-family: Georgia, "Times New Roman", serif;
+	width: 50%;
+}
+
+.head form {
+	margin: 2em auto;
+}
+
+.head h2 {
+	border-top: 1px solid black;
+	font-size: 1em;
+}
+
+
+.results li {
+	margin-bottom: 0.5em;
+}
+.results .stats {
+	font-family: "Trebuchet MS", "Univers 45 Light", Verdana, sans-serif;
+	font-size: 90%;
+}
