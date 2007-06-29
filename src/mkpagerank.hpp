@@ -11,7 +11,7 @@
 				    Typedefs
  ***********************************************************************/
 
-//!@name Inter-page linking containers
+//!@name PageRank-related containers
 //!@{
 
 //!Simple class to accumulate estimate PageRank values for pages.

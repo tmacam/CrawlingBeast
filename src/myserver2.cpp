@@ -1,11 +1,8 @@
 // vim:syn=cpp.doxygen:autoindent:smartindent:fileencoding=utf-8:fo+=tcroq:
-/**@file myserver.cpp
- * @brief My Search Engine Web interface - PageRank and Vector-Space Model.
+/**@file myserver2.cpp
+ * @brief My Search Engine Web interface - Vector-Space Model.
  *
- * @see myserver2.cpp for the VSM-only implementation.
- *
- * @todo There is too much code here that could be combined/shared with
- * myserve.cpp. Fix this in a new incarnation.
+ * @see myserver.cpp for the VSM+PageRank implementation.
  *
  */
 
@@ -18,46 +15,14 @@
 #include "mmapedfile.h"         // For CachedCrawledDataHandler
 
 #include "mkmeta.hpp"		// Page Metadata information
-#include "mkpagerank.hpp"
 
 #include <map>
 
 #include "queryvec_logic.hpp"
 
-#include <valarray>
-
 
 #include <iostream>
 
-
-/******************************************************************************
-				    Typedefs
- ******************************************************************************/
-
-typedef hash_map<uint32_t, float> TPageRankMap;
-
-struct pagerank_res_t{
-	uint32_t docid;		//!< The document this entry is about
-	float   pagerank;	//!< The page's PageRank
-	float  similarity;	//!< Vector-Space model similarity
-	float  score;		//!< Final combination of a doc PR and Sim.
-
-	explicit pagerank_res_t(uint32_t d, float pr, float sim, float w)
-	: docid(d), pagerank(pr), similarity(sim), score(w)
-	{}
-
-	pagerank_res_t(const vec_res_t& vs)
-	: docid(vs.first), pagerank(0), similarity(vs.second), score(0)
-	{}
-
-	//! This is reverse-order operator< !!!
-	inline bool operator< (const pagerank_res_t& other) const
-	{
-		return score > other.score;
-	}
-};
-
-typedef std::vector<pagerank_res_t> pr_res_vec_t;
 
 /******************************************************************************
 				MatchLiOuputter
@@ -72,28 +37,24 @@ struct MatchLiOuputter {
 	{}
 
 
-	inline void operator()(const pagerank_res_t& doc)
+	inline void operator()(const vec_res_t& docweight)
 	{
-		const uint32_t& id = doc.docid;
+		const uint32_t& id = docweight.first;
+		const double& w = docweight.second;
 		TMetaBase::TUrlTitle ut = metabase.getMetaData(id);
 
 		out << "<li>";
-		out << "<a class='title' href=\"" << ut.first << "\">" << ut.second << "</a>";
-		out << "<div class='stats'>";
-		out << "DocId: " << id;
-		out << " - Score: " << doc.score;
-		out << " - PageRank: " << doc.pagerank;
-		out << " - Similarity: " << doc.similarity;
-		out << " - ";
+		out << "<a href=\"" << ut.first << "\">" << ut.second << "</a>";
+		out << "<br />";
+		out << "DocId: " << id << " - Weight: " << w << " - ";
 		out << "<a href='/cache/" << id << "' >(Cached version)</a>";
-		out << "</div></li>\n";
 		out << "</li>\n";
 	}
 };
 
 
 /******************************************************************************
-		       Support / Example Request Handlers
+				      Main
  ******************************************************************************/
 
 struct IndexHandler : public AbstractRequestHandler {
@@ -145,38 +106,21 @@ struct CachedCrawledDataHandler : public AbstractRequestHandler {
 };
 
 
-/******************************************************************************
-			      PageRankQueryHandler
- ******************************************************************************/
-
-
-struct PageRankQueryHandler : public AbstractRequestHandler {
+struct VectorialQueryHandler : public AbstractRequestHandler {
 	typedef std::map<std::string, std::string> TQueryMap;
 
 	std::string index_dir;
 	VectorialQueryResolver resolver;
-	vec_res_vec_t vs_matches;	//!< Vector-Space results
-	pr_res_vec_t matches;		//!< The result of a query
-	TPageRankMap pagerank;
+	vec_res_vec_t matches;
 
 	TQueryMap _GET;
 	TMetaBase metabase;
 
-	PageRankQueryHandler(std::string dir)
+	VectorialQueryHandler(std::string dir)
 	: index_dir(dir),
 	  resolver(index_dir.c_str()),
 	  metabase(index_dir)
-	{
-		// Load PageRank
-		MMapedFile prfile(index_dir + PAGERANK_HDR_SUFIX);
-		filebuf prdata = prfile.getBuf();
-		pagerank_hdr_entry_t* cur = (pagerank_hdr_entry_t*) prdata.start;
-		pagerank_hdr_entry_t* end = (pagerank_hdr_entry_t*) prdata.end;
-
-		for(; cur < end; ++cur) {
-			pagerank[cur->docid] = cur->pagerank;
-		}
-	}
+	{}
 
 	void process(HTTPClientHandler& req)
 	{
@@ -186,16 +130,11 @@ struct PageRankQueryHandler : public AbstractRequestHandler {
 		parse_GET(uri.query);
 
 		matches.clear();
-		vs_matches.clear();
-
-		// Process Query
 		if (_GET["q"] != "") {
-			resolver.processQuery(_GET["q"],vs_matches);
-			combinePRandVSM(vs_matches, matches);
+			resolver.processQuery(_GET["q"],matches);
 			mkResultsFragment(matches,results);
 		}
 
-		// Make response page
 		std::string response = http::mk_response_header();
 
 		response += mkResultPage(results);
@@ -203,55 +142,6 @@ struct PageRankQueryHandler : public AbstractRequestHandler {
 
 		req.write(response);
 
-	}
-
-	//!Combine Vector-Space and PageRank
-	void combinePRandVSM(const vec_res_vec_t& vs_result,
-			     pr_res_vec_t& result)
-	{
-		size_t n = vs_result.size();
-
-		if (n == 0) {
-			return;
-		}
-
-		float max_vs = vs_result[0].second; // Results are sorted by VS
-		float max_pr = 0.0;
-
-		std::valarray<float> vs(n);
-		std::valarray<float> pr(n);
-		std::valarray<float> res(n);
-
-		// Load data
-		for(size_t i = 0; i < n; ++i){
-			pagerank_res_t page(vs_result[i]);
-
-			float prval = pagerank[page.docid];
-			vs[i] = page.similarity;
-			pr[i] = page.pagerank = prval;
-
-			if (prval > max_pr){ max_pr = prval; }
-
-			result.push_back(page);
-		}
-
-		// Normalize vectors
-		vs /= max_vs;
-		pr /= max_pr;
-
-		// Apply combination factor
-		vs *= (1.0 - PAGERANK_WEIGHT);
-		pr *= PAGERANK_WEIGHT;
-
-		res = vs + pr;
-
-		// Save resulting scores
-		for(size_t i = 0; i < n; ++i) {
-			result[i].score = res[i];
-		}
-
-		// Sort the result
-		std::sort(result.begin(), result.end());
 	}
 
 
@@ -325,7 +215,6 @@ struct PageRankQueryHandler : public AbstractRequestHandler {
 			"<head>\n"
 			"<title>" << title << "Heim, meu filho?</title>\n"
 			"<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\" />\n"
-			"<link rel=stylesheet type='text/css' href='http://homepages.dcc.ufmg.br/~tmacam/irstyle.css'>"
 			"</head>\n"
 			"<body>\n"
 			"<h1>Heim, meu filho?</h1>\n"
@@ -341,7 +230,7 @@ struct PageRankQueryHandler : public AbstractRequestHandler {
 		return out.str();
 	}
 
-	void mkResultsFragment(const pr_res_vec_t& matches,
+	void mkResultsFragment(const vec_res_vec_t& matches,
 				std::string& results)
 	{
 		std::ostringstream out;
@@ -351,7 +240,7 @@ struct PageRankQueryHandler : public AbstractRequestHandler {
 			out << "No matches" << std::endl;
 		} else {
 			out << "# matches: " << matches.size() << "<br />\n"; 
-			out << "<ol class='results'>";
+			out << "<ol>";
 			MatchLiOuputter li(out, metabase);
 			std::for_each(matches.begin(),matches.end(),li);
 			out << "</ol>";
@@ -385,7 +274,7 @@ int main(int argc, char* argv[])
 	/* Setup server */
 	BaseHTTPServer server(SERVER_PORT);
 
-	server.putChild("", new PageRankQueryHandler(index_dir));
+	server.putChild("", new VectorialQueryHandler(index_dir));
 	server.putChild( "source",
 		new StaticFileHandler("myserver.cpp", "text/plain"));
 	server.putChild( "err",

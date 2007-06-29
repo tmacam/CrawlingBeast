@@ -37,6 +37,9 @@ const float PAGERANK_RESIDUAL_LIMIT = 0.001;
 
 const std::string PAGERANK_HDR_SUFIX = "/pagerank.hdr";
 
+//! Weight of a document's PageRank in it's final score
+const float PAGERANK_WEIGHT = 0.9;
+
 #endif //__CONFIG_H__
 
 
