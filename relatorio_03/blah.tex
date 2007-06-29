@@ -1,0 +1,57 @@
+http://lucene.apache.org/java/docs/scoring.html
+http://wiki.apache.org/lucene-java/InformationRetrieval
+http://wiki.apache.org/lucene-java/FrontPage?action=show&redirect=FrontPageEN
+http://www.perl.com/pub/a/2003/02/19/engine.html?page=2
+http://crawler.archive.org/cgi-bin/wiki.pl?AlreadySeen
+
+ ~george/mestrado/materias/ir/tp2.tar.gz
+
+
+time ./mknorms ../down/docids.clean ../index_data
+
+real    7m59.778s
+user    7m35.760s
+sys     0m7.330s
+
+time ./mkpagerank ../down/docids.clean ../index_data ../index_data > ../mkpagerank_tmp.log
+
+real    171m21.298s
+user    110m22.040s
+sys     4m3.510s
+
+
+
+
+Agradecimentos
+
+ - Anísio - pela função de hash
+
+Sem colisões mesmo para o conjunto de 9M URLs descobertas.
+
+
+page Rank
+
+Cada página identificada e possuim um ranking independente. (Não fazemos agrupamentos de páginas) utilizando floats (precisão simples).
+
+Dangling links são removidos - durante o MK e na geração da lista de outlinks
+
+
+Similaridade:
+\begin{equation}
+Sim(d_{j},q) = \frac{\sum_{i = 1}^{t}w_{i,j} w_{i,q}}{\sqrt{\sum_{i =
+1}^{t}w_{i,j}^{2}} \sqrt{\sum_{j = 1}^{t}w_{i,q}^{2}}}
+\label{eq:sim}
+\end{equation}
+
+TF:
+\begin{equation}
+tf_{i,j} = \frac{freq_{i,j}}{max freq_{j}}
+\label{eq:tf}
+\end{equation}
+
+
+IDF:
+\begin{equation}
+idf_{i} = log\frac{N}{n_{i}}
+\label{eq:idf}
+\end{equation}

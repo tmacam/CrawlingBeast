@@ -1,0 +1,804 @@
+\documentclass[10pt,twocolumn]{article}
+
+\usepackage{graphicx,url}
+\usepackage{subfigure}
+
+\usepackage[brazil]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{times}
+\usepackage{subfigure}
+\usepackage{graphicx}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% Header  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\title{Recuperação de Informação \\Trabalho Prático 3 -- Processamento
+de Consulta}
+\author{Tiago Alves Macambira \\ \texttt{tmacam@dcc.ufmg.br}}
+\date{29 de julho de 2007}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%  Body  %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{document}
+\maketitle
+
+\section{Introdução}
+
+O terceiro trabalho prático da disciplina de Recuperação de Informação
+consiste no projeto e implementação de programas para
+recuperação eficiente de grandes base de dados. Tal trabalho é uma
+extensão do trabalho realizado no TP anterior, possuindo os seguintes
+requisitos adicionais, como disposto no seu enunciado~\cite{tp3}:
+\begin{itemize}
+\item O sistema deve utilizar como base os dados coletados pelo
+\emph{crawler} do TP1~\cite{tp1}.
+\item Diferentemente do TP2, neste trabalho o aluno deverá processar e
+\emph{rankear} consultas usando o modelo de espaço
+vetorial~\cite{tp2}.
+\item O sistema deve possuir uma interface \emph{Web} com a qual
+o usuário interagirá com o mesmo.
+\item Opcionalmente o sistema pode se utilizar de mecanismos de análise
+de \emph{link} como forma de melhorar a qualidade da resposta gerada
+pela solução.
+\item O sistema deve ser escrito em C/C++. Bibliotecas extras somente
+poderão ser utilizadas mediante autorização dos professores.
+\end{itemize}
+
+Nesse relatório, comentaremos sobre a resolução do nosso trabalho:
+os desafios encontrados, as escolhas de projetos
+adotadas e peculiaridades de nossa implementação. Além disso, comentamos
+sobre o desempenho do mesmo, as estruturas de dados usadas bem como suas
+complexidades.
+
+Muitos dos pontos abordados nos trabalhos práticos anteriores são também
+relevantes a esse trabalho prático. Por esse motivo e para tornar a
+leitura desse relatório independente da leitura dos relatórios
+anteriores, sempre que necessário, utilizaremos fragmentos dos mesmos.
+Todavia, buscaremos não detalhar mais do que o necessário decisões
+de projeto e peculiaridades dos TPs anteriores.
+
+\section{Recuperação de documentos}\label{sec:retrieval}
+
+Dado um conjunto de páginas \emph{Web} coletadas, para que seja possível
+realizar buscas eficientemente nessa coleção é necessário, antes de mais
+nada, indexar o seu conteúdo.
+
+Uma vez que esse conteúdo tenha sido indexado, resta então o problema
+de recuperar documentos da coleção que atendam uma ``necessidade de
+informação'' ou consulta de um usuário. Ou seja, dada uma busca solicitada por um
+usuário, representada através de um
+conjunto de palavras-chaves (\emph{query}), localizar na colação
+documentos que atendam a essa busca e, por alguma métrica, ordenar esses
+documentos de forma a priorizar a exibição no topo dessa lista de
+documentos mais relevantes. É importante frisar que
+\emph{relevância} é uma prerrogativa do usuário. Tudo o que o sistema
+pode fazer é se utilizar de heurísticas que priorizarão documentos que
+\emph{devem}, sob a ótica do usuário, ser mais relevantes.
+
+Uma das formas mais utilizadas atualmente por sistemas de buscas para
+estimar a relevância de documentos dada uma consulta consiste no uso de
+alguma medida de \emph{similaridade} entre os documentos e a consulta. A
+intuição é que quanto maior a similaridade entre um dado documento e a
+consulta, maior será a chance de que um humano considere esse documento
+como relevante~\cite{moffat2006survey}.
+
+Existem diferentes formas de determinar se um dado documento
+atende (\emph{match}) uma busca  realizada pelo usuário e, associadas a
+essas formas, diversos mecanismos de ordenação dos resultados. Cada uma
+destas formas determina diferentes \emph{modelos de recuperação de
+documentos}. No trabalho prático anterior implementou-se o modelo
+booleano para recuperação de documentos. Neste, é solicitada a
+implementação do modelo de espaço vetorial(\emph{Vector-Space Model}).
+
+\subsection{Modelo de espaço vetorial}
+
+No modelo de vetorial vetorial tanto um documento \(D\) como uma busca
+\(Q\) são representados como vetores em um espaço \(t\)-dimensional,
+onde \(t\) é o número de termos no vocabulário da coleção. A
+similaridade entre o documento e a busca é dada pela ângulo entre esses
+dois vetores~\cite{berthier1999modern}.
+Esse ângulo é obtido através do cálculo do cosseno entre
+os vetores de \(D\) e \(Q\), apresentada na equação~\ref{eq:sim}:
+
+\begin{equation}
+Sim(d_{j},q) = \frac{\sum_{i = 1}^{t}w_{i,j} w_{i,q}}{\sqrt{\sum_{i =
+1}^{t}w_{i,j}^{2}} \sqrt{\sum_{j = 1}^{t}w_{i,q}^{2}}}
+\label{eq:sim}
+\end{equation}
+
+Observe que \(w_{i,j}\), o peso do termo \(i\) no documento \(j\), é
+dado pela equação~\ref{eq:tfidf}:
+
+
+\begin{equation}
+w_{i,j} = tf_{i,j}\times idf_{i}
+\label{eq:tfidf}
+\end{equation}
+
+As fórmulas de \(tf_{i,j}\), que representa o quanto um termo é
+discriminante em um dado documento, e de \(idf_{i}\), que representa o
+quanto um dado termo é discriminatório sob o ponto de vista da coleção
+como um todo, são apresentadas nas equações~\ref{eq:tf} e~\ref{eq:idf}:
+
+\begin{equation}
+tf_{i,j} = \frac{freq_{i,j}}{max freq_{j}}
+\label{eq:tf}
+\end{equation}
+
+\begin{equation}
+idf_{i} = log\frac{N}{n_{i}}
+\label{eq:idf}
+\end{equation}
+
+É importante observar que, dada uma consulta, a norma do seu vetor
+(\(|Q|\)), pode ser omitida dos cálculos para fins de ordenação de
+resultados, uma vez que nesse caso ela será constante.
+
+\subsection{Análise de links}
+
+Além da similaridade, outras informações, tais como
+proximidade entre palavras-chaves, taxa de atualização dos documentos,
+ quantidade de \emph{links} de saída ou de \emph{links} de chegada em uma página
+etc, podem ser utilizadas no processo de \emph{ranking} de documentos.
+
+O uso de informações sobre sobre a ligação de uma página com as outras
+(seus \emph{links}), ou \emph{link analysis}, tem se mostrado bastante
+satisfatório, não somente no contexto de \emph{ranking} de documentos
+mas também em políticas de escalonamento de
+\emph{crawling}~\cite{baezayates2005crawling}. Todavia, a forma de se
+utilizar essa informação e de aferir a esta um valor pode variar
+bastante. Na literatura encontramos propostas tais como o HITS e o
+PageRank que diferem na forma como que a informação de \emph{links} de
+uma página é utilizada~\cite{page98pagerank}.
+
+No modelo do \emph{PageRank}, a cada página é atribuído um valor, que
+representa, de certa forma, a ``importância'' dessa página tal como ela
+é vista pela relação de \emph{links} da \emph{Web}. De outra forma, o
+\emph{PageRank} de uma página pode ser visto como medindo a chance de
+que um surfista aleatório atinja uma determinada página.
+
+Sejam \(u\) uma página, \(PR(u)\) o valor do \emph{PageRank} da página
+\(u\), \(B_u\) o conjunto de páginas que possuem
+\emph{links} para \(u\) e \(N_v\) o número de \emph{links} que
+partem de uma página qualquer \(u\) para outras páginas na coleção ou na
+\emph{Web}. Assim sendo, o \emph{PageRank} pode ser definido da
+seguinte:
+
+\begin{equation}
+ PR(u) = (1-d) + d\sum_{v \in B_u}\frac{PR(v)}{N_v}
+\label{eq:pagerank}
+\end{equation}
+
+Essa fórmula é recursiva mas o calculo do \emph{PageRank} para alguns
+milhoes de páginas pode ser feito eficientemente em questão de horas
+utilizando um algoritmo iterativo~\cite{brin1998google}.
+
+%Nessa fórmula, \(d\)
+
+
+
+\section{Problemas e desafios}
+
+Nessa seção comentaremos sobre alguns dos problemas que podem ser
+encontrados durante o processamento de consultas utilizando o modelo de
+espaço vetorial e realizando análise de \emph{links} usando o PageRank.
+de conteúdo HTML. Na
+seção~\ref{sec:implementation} comentaremos como lidamos com esses
+problemas na nossa implementação.
+
+\subsection{Escolha do modelo de TF-IDF}
+
+Além das fórmulas apresentadas na sessão~\ref{sec:retrieval}, existem
+outras fórmulas para o cálculo de TF-IDF. Apesar da similaridade em
+função de várias delas, é necessário observar que cada um possui
+pequenas particularidades que podem torná-las mais atraentes alguns
+determinados tipos de documentos ou coleções mas não para os demais.
+
+\subsection{Formas eficientes de calcular similaridade}
+
+Apesar da diferença entre os modelos booleanos e o modelo de espaço
+vetorial, a forma de se realizar processamento de consulta em ambos os
+modelos possui algumas similaridades. Uma das mais óbvias é o fato de
+que ambas utilizam as listas invertidas dos termos presentes na coleção
+(e apenas estes) para a realização da consulta.
+
+No entanto, no modelo vetorial, para cada lista invertida será
+necessário acrescentar o peso que o termo daquela lista invertida
+acrescentará no valor de similaridade de cada um dos documentos
+existentes. Dependendo do tamanho da lista invertida, isso pode se
+tornar caro, especialmente no caso de \emph{stopwords}, que possuem
+listas invertidas bem maiores à média.
+
+Diversas estratégias podem ser adotadas para tornar esse cálculo mais
+eficiente ou até mesmo para evitar que cálculo desnecessário tenha de
+ser feito. Uma das abordagens mais simples é limitar as consultas apenas
+a buscas conjuntivas, limitando assim a quantidade de acumuladores que
+têm de ser armazenados na memória a cada interação. Outras abordagens
+possíveis são o uso de listas de impacto ou na reordenação das
+listas invertidas por valores de freqüência de
+documentos~\cite{moffat1999managing, persin1996frequency}.
+
+\subsection{Extração de \emph{Links}}
+
+Para a realização de \emph{link analysis} é necessário a obtenção da
+lista de \emph{links} existentes em um dado documento \emph{Web}.
+Apesar de ser uma atividade que já fora relizada durante o
+\emph{crawling} dos documentos mas, caso essa informação não tenha sido
+armazenada nesse momento, será necessário realizar novamente o
+\emph{parsing} de todos os documentos. Sendo esse o caso, alguns dos
+problemas que têm que ser enfrentados ao se realizar o \emph{parsing} de
+documentos, muitos destes mencionados no TP1 e no TP2, terão de ser
+enfrentados novamente:
+\begin{itemize}
+\item Normalização de mapas de caracteres
+\item Descoberta de mapa de caracteres
+\item \emph{Parsing} de páginas HTML
+\item \emph{Parsing} de entidades
+\item Internacionalização e \emph{tokenização} de texto
+\end{itemize}
+
+\section{Lidar com páginas-sumidouros}
+
+Página-sumidouros (\emph{sinks}) são páginas que não apresentam
+\emph{links} de saída. Tais páginas além de penalizar o valor de
+PageRank de outras páginas também tornam a convergência do cálculo do
+PageRank mais lenta~\cite{haveliwala99efficient, page98pagerank}.
+
+Decidir como, se e quando esse tipo de página será tratado é uma decisão
+que o implementador deve tomar.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROJETO %%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{O projeto do indexador}
+
+Realizamos o projeto de nosso indexador tendo em mente os desafios
+mencionados na seção anterior e algumas decisões tomadas durante o
+trabalho prático 1 (TP1). Algumas decisões de projeto tiveram que
+ser tomadas tanto para contornar tais problemas como para ser capaz de
+completar o trabalho num prazo razoável.
+
+
+\subsection{Premissas e decisões iniciais de projetos}
+
+Uma das primeiras decisões tomadas, ainda no TP1, foi sobre qual mapa de
+caractere seria utilizado na normalização dos dados coletados.  Tendo em
+vista os pontos discutidos na sub-seção~\ref{prob:charmapnorm} e a
+despeito dos pontos lançados em~\ref{prob:token}, decidimos que
+\textbf{todo o conteúdo de páginas HTML coletadas será normalizado para
+UTF-8}. O problema de descoberta de mapas de caracteres foi contornado
+durante a coleta das páginas.
+
+Outra opção de projeto foi sobre o que seria indexado e como seria o
+nosso tratamento de \emph{stopwords}. Como recomendado nos artigos e
+livros sugeridos na ementa da disciplina para indexação de conteúdo
+\emph{Web}, \textbf{indexamos toda e qualquer palavra que apareça} na
+nossa coleção, sem realizar nenhum tratamento especial para
+números~\cite{moffat1999managing}.
+
+\textbf{Não realizaremos \emph{stemming}} das palavras.
+
+\textbf{Realizaremos compressão do índice}. Todavia, ao invés de
+utilizar os métodos sugeridos em sala, utilizaremos um \textbf{método de
+codificação \emph{byte-wise}} tanto para codificação de \emph{d-gaps}
+como para codificar as freqüências \(f_{d,f}\) nas listas invertidas.
+Esse método de compressão apresenta ganhos menores que os obtidos com
+codificações orientadas a bits mas ainda assim seus ganhos são
+significativos e essa codificação apresenta um desempenho melhor tanto
+no processo de compressão como no processo de \emph{query
+evaluation}~\cite{zobel2002fastquery}.
+
+Assumimos que \textbf{todo o vocabulário cabe na memória}. Isso é necessário
+tanto para a indexação como para o processamento de consultas.
+
+\subsection{Componentes}
+
+
+Os componentes da no nosso \emph{indexador} são:
+\begin{description}
+\item[armazém de dados:] uma fina camada sobre o sistema de arquivos que
+permite organizar os dados coletados/indexados;
+\item[indexador:] realiza o \emph{parsing} dos documentos e escreve
+\emph{runs};
+\item[merger:] realiza o \emph{n-way merging} das runs salvas e escreve
+o arquivo invetido comprimido;
+\item[querybool:] nosso processador de consultas booleanas.
+\end{description}
+
+
+Observe que o processador de consultas não faz parte do processo de
+indexação propriamente dito, mas faz parte da especificação do trabalho.
+
+Maiores detalhes sobre a implementação deles serão fornecidos na seção
+seguinte.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% IMPLEMENTAÇÃO %%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{Implementação}\label{sec:implementation}
+
+\subsection{Decisões de implementações}
+
+Nosso indexador foi escrito em C++
+e utiliza a biblioteca de gabaritos padrões (STL) dessa
+linguagem~\cite{stroustrup97}.
+Não foi utilizada nenhuma nova libioteca em comparação às já utilizadas
+no TP1.
+
+Além disso, nosso código faz uso extensivo de uma técnica para controle
+de recursos (como memória, \emph{locks} etc)  muito comum em C++,
+denominada RAII (\emph{Resource Acquisition Is Initialization}).
+Diversas partes de nosso código possuem código de teste (\emph{Unit
+Testing}).
+
+Além disso sempre que possível, delegamos o processo de leitura de
+arquivos ao SO através do uso de \texttt{mmaps}.
+
+\subsection{Estruturas de armazenamento}\label{sec:storage}
+
+A forma como que os dados são gravados e recuperados do disco é
+tão importante quanto os algoritmos e estruturas de dados utilizados
+pelo nosso indexador. As estruturas de armazenamento podem ditar ou
+limitar a efetividade dos algoritmos utilizados.
+
+Em nossa solução, vocabulário e arquivo invertido possuem uma estrutura
+de armazenamento similar e composta, de maneira geral, de dois
+elementos:
+\begin{description}
+
+\item[Arquivo-cabeçalho] Uma estrutura que permite acesso rápido a
+informações sobre um determinado termo ou documento.  Tais informações
+consistem, entre outras coisas, na localização (\emph{offset} ou
+ponteiro) do conteúdo de interesse no arquivo(s) de dados . \footnote{
+Na prática, esse arquivo nada mais é do que o \emph{dump} de um
+\emph{array}, o que, ao utilizarmos técnicas como \texttt{mmap}, permite
+o aceso quase que em tempo constante à informação desejada.}
+
+\item[Arquivo(s) de dados] Nesse arquivo, termos do vocabulário ou listas
+invertidas propriamente ditas são armazenadas concatenadas. A
+localização de um item em um arquivo de dados depende da leitura do
+arquivo-cabeçalho correspondente.
+\end{description}
+
+No caso do vocabulário, o arquivo de dados consiste na concatenação das
+palavras do vocabulário em ordem ascendente de seus \(t_{id}\).
+
+As listas invertidas podem, quando concatenadas, atingir um tamanho
+superior ao tamanho máximo de um arquivo no SO utilizador. Para evitar
+problemas, os dados das listas invertidas são distribuídos entre vários
+arquivos de dados, cada um de aproximadamente 256~MB. A localização de
+uma lista invertida relativa a um termo em um destes arquivo de dados
+bem como a informação de em qual arquivo de dados essa lista se encontra
+é guardada no arquivo-cabeçalho do arquivo invertido. 
+
+\subsection{Estruturas de dados}\label{sec:datastructures}
+
+Nossa implementação usa as seguintes estruturas de
+dados~\cite{cormen-algorithms}:
+
+\begin{itemize}
+
+\item Na indexação, utiliza-se uma \emph{hashtable} tanto para armazenar
+o vocabulário (termo\(\rightarrow t_{id}\)) como para obter a representação
+textual em UTF-8 de referências para entidades. No processamento de
+consulta, também se utiliza uma \emph{hashtable} como nos moldes acima
+para armazenar o vocabulário.  Busca e inserção nessa estrutura possui
+uma complexidade de tempo médio de \(O\left(1 \right)\).
+
+\item Uma fila de prioridades é utilizada no processo de \emph{n-way
+merging}. Essa fila é implementada como uma \emph{heap} de ``leitores de
+\emph{runs}'' e os elementos dela são ordenados pelo valor da tripla
+\(<t_{id}, d_{id}, f_{d,t}>\) disponível para leitura em cada um dos
+``leitores de \emph{run}''.  Inserção, e remoção nessa estrutura possuem
+complexidades de tempo no pior caso de \(O\left(\log n\right)\). A
+localização do elemento de maior prioridade leva tempo constante.  O
+processo completo de intercalar as \emph{runs} é da ordem de \(O\left(
+n\times\log r\right)\) , onde \(r\) é o número de leitores de
+\emph{runs} em uso.
+
+\item Cada leitor de \emph{run} apresenta tempo constante para obtenção
+do seu próximo valor.
+
+\item Durante o processo de indexação e geração da \emph{runs}, várias
+triplas são armazenadas em memória até que se atinja um volume
+pré-determinado (512~MB). Atingido esse valor, essas triplas são
+ordenadas com um algoritmo \emph{introsort}\footnote{ D. R. Musser,
+"Introspective Sorting and Selection Algorithms", Software Practice and
+Experience 27(8):983, 1997.  } cuja complexidade de pior caso é
+\(O\left(n \log n\right)\)
+
+\end{itemize}
+
+\subsection{Componentes}
+
+Nesta seção discutiremos decisões de implementação, problemas e soluções
+encontradas no desenvolvimento de cada um dos componentes da nossa
+solução.
+
+\subsubsection{\emph{Parsers}}
+
+Para extrair texto dos documentos HTML e para converter texto com
+entidades em texto puro, aproveitamos a pequena infra-estrutura para
+a construção de \emph{parsers} recursivos-descendentes
+(\texttt{BaseParser}) criada para o TP1. Essa implementação busca evitar cópias
+desnecessárias de dados ao fazer uso extensivo de uma estrutura própria
+(\texttt{filebuf}) em lugar de strings C++ convencionais.
+
+\subsubsection{\emph{Parsing} de documentos HTML}
+
+O extrator de texto de documentos HTML foi é construído sobre um
+\emph{parser} genérico para documentos XML e HTML, o
+\texttt{SloppyHTMLParser}. Esse parser é na verdade um
+\emph{parser} completo e versátil para documentos HTML e XML. Sua
+elaboração foi feita tendo em vista as especificações dos dois padrões
+de documentos acima e o comportamento que navegadores \emph{Web}
+tradicionais apresentam quando defrontados com documentos mal-formados.
+A interface provida para seus utilizadores é similar à de \emph{parsers}
+SAX XML tradicionais~\cite{saxxml, bray2006xml, html4tr}. Ao contrário
+destes últimos, ele e é capaz de lidar com uma ampla variedade de
+construções XML e HTML mesmo em documentos
+mal-formados. Além disso, ele reconhece \emph{tags} HTML que devem ter
+seu conteúdo ignorado por \emph{parsers} desse tipo de documento, como
+comentado na seção~\ref{prob:html}.
+
+\subsubsection{Detecção e Normalização de Mapas de Caracteres}
+
+Como dito anteriormente, a detecção e normalização de mapas de
+caracteres foi feita durante o processo de coleta utilizando o
+componente componente \texttt{UnicodeBugger} Todo
+o conteúdo coletado, antes de ser processado, foi convertido para UTF-8
+por instâncias desse componente, resolvendo os problemas comentados na
+seção~\ref{prob:charmapnorm}.
+
+O processo de detecção de mapas de caracteres segue os passos descritos
+anteriormente na seção na seção~\ref{prob:charmapdetection},
+excetuando-se pelo último deles, o de heurísticas compostas, por ser
+muito dispendiosa~\cite{mozillaiuc}.
+
+
+\subsubsection{Normalização de Termos}
+
+Durante o processo de indexação e durante o processamento de consultas
+realizamos a normalização dos termos (indexados e termos da consulta).
+A normalização possui os seguintes passos:
+\begin{enumerate}
+\item Conversão de texto de UTF-8 para UTF-32
+\item Tokenização de conteúdo em UTF-32
+\item Conversão das letras de cada palavra encontrada para minúsculo.
+\item Conversão de caracteres acentuados para seus respectivos
+caracteres sem acento
+\item conversão de texto em UTF-32 para UTF-8
+\end{enumerate}
+
+Dessa forma, nosso indexador e nosso processador de consulta  não faz
+diferença entre os termos \texttt{AçãO} e \texttt{acao}. Observa-se que
+um processo com efeitos similares ocorre em máquinas de buscas como o
+Google. 
+
+\subsubsection{Leitores, escritores e intercaladores de \emph{run}}
+
+Tentamos modelar nossos leitores, escritores e intercaladores de
+\emph{runs} como iteradores C++. Desta forma, torna-se mais fácil
+integrar o código existente com os algoritmos da C++ que esperam
+interadores.
+
+
+%\subsection{Dificuldades}
+%
+%Nessa sub-seção discutiremos alguns dos problemas enfrentados durante a
+%elaboração e teste da nossa implementação.
+%
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\section{Testes e Resultados}
+
+\subsection{Ambiente experimental}
+
+Todos os testes de nossa implementação foram realizados em um micro do
+laboratório de graduação do DCC/UFMG, rodando como S.O. Linux Gentoo
+1.12.9, kernel 2.6.19-gentoo-r5, dotado de uma CPU Pentium 4 de
+3.00~MHz, 1~GB de memória RAM e 1~GB de \emph{swap}.
+
+\subsection{Resultados}
+
+Documentos/s : 20.568
+KB/s : 562
+
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{|c|r|} \hline
+Volume do vocabulário&	      29.948 KB \\\hline
+Volume da base de &   			\\
+dados (compactado)&   	  13.977.374 KB \\\hline
+Volume das runs  &	   7.180.092 KB \\\hline
+Volume do índice  &			\\
+  sem compressão  &	   5.764.740 KB \\
+  com compressão  &	   1.547.700 KB \\\hline
+Tempo para geração do índice  &		\\
+  sem compressão  &	   9m43.120s \\
+  com compressão  &	   7m12.012s \\\hline
+Velocidade de indexação&		\\
+  doc/s		  & 20,568		\\
+  KB/s		& 562			\\\hline
+Número de Termos&     2.311.837	\\\hline
+Número de documentos& 1.572.822		\\\hline
+\hline
+\end{tabular}
+\caption{Dados sobre as coletas}
+\label{tab:sumario}
+\end{table}
+
+
+A Tabela~\ref{tab:sumario} apresenta um sumário dos valores de
+desempenho e de outras informações pertinentes sobre esse TP.
+
+Na Figura~\ref{fig:desempenho}, podemos acompanhar o desempenho do
+processo de indexação. Na sub-figura~\ref{fig:bytes} vemos o gráfico da
+da variação da taxa de indexação medida em KBytes. Já na
+sub-figura~\ref{fig:docs} vemos o crescimento do volume acumulado de
+documentos indexados no decorrer do tempo.
+
+\begin{figure*}
+  \centering
+  \mbox{
+    \subfigure[Bytes indexados/s]{
+          \label{fig:bytes}
+          \includegraphics[width=0.45\textwidth]{plot_bps}}
+ }
+ \mbox{
+    \subfigure[Documentos indexados]{
+          \label{fig:docs}
+          \includegraphics[width=0.45\textwidth]{plot_dps}}
+  }
+  \caption{Desempenho do indexador}
+  \label{fig:desempenho}
+\end{figure*}
+
+
+Observe que os gráficos apresentados na Figura~\ref{fig:desempenho} são
+referentes a uma execução do processo de indexação diferente daquela
+apresentada na Tabela~\ref{tab:sumario}. A execução cujos dados estão
+apresentados nessa tabela dizem respeito a idenxação de todo o conteúdo
+coletado. A existência dessa diferença entre a tabela e os dados ocorre
+devido ao fato de que as alterações necessárias no indexador para a
+geração desse gráfico foram feitas tardiamente e uma re-execução
+completa do processo de indexação levaria aproximadamente mais 15,5
+horas.\footnote{E esse TP já está atrasado.}
+
+\subsection{Exemplo de uso}
+
+Podemos ver saídas de execuções do processador de consultas nas
+Figuras~\ref{fig:exemplo} e \ref{fig:real}. A primeira presenta a saída
+de uma execução na qual foi utilizada uma coleção de dados de exemplo
+igual a coleção usada em sala de aula nas aulas de indexação. A segunda
+apresenta a saída para algumas \emph{queries} utilizando o índice gerado
+a partir dos dados coletados.
+
+\begin{figure*}
+\begin{center}
+\begin{verbatim}
+./querybool ../test_indexer/
+Loading vocabulary and inverted file ... done
+Type your query using AND, OR and spaces to split terms.
+Default operation is AND (conjunctive).
+Notice: a AND b c OR d == (((a AND b) AND c) OR d )
+> porridge
+Document(s) found matching query 'porridge':  1 2
+> hot
+Document(s) found matching query 'hot':  1 4
+> hot AND porridge
+Document(s) found matching query 'hot AND porridge':  1
+> hot OR porridge
+Document(s) found matching query 'hot OR porridge':  1 2 4
+>
+\end{verbatim}
+\caption{Uso da ferramenta com uma base de exemplo}
+\label{fig:exemplo}
+\end{center}
+\end{figure*}
+
+\begin{figure*}
+\begin{center}
+\begin{verbatim}
+$ ./querybool ../index_data
+Loading vocabulary and inverted file ... done
+Type your query using AND, OR and spaces to split terms.
+Default operation is AND (conjunctive).
+Notice: a AND b c OR d == (((a AND b) AND c) OR d )
+> lésbicas OR selvagens AND freiras
+Document(s) found matching query 'lésbicas OR selvagens AND freiras':  31922
+65842 84882 94838 108508 115584 124033 130857 141172 158426 168044
+183336 196840 207264 216442 226165 236593 243890 252612 256096 263363
+272922 282825 290036 299370 307725 315274 323257 332230 341223 349546
+356752 364623 373471 382413 390689 409396 426570 439908 449507 456076
+462829 469155 475139 480537 487507 496218 502690 512025 518657 524208
+531037 540090 544070 549361 555214 560007 565528 568628 570142 574648
+579555 585285 591063 592813 604989 610850 615952 625775 630188 632206
+641719 646877 651394 658620 663791 663793 663953 669615 674586 680257
+682757 687234 693030 698780 704742 709824 715349 720210 724919 731019
+737507 737589 743592 748693 754156 756055 758788 760390 760392 763375
+769037 773114 777792 780059 781749 785801 789528 791333 794381 799364
+804656 809995 817204 826368 828038 830201 834120 838065 849036 854318
+861354 865075 869356 873638 886580 891076 896460 902930 903463 910369
+914225 920268 924571 930078 935533 939771 944401 949906 953827 959028
+963400 967952 972054 976207 980077 984419 989587 994954 999051 1004041
+1006623 1010623 1011280 1015995 1016813 1021027 1026184 1030933 1041424
+1045448 1051886 1057097 1057299 1061454 1065080 1065520 1070027 1074334
+1079421 1083479 1086813 1087051 1091880 1092497 1099165 1172010 1172012
+1208717 1215003 1225674 1231362 1237443 1242387 1253852 1260545 1266924
+1271244 1277691 1283726 1289641 1296986 1302666 1304467 1307215 1313336
+1318746 1324809 1329855 1335839 1340520 1342909 1346002 1350950 1355268
+1361052 1366442 1373461 1385372 1390943 1396249 1401501 1406075 1411560
+1417425 1423514 1427359 1429289 1433270 1438565 1442471 1447409 1451165
+1455432 1461749 1466591 1470365 1473606 1477900 1481885 1485432 1488742
+1492894 1496786 1501076 1501246 1505783 1508451 1510345 1510486 1514772
+1518651 1523382 1527498 1533617 1537628 1540675 1544839 1548062 1551580
+1552308 1878118 1914096 2172227 2172229 2520734 2566735 2566737 2647844
+2665235 2953721 3080068 3704516 3726904 4307367
+> freiras hentai
+Document(s) found matching query 'freiras hentai':  5090591
+> psicanalistas AND psicopatas
+Document(s) found matching query 'psicanalistas AND psicopatas':  1940391
+2091678
+>
+\end{verbatim}
+\caption{Uso da ferramenta com dados reais}
+\label{fig:real}
+\end{center}
+\end{figure*}
+
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%\section{Conclusões}
+%
+%Nesse relatório descrevemos a implementação do \emph{crawler}
+%especificado no TP1 da disciplina~\cite{tp1}, bem como os problemas
+%enfrentados e as decisões de projeto tomadas.
+%
+%Pudemos observar como a política de escalonamento possui um papel
+%fundamental no desempenho do coletor. Em nossos experimentos, o
+%uso da política ``\emph{largest site first}'' mostrou-se capaz de, em
+%50\% do tempo necessário, baixar 150\% do conteúdo desejado para um
+%único dia de coleta. Além disso, mostro-se quase duas vezes mais eficiente do que a
+%política ``\emph{breadth-first}''. Esses resultados, embora bastante
+%interessantes, estão longe de ser novidades, sendo bastante estudados na
+%literatura~\cite{baezayates2005crawling}.
+%
+%
+%Finalmente, foi também possível observar como que, a despeito de ser
+%aparentemente um problema simples, a elaboração de um \emph{crawler}
+%industrial é complicada.
+%
+%\subsection{Problemas encontrados e Melhorias
+%futuras}\label{sec:problemas}
+%
+%Durante a implementação do \emph{crawler}, diversos problema foram
+%observados mas, devido a problema relativos ao tempo de entrega do
+%trabalho, tiveram que ser deixados de lado. Todavia, esses problemas
+%merecem menção, uma vez que constituem limitações da implementação e
+%que, em TP's futuros podem se revelar como problemas cuja solução será
+%necessária.
+%
+%\subsubsection{Armadilhas para \emph{crawlers}}\label{dif:armadilhas}
+%
+%Um dos problemas de se lidar com a coleta de conteúdo dinâmico é que
+%sítios com esse tipo de página pode conter o que se chama e ``buracos
+%negros'', ou seja, é possível que o coletor possa se perder ou passar
+%mais tempo do que o necessário tentando coletar uma
+%infinidade de páginas geradas dinamicamente. Ignorar o conteúdo do
+%componente \emph{query} de URLs é uma forma de tentar contornar esse
+%problema mas está longe de ser uma solução eficaz, uma vez que existem
+%formas de se apresentar conteúdo dinâmico sem que esse envolva o uso de
+%URLs com componentes \emph{query}.
+%
+%Uma outra forma de gerar conteúdo ou URLs dinâmicas é através do
+%componente \emph{domainname} de URLs. Essa forma é particularmente
+%nociva à nossa implementação, sobretudo na que usa a política de
+%escalonamento BF. Isso deve-se a diversos fatores:
+%\begin{itemize}
+%\item Quando uma página em um domínio desses é encontrada pela primeira
+%vez, acaba-se descobrindo por tabela diversas páginas em diversos
+%domínios dinâmicos pertencentes ao mesmo sítio;
+%\item uma vez que cada novo domínio gerado
+%acarreta a criação de uma instância de gerente de domínio em nossa
+%implementação, ao visitar apenas uma única página num sítio desses
+%diversas instâncias de gerentes de domínios terão de ser geradas
+%instantaneamente,
+%\item finalmente,  como nessa política os domínios são visitados por ordem de
+%descoberta, o inicio da coleta do primeiro domínio dinâmico de um sítio
+%desses acarretará diversas requisições DNS, uma para cada um dos outros
+%domínios dinâmicos encontrados em seqüência.
+%\end{itemize}
+%
+%Nessas circunstâncias o desempenho do coletor cai para patamares
+%baixíssimos, como pode-se observam em alguns vales na
+%Figura~\ref{fig:bf}. A política de escalonamento LSF contorna isso de
+%maneira elegante, mas até que ponto? Se tivessemos deixado o coletor com
+%LSF rodando por mais tempo teríamos encontrado esse tipo de
+%comportamento?
+%
+%%Buracos negros - nossa abordagem de escalonamento foi baseada em domínios. Isso
+%%permitia não somente controlar o tempo mínimo de intervalo entre acessos
+%%consecutívos a um mesmo domínio, limitar o uso de memória (já que nao era mais
+%%necesári armazenar o nome de domínio em cada URL pertencente a ele) e armazenar
+%%a lista de URLs pendentes. Todavia, para a nossa implementação, sítios que
+%%fazem uso extensivo de sub-domínios para sua organização são torna um problema.
+%%Isso deve-se ao fato de que, custumeiramente, a obtenção e \emph{parsing} de
+%%uma unica página de um sítio destes acarreta na ``descoberta'' de vários
+%%sub-domínos desse sítio, o que por sua vez acarreta no acréscimo de cada um
+%%destes na lista de domínios conhecidos e de domínios pendentes. Além desses
+%%domínios serem costumeriramente rasos, ou seja, sem muitos links para
+%%documentos internos, a sua adição limitará a capacidade do crawler de baixar
+%%páginas de conteúdo, uma vez que, antes de que qualquer conteúdo possa ser
+%%obtido desses domínios, os arquivos \texttt{robots.txt} dele terá de ser
+%%obtido.
+%
+%\subsubsection{Esgotamento da memória primária}
+%
+%Todas as estruturas de controle de nossa implementação são deixadas em
+%memória primária. Em questão de horas isso começa a se tornar um
+%problema, quando o S.O. inicia um processo de colocar algumas das
+%páginas de memória de nosso sistema em  memória secundária. A medida que
+%o tempo passa, vai se tornando cada vez mais difícil não ser afetado
+%pela troca de páginas entre a memória principal e o \emph{swap}, fruto
+%do consumo de memória de nossa aplicação.
+%
+%Uma forma de contornar o uso de memória seria fazer um uso mais
+%agressivo de identificadores numéricos para as páginas. Isso será útil
+%não somente para a contenção dos gastos com memória mas também quando
+%estivermos realizando a indexação dos documentos.
+%
+%Encontrar mecanismos que nos permitam determinar a lista de URLs
+%pendentes em um dominio além de rapidamente determinar se uma
+%determinada URL já foi encontrada antes ou não sem depender tanto de
+%memória primária é um problema não resolvido de nossa implementação.
+%O uso de soluções como \emph{hashtables} distribuídas foi cogitado, mas
+%não chegamos a implementá-lo.
+%
+%\subsubsection{Melhores implementações de listas de prioridades}
+%
+%A adoção da política de escalonamento LSF mostrou-se bastante benéfica à
+%nossa implementação. Todavia, da forma que ela está implementada, ela
+%sofre de uma severa limitação: uma vez que um domínio tenha entrado na
+%lista de domínios ativos (Seção~\ref{sec:datastructures}), o valor do
+%tamanho da sua fila de páginas pendentes não pode mais ser atualizado.
+%Isso ocorre porque os algoritmos e estruturas disponíveis na STL, a
+%bilbioteca padrão de tipos e algoritmos do C++, para lidar com listas de
+%prioridades e \emph{heaps} não possuem métodos para decrementar ou
+%incrementar um o valor atribuído a um ítem interno ao \emph{heap}. Essa
+%limitação dificulta e limita também a implementação de políticas de
+%escalonamento de domínios ou de páginas baseados na quantidade de
+%\emph{links} que apontam para os mesmos.
+%
+%Um solução seria implementar \emph{heaps} binários e de Fibonacci do
+%zero, de tal forma que esses possuíssem métodos para decrementar o valor
+%associado a um ítem ou atualizá-lo dinamicamente. Foi cogitada a
+%implementação uma estrutura similar a um \emph{heap} de Fibonacci mas
+%com custos assintóticos inferiores, conhecida como \emph{relaxed heap},
+%mas, por questões de tempo, essa implementação não foi
+%possível~\cite{driscoll1988relaxed}.
+%
+%\subsubsection{Estrutura de diretórios}
+%
+%\subsubsection{UTF-8 vs Latin1}
+%
+%Considerando-se o fato de que o trabalho objetivava o uso de uma coleção
+%de páginas da \emph{Web} brasileira e, por tanto, de conteúdo em língua
+%portuguesa, as escolha de UTF-8 como mapa de caracteres utilizado após a
+%normalização não parece mais um boa decisão. Considerando os problemas
+%que UTF-8 causa no processo de parsing e normalização dos termos,
+%percebe-se agora que o uso de Latin-1 seria um escolha mais sensata.
+%Ainda mais considerando que, após a normalização de caso e de acentos
+%nas palavras, tudo o que resta de útil é um conteúdo limitado de ASCII
+%7-bits.
+%
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%% Bibliografia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\bibliographystyle {plain}
+\bibliography{relatorio}
+
+
+\end{document}
+
+% vim:tw=72 fileencoding=utf-8 spelllang=pt spell syn=tex:
