@@ -193,6 +193,21 @@ função de várias delas, é necessário observar que cada um possui
 pequenas particularidades que podem torná-las mais atraentes alguns
 determinados tipos de documentos ou coleções mas não para os demais.
 
+\subsection{Valores pré-computados}
+
+Tanto o modelo de espaço vetorial como o PageRank assumem que alguns
+valores estão pré-computados ou que sua obtenção é fácil. Entre tais
+valores podemos citar a norma ou o módulo de vetores de cada documento,
+a freqüência do termo mais freqüente de cada documento e o valor de
+PageRank de cada documento da coleção.
+
+Obter esses valores em tempo de consulta é inviável. Alguns podem ser
+calculados tão logo se termine a etapa de indexação dos
+documentos, outros só poderão ser obtidos após o término da geração do
+arquivo invertido. O momento e a forma de fazer isso pode ocasionar um
+acréscimo de tempo de pré-processamento grande e, por isso, deve ser
+dosado.
+
 \subsection{Formas eficientes de calcular similaridade}
 
 Apesar da diferença entre os modelos booleanos e o modelo de espaço
@@ -236,7 +251,7 @@ enfrentados novamente:
 \item Internacionalização e \emph{tokenização} de texto
 \end{itemize}
 
-\section{Lidar com páginas-sumidouros}
+\subsection{Lidar com páginas-sumidouros}
 
 Página-sumidouros (\emph{sinks}) são páginas que não apresentam
 \emph{links} de saída. Tais páginas além de penalizar o valor de
@@ -248,67 +263,106 @@ que o implementador deve tomar.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%% PROJETO %%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-\section{O projeto do indexador}
+\section{O projeto do processador de consultas}\label{sec:projeto}
 
-Realizamos o projeto de nosso indexador tendo em mente os desafios
-mencionados na seção anterior e algumas decisões tomadas durante o
-trabalho prático 1 (TP1). Algumas decisões de projeto tiveram que
+Realizamos o projeto de nosso processador de consultas tendo em mente os desafios
+mencionados na seção anterior e algumas decisões tomadas durante os
+trabalhos práticos 1 e 2~\cite{tp1,tp2}. Algumas decisões de projeto tiveram que
 ser tomadas tanto para contornar tais problemas como para ser capaz de
-completar o trabalho num prazo razoável.
+completar o trabalho em um prazo razoável.
 
 
 \subsection{Premissas e decisões iniciais de projetos}
 
-Uma das primeiras decisões tomadas, ainda no TP1, foi sobre qual mapa de
-caractere seria utilizado na normalização dos dados coletados.  Tendo em
-vista os pontos discutidos na sub-seção~\ref{prob:charmapnorm} e a
-despeito dos pontos lançados em~\ref{prob:token}, decidimos que
-\textbf{todo o conteúdo de páginas HTML coletadas será normalizado para
-UTF-8}. O problema de descoberta de mapas de caracteres foi contornado
-durante a coleta das páginas.
+Como forma de limitar o volume de processamento realizado por consulta e
+também como forma de melhorar os resultados das buscas submetidas ao
+sistema, \textbf{processamos todas as buscas como buscas conjuntivas}.
+Em nossos testes essa escolha apenas melhorou a qualidade das respostas.
 
-Outra opção de projeto foi sobre o que seria indexado e como seria o
-nosso tratamento de \emph{stopwords}. Como recomendado nos artigos e
-livros sugeridos na ementa da disciplina para indexação de conteúdo
-\emph{Web}, \textbf{indexamos toda e qualquer palavra que apareça} na
-nossa coleção, sem realizar nenhum tratamento especial para
-números~\cite{moffat1999managing}.
+\textbf{A obtenção das normas dos documentos (\(W_j\)) e dos
+\(maxfreq_i\) será feita apenas após a construção do arquivo invertido}.
+As normas apenas podem ser calculadas quando tivermos os valores de
+\(n_i\), ou seja, número de documentos contendo um determinado termo
+\(i\), e isso só é possível após o termino da criação do arquivo
+invertido. Além disso, esse arquivo é consideravelmente menor do que a
+coleção de documentos, e o processamento realizado para sua leitura bem
+inferior ao do \emph{parsing} de documentos.
 
-\textbf{Não realizaremos \emph{stemming}} das palavras.
+\texbf{A obtenção do grafo de vizinhança de páginas}, ou seja, da lista de
+ligações entre documentos da nossa coleção, \textbf{ocorre após a coleta de
+todas as páginas}. Caso fôssemos realizar o uma nova coleta de páginas,
+repensaríamos esse ponto. Todavia, como o \emph{crawling} já foi feito, isso
+realmente não representa muito uma decisão de projeto, mas apenas uma
+forma viável de contornar essa limitação de nosso \emph{crawler}.
 
-\textbf{Realizaremos compressão do índice}. Todavia, ao invés de
-utilizar os métodos sugeridos em sala, utilizaremos um \textbf{método de
-codificação \emph{byte-wise}} tanto para codificação de \emph{d-gaps}
-como para codificar as freqüências \(f_{d,f}\) nas listas invertidas.
-Esse método de compressão apresenta ganhos menores que os obtidos com
-codificações orientadas a bits mas ainda assim seus ganhos são
-significativos e essa codificação apresenta um desempenho melhor tanto
-no processo de compressão como no processo de \emph{query
-evaluation}~\cite{zobel2002fastquery}.
 
-Assumimos que \textbf{todo o vocabulário cabe na memória}. Isso é necessário
-tanto para a indexação como para o processamento de consultas.
+\textbf{Todas as URLs processadas pelo algoritmo de \emph{link analysis} são
+normalizadas} e têm seus campos \emph{query} e fragmento removidos. Os
+mecanismos de normalização são os mesmos descritos nos TPs anteriores,
+ou seja, baseados nas especificações da RFC 3986~\cite{rfc3986}.
+
+Para contornar o volume de memória necessário para o armazenamento e
+processamento do grafo de vizinhança \textbf{utilizaremos não as URLs em si, mas
+suas ``impressões digitais''} (\emph{fingerpring}, geradas pelo uso da
+função ou \emph{hash} FNV-1~\cite{fnv1}. Observamos essa função \textbf{não
+apresenta colisões mesmo para o conjunto de aproximadamente 9 milhões de
+URLs descobertas pelo nosso \emph{crawler}}.
+
+Removemos \emph{dangling links}, ou seja, \emph{links} para
+páginas-sumidouros em dois momentos:
+\begin{enumerate}
+\item durante a re-leitura da base, quando fazemos a extração das URLs
+dos documentos,
+\item durante o cálculo do PageRank, quando removemos interativamente
+\emph{links} para páginas que se mostraram como páginas sem ligações de 
+saída (\emph{outlinks}).
+\end{enumerate}
+
+Devido ao tamanho de nossa base e às características de ligação dos
+nossos documentos, \textbf{o processamento do \emph{PageRank} envolverá
+memória secundária}. Não como armazenento secundário, mas simplesmente
+\textbf{pelo fato de que o grafo não cabe na memória primária}. Mais a
+frente discutiremos isso e o desempenho dessa etapa.
+
+\textbf{Assumimos que várias das nossas estruturas de controle caberão na
+memória}. Entre tais estruturas temos:
+\begin{itemize}
+\item o vocabulário,
+\item as normas dos documentos,
+\item a freqüência do termo mais freqüente de cada documento,
+\item o valor de PageRank de cada documento,
+\item o índice da base de títulos de URLs dos documentos.
+\end{itemize}
+
+\textbf{A interface entre o nosso sistema e o usuário se dá através de um
+servidor HTTP próprio, single-threaded e blocante}. Esse servidor foi
+feito especificamente para esse projeto e, a despeito de suas
+limitações, atende aos propósitos da disciplina.
 
 \subsection{Componentes}
 
 
-Os componentes da no nosso \emph{indexador} são:
+Os componentes da no nosso \emph{processador de consultas} são:
 \begin{description}
-\item[armazém de dados:] uma fina camada sobre o sistema de arquivos que
-permite organizar os dados coletados/indexados;
-\item[indexador:] realiza o \emph{parsing} dos documentos e escreve
-\emph{runs};
-\item[merger:] realiza o \emph{n-way merging} das runs salvas e escreve
-o arquivo invetido comprimido;
-\item[querybool:] nosso processador de consultas booleanas.
+\item[armazém de dados:] esse sistema foi decomposto em dois, um sendo 
+uma fina camada sobre o sistema de arquivos que
+permite organizar os dados coletados/indexados e outra sendo um base de
+dados indexada para acesso sequencial (ISAM), que permite acesso
+sequencial muito mais rápido do que o sistema anterior.
+\item[mknorms:] realiza a leitura e processamento do arquivo invertido
+para geração das normas dos documentos e de outros dados que são
+utilizados durante o processamento de consultas.
+\item[mkmeta:] realiza o \emph{parsing} dos documentos e extrai desses
+seus títulos e suas URLs, para uso posterior.
+\item[mkprepr:] realiza o \emph{parsing} dos documentos e extrai destes
+a lista de ( \emph{fingerprints} de) URLs de saída (\emph{outlinks}) de
+cada página. A saída desse componente é utilizada como entrada para o
+programa que calcula o PageRank das páginas.
+\item[myserver:] nossa interface com o processador de consultas, ou
+seja, nosso servidor HTTP. O processador de consultas em si encontra-se
+como um componente usado em por esse servidor.
 \end{description}
 
-
-Observe que o processador de consultas não faz parte do processo de
-indexação propriamente dito, mas faz parte da especificação do trabalho.
-
-Maiores detalhes sobre a implementação deles serão fornecidos na seção
-seguinte.
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%% IMPLEMENTAÇÃO %%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -316,10 +370,10 @@ seguinte.
 
 \subsection{Decisões de implementações}
 
-Nosso indexador foi escrito em C++
+Todo o nosso código foi escrito em C++
 e utiliza a biblioteca de gabaritos padrões (STL) dessa
 linguagem~\cite{stroustrup97}.
-Não foi utilizada nenhuma nova libioteca em comparação às já utilizadas
+Não foi utilizada nenhuma nova liblioteca em comparação às já utilizadas
 no TP1.
 
 Além disso, nosso código faz uso extensivo de uma técnica para controle
@@ -328,8 +382,8 @@ denominada RAII (\emph{Resource Acquisition Is Initialization}).
 Diversas partes de nosso código possuem código de teste (\emph{Unit
 Testing}).
 
-Além disso sempre que possível, delegamos o processo de leitura de
-arquivos ao SO através do uso de \texttt{mmaps}.
+Sempre que possível, delegamos o processo de leitura de
+arquivos ao S.O. através do uso de \texttt{mmaps}.
 
 \subsection{Estruturas de armazenamento}\label{sec:storage}
 
@@ -338,7 +392,9 @@ tão importante quanto os algoritmos e estruturas de dados utilizados
 pelo nosso indexador. As estruturas de armazenamento podem ditar ou
 limitar a efetividade dos algoritmos utilizados.
 
-Em nossa solução, vocabulário e arquivo invertido possuem uma estrutura
+Em nossa solução, a exceção dos arquivos coletados pelo crawler, todas
+as outras estrutuas (vocabulário, arquivo invertido, metadados sobre as
+páginas, valores de PageRank) possuem uma estrutura
 de armazenamento similar e composta, de maneira geral, de dois
 elementos:
 \begin{description}
@@ -360,13 +416,16 @@ arquivo-cabeçalho correspondente.
 No caso do vocabulário, o arquivo de dados consiste na concatenação das
 palavras do vocabulário em ordem ascendente de seus \(t_{id}\).
 
-As listas invertidas podem, quando concatenadas, atingir um tamanho
+As listas invertidas podem, quando concatenadas, podem vir a atingir um tamanho
 superior ao tamanho máximo de um arquivo no SO utilizador. Para evitar
-problemas, os dados das listas invertidas são distribuídos entre vários
+problemas, os dados das listas invertidas e de outras estruturas de
+dados grandes, são distribuídos entre vários
 arquivos de dados, cada um de aproximadamente 256~MB. A localização de
 uma lista invertida relativa a um termo em um destes arquivo de dados
 bem como a informação de em qual arquivo de dados essa lista se encontra
-é guardada no arquivo-cabeçalho do arquivo invertido. 
+é guardada no arquivo-cabeçalho do arquivo invertido. De maneira similar
+é possível encontrar, por exemplo, a lista de \emph{outlinks} de uma
+dada página.
 
 \subsection{Estruturas de dados}\label{sec:datastructures}
 
@@ -648,6 +707,8 @@ Document(s) found matching query 'psicanalistas AND psicopatas':  1940391
 
 
 
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %\section{Conclusões}
 %
@@ -793,6 +854,12 @@ Document(s) found matching query 'psicanalistas AND psicopatas':  1940391
 %7-bits.
 %
 %
+
+\section{Agradecimentos}
+
+Hélio, Anísio.
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%% Bibliografia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \bibliographystyle {plain}
