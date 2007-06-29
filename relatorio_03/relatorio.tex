@@ -60,10 +60,15 @@ anteriores, sempre que necessário, utilizaremos fragmentos dos mesmos.
 Todavia, buscaremos não detalhar mais do que o necessário decisões
 de projeto e peculiaridades dos TPs anteriores.
 
-\framebox[0.45\textwidth]{
-A implementação atual de nossa solução se encontra operacional no
-enderço \texttt{http://mimosa.grad.dcc.ufmg.br:8090}.
-}
+\vspace{0.5cm}
+\rule[0.5mm]{0.9\linewidth}{0.5mm}
+
+A implementação atual de nossa solução\
+ se encontra operacional no
+endereço \texttt{http://mimosa.grad.dcc.ufmg.br:8090}.
+
+\rule[0.5mm]{0.9\linewidth}{0.5mm}
+
 
 \section{Recuperação de documentos}\label{sec:retrieval}
 
@@ -466,85 +471,57 @@ encontrados. Esse algoritmo possui custo liner.
 
 \end{itemize}
 
-\subsection{Componentes}
 
-Nesta seção discutiremos decisões de implementação, problemas e soluções
-encontradas no desenvolvimento de cada um dos componentes da nossa
-solução.
+\subsection{Dificuldades}
 
-\subsubsection{\emph{Parsers}}
+Nessa sub-seção discutiremos alguns dos problemas enfrentados durante a
+elaboração e teste da nossa implementação.
 
-Para extrair texto dos documentos HTML e para converter texto com
-entidades em texto puro, aproveitamos a pequena infra-estrutura para
-a construção de \emph{parsers} recursivos-descendentes
-(\texttt{BaseParser}) criada para o TP1. Essa implementação busca evitar cópias
-desnecessárias de dados ao fazer uso extensivo de uma estrutura própria
-(\texttt{filebuf}) em lugar de strings C++ convencionais.
+\subsubsection{Obtenção das normas, etc}
 
-\subsubsection{\emph{Parsing} de documentos HTML}
+Como já mencinado anteriormente, um dos problemas que enfrentamos foi o
+cálculo das normas dos documentos e de outros valores que são utilizados
+pelo processador de consulta. Boa parte desse trabalho poderia ter sido
+feito durante o TP1, que tratava da construção do arquivo invertido.
 
-O extrator de texto de documentos HTML foi é construído sobre um
-\emph{parser} genérico para documentos XML e HTML, o
-\texttt{SloppyHTMLParser}. Esse parser é na verdade um
-\emph{parser} completo e versátil para documentos HTML e XML. Sua
-elaboração foi feita tendo em vista as especificações dos dois padrões
-de documentos acima e o comportamento que navegadores \emph{Web}
-tradicionais apresentam quando defrontados com documentos mal-formados.
-A interface provida para seus utilizadores é similar à de \emph{parsers}
-SAX XML tradicionais~\cite{saxxml, bray2006xml, html4tr}. Ao contrário
-destes últimos, ele e é capaz de lidar com uma ampla variedade de
-construções XML e HTML mesmo em documentos
-mal-formados. Além disso, ele reconhece \emph{tags} HTML que devem ter
-seu conteúdo ignorado por \emph{parsers} desse tipo de documento, como
-comentado na seção~\ref{prob:html}.
+\subsubsection{Número de Links}
 
-\subsubsection{Detecção e Normalização de Mapas de Caracteres}
-
-Como dito anteriormente, a detecção e normalização de mapas de
-caracteres foi feita durante o processo de coleta utilizando o
-componente componente \texttt{UnicodeBugger} Todo
-o conteúdo coletado, antes de ser processado, foi convertido para UTF-8
-por instâncias desse componente, resolvendo os problemas comentados na
-seção~\ref{prob:charmapnorm}.
-
-O processo de detecção de mapas de caracteres segue os passos descritos
-anteriormente na seção na seção~\ref{prob:charmapdetection},
-excetuando-se pelo último deles, o de heurísticas compostas, por ser
-muito dispendiosa~\cite{mozillaiuc}.
+Durante a elaboração do código responsável pelo cálculo do PageRank nos
+defrontamos com o seguinte problema: nosso arquivo contendo a lista de
+\emph{outlinks}, essencialmente uma representação do grafo de ligação
+entre páginas como uma lista de adjacências, estava atingindo a marca de
+aprox. 2,5~GB. Esse arquivo possuía apenas as \emph{fingerprints} de
+cada URL, cada um ocupando 8 bytes. Mesmo levando em considerando o
+número de documentos baixados pelo \emph{crawler} e mesmo o número de
+URLs descobertas pelo mesmo ( aprox. 1,5 milhões e 9 milhões) e número
+médio de links por páginas Web como 11~\cite{page98pagerank}, ainda
+assim verifica-se que o volume de 2,5 GB está muito longe do esperado.
 
 
-\subsubsection{Normalização de Termos}
+\begin{figure}[ht]
+\begin{center}
+\includegraphics[width=0.5\textwidth]{plot_linkranking}
+\end{center}
+\caption{Distribuição de links por páginas. (Log-Normal)}
+\label{fig:linkspp}
+\end{figure}
 
-Durante o processo de indexação e durante o processamento de consultas
-realizamos a normalização dos termos (indexados e termos da consulta).
-A normalização possui os seguintes passos:
-\begin{enumerate}
-\item Conversão de texto de UTF-8 para UTF-32
-\item Tokenização de conteúdo em UTF-32
-\item Conversão das letras de cada palavra encontrada para minúsculo.
-\item Conversão de caracteres acentuados para seus respectivos
-caracteres sem acento
-\item conversão de texto em UTF-32 para UTF-8
-\end{enumerate}
+Para determinar se existia alguma problema em nossa solução ou se
+existia alguma anomalia dos dados coletados, verificamos como se dava a
+distribuição de \emph{links} por página nos documentos de nossa coleção.
+O resultado dessa análise pode ser visto na Figura~\ref{fig:linkspp}.
+Nessa figura, disposta em escala log-normal, pode-se observar que existe
+uma significativa proporção de nós que possui mais de 200 links de
+saída. Isso explica o motivo pelo qual nosso arquivo de \emph{outlinks}
+tornou-se tão grande.
 
-Dessa forma, nosso indexador e nosso processador de consulta  não faz
-diferença entre os termos \texttt{AçãO} e \texttt{acao}. Observa-se que
-um processo com efeitos similares ocorre em máquinas de buscas como o
-Google. 
-
-\subsubsection{Leitores, escritores e intercaladores de \emph{run}}
-
-Tentamos modelar nossos leitores, escritores e intercaladores de
-\emph{runs} como iteradores C++. Desta forma, torna-se mais fácil
-integrar o código existente com os algoritmos da C++ que esperam
-interadores.
-
-
-%\subsection{Dificuldades}
-%
-%Nessa sub-seção discutiremos alguns dos problemas enfrentados durante a
-%elaboração e teste da nossa implementação.
-%
+Por amostragem determinou-se que boa parte desses links correspondiam a
+páginas do sítio \texttt{letras.terra.com.br} e seus sub-domínios. Em
+conjunto, existem 1019681 páginas em nossa base cujas URLs possuem o
+fragmento de texto \texttt{letras.terra}. Isso corresponde a quase dois
+terços de nossa base, o que explica ainda mais o que aconteceu: baixamos
+muitas página desses sítio e esse sítio e seus subdomíno estão
+fortemente ligados entre si.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
@@ -597,21 +574,21 @@ da variação da taxa de indexação medida em KBytes. Já na
 sub-figura~\ref{fig:docs} vemos o crescimento do volume acumulado de
 documentos indexados no decorrer do tempo.
 
-\begin{figure*}
-  \centering
-  \mbox{
-    \subfigure[Bytes indexados/s]{
-          \label{fig:bytes}
-          \includegraphics[width=0.45\textwidth]{plot_bps}}
- }
- \mbox{
-    \subfigure[Documentos indexados]{
-          \label{fig:docs}
-          \includegraphics[width=0.45\textwidth]{plot_dps}}
-  }
-  \caption{Desempenho do indexador}
-  \label{fig:desempenho}
-\end{figure*}
+%\begin{figure*}
+%  \centering
+%  \mbox{
+%    \subfigure[Bytes indexados/s]{
+%          \label{fig:bytes}
+%          \includegraphics[width=0.45\textwidth]{plot_bps}}
+% }
+% \mbox{
+%    \subfigure[Documentos indexados]{
+%          \label{fig:docs}
+%          \includegraphics[width=0.45\textwidth]{plot_dps}}
+%  }
+%  \caption{Desempenho do indexador}
+%  \label{fig:desempenho}
+%\end{figure*}
 
 
 Observe que os gráficos apresentados na Figura~\ref{fig:desempenho} são
