@@ -328,12 +328,14 @@ struct PageRankQueryHandler : public AbstractRequestHandler {
 			"<link rel=stylesheet type='text/css' href='http://homepages.dcc.ufmg.br/~tmacam/irstyle.css'>"
 			"</head>\n"
 			"<body>\n"
+			"<div class='head'>\n"
 			"<h1>Heim, meu filho?</h1>\n"
 			"<h2>A máquina de busca de Luiz Pareto</h2>\n"
 			"<form action=\"/\" method=\"get\" >\n"
 			"<input name=\"q\" type=\"text\" id=\"q2\" size=\"25\" value=\"" << q_val <<  "\">\n"
 			"<input type=\"submit\" name=\"Submit\" value=\"Fala, Pareto!\">\n"
-			"</form>\n" <<
+			"</form>\n"
+			"</div> <!-- head -->"<<
 			results <<
 			"</body>\n"
 			"</html>\n" << std::endl;
