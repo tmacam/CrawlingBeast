@@ -259,6 +259,8 @@ struct PageRankQueryHandler : public AbstractRequestHandler {
 	{
 		typedef std::vector<std::string> strvec_t;
 
+		_GET.clear();
+
 		strvec_t tuples = split(query,"&");
 		for(size_t i = 0; i < tuples.size(); ++i) {
 			strvec_t keyval = split(tuples[i],"=",1);
