@@ -523,6 +523,11 @@ terços de nossa base, o que explica ainda mais o que aconteceu: baixamos
 muitas página desses sítio e esse sítio e seus subdomíno estão
 fortemente ligados entre si.
 
+Ao invés de retirar esses documentos da base para tornar o cálculo do
+PageRank viável utilizando somente memória primária, decidimos por
+realizar o cálculo do PageRank de tal forma que, a cada iteração, os
+valores são re-lidos do disco.
+
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 \section{Testes e Resultados}
@@ -536,28 +541,31 @@ laboratório de graduação do DCC/UFMG, rodando como S.O. Linux Gentoo
 
 \subsection{Resultados}
 
-Documentos/s : 20.568
-KB/s : 562
-
-
 \begin{table}[htbp]
 \centering
 \begin{tabular}{|c|r|} \hline
-Volume do vocabulário&	      29.948 KB \\\hline
-Volume da base de &   			\\
-dados (compactado)&   	  13.977.374 KB \\\hline
-Volume das runs  &	   7.180.092 KB \\\hline
-Volume do índice  &			\\
-  sem compressão  &	   5.764.740 KB \\
-  com compressão  &	   1.547.700 KB \\\hline
-Tempo para geração do índice  &		\\
-  sem compressão  &	   9m43.120s \\
-  com compressão  &	   7m12.012s \\\hline
-Velocidade de indexação&		\\
-  doc/s		  & 20,568		\\
-  KB/s		& 562			\\\hline
-Número de Termos&     2.311.837	\\\hline
-Número de documentos& 1.572.822		\\\hline
+Número de documentos			& 1.572.822		\\\hline
+Volume do vocabulário			&	      29.948 KB \\\hline
+Volume da base de dados 		&   			\\
+          compactado 			&            43.460.994 KB \\
+          compactado 			&   	  13.977.374 KB \\\hline
+Volume das runs 			&	   7.180.092 KB \\\hline
+Volume do índice  			&			\\
+  sem compressão  			&	   5.764.740 KB \\
+  com compressão  			&	   1.547.700 KB \\\hline
+Tempo para geração das normas 		&	    7m59.778s	\\ \hline
+Tempo para extração de \# links		&		4h12m02s \\ \hline
+PageRank				& 		\\
+Tempo para convergência& 02h51m21s	\\
+Valor Residual (norma \(L_1\)		& 	0.0500221 \\
+Nº de Iterações até covergência		& 	89	\\ \hline
+Total de \emph{links} (arestas) válidas & 297.401.139	\\ \hline
+  sem compressão 			&	   9m43.120s \\
+  com compressão  			&	   7m12.012s \\\hline
+Velocidade de indexação			&		\\
+  doc/s		  			& 20,568		\\
+  KB/s					& 562			\\\hline
+Número de Termos			&     2.311.837	\\\hline
 \hline
 \end{tabular}
 \caption{Dados sobre as coletas}
@@ -568,121 +576,43 @@ Número de documentos& 1.572.822		\\\hline
 A Tabela~\ref{tab:sumario} apresenta um sumário dos valores de
 desempenho e de outras informações pertinentes sobre esse TP.
 
-Na Figura~\ref{fig:desempenho}, podemos acompanhar o desempenho do
-processo de indexação. Na sub-figura~\ref{fig:bytes} vemos o gráfico da
-da variação da taxa de indexação medida em KBytes. Já na
-sub-figura~\ref{fig:docs} vemos o crescimento do volume acumulado de
-documentos indexados no decorrer do tempo.
+Observe que o tempo de geração de normas engloba também o 
+tempo para a extração e geração de outros valores gerados pelo
+utilitário \texttt{mknorms}, como \(maxfreq_j\) e \(n_i\). Observe ainda
+que o total de arestas válidas corresponde apenas a ligações entre
+páginas baixadas na coleção para páginas com URLs que correspondem a
+páginas baixadas na coleção.
 
-%\begin{figure*}
-%  \centering
-%  \mbox{
-%    \subfigure[Bytes indexados/s]{
-%          \label{fig:bytes}
-%          \includegraphics[width=0.45\textwidth]{plot_bps}}
-% }
-% \mbox{
-%    \subfigure[Documentos indexados]{
-%          \label{fig:docs}
-%          \includegraphics[width=0.45\textwidth]{plot_dps}}
-%  }
-%  \caption{Desempenho do indexador}
-%  \label{fig:desempenho}
-%\end{figure*}
+\subsubsection{Convergência do PageRank}
 
+Mesmo realizando, a cada iteração, a leitura dos arquivos com as listar
+invertidas, consideramos que nossa implementação do PageRank executou
+com relativa velocidade. Cada iteração demora em média 115 segundos.
 
-Observe que os gráficos apresentados na Figura~\ref{fig:desempenho} são
-referentes a uma execução do processo de indexação diferente daquela
-apresentada na Tabela~\ref{tab:sumario}. A execução cujos dados estão
-apresentados nessa tabela dizem respeito a idenxação de todo o conteúdo
-coletado. A existência dessa diferença entre a tabela e os dados ocorre
-devido ao fato de que as alterações necessárias no indexador para a
-geração desse gráfico foram feitas tardiamente e uma re-execução
-completa do processo de indexação levaria aproximadamente mais 15,5
-horas.\footnote{E esse TP já está atrasado.}
-
-\subsection{Exemplo de uso}
-
-Podemos ver saídas de execuções do processador de consultas nas
-Figuras~\ref{fig:exemplo} e \ref{fig:real}. A primeira presenta a saída
-de uma execução na qual foi utilizada uma coleção de dados de exemplo
-igual a coleção usada em sala de aula nas aulas de indexação. A segunda
-apresenta a saída para algumas \emph{queries} utilizando o índice gerado
-a partir dos dados coletados.
-
-\begin{figure*}
+\begin{figure}[htb]
 \begin{center}
-\begin{verbatim}
-./querybool ../test_indexer/
-Loading vocabulary and inverted file ... done
-Type your query using AND, OR and spaces to split terms.
-Default operation is AND (conjunctive).
-Notice: a AND b c OR d == (((a AND b) AND c) OR d )
-> porridge
-Document(s) found matching query 'porridge':  1 2
-> hot
-Document(s) found matching query 'hot':  1 4
-> hot AND porridge
-Document(s) found matching query 'hot AND porridge':  1
-> hot OR porridge
-Document(s) found matching query 'hot OR porridge':  1 2 4
->
-\end{verbatim}
-\caption{Uso da ferramenta com uma base de exemplo}
-\label{fig:exemplo}
+\includegraphics[width=0.5\textwidth]{plot_pagerankconverge}
 \end{center}
-\end{figure*}
+\caption{Convergência do PageRank (escala Log-Normal)}
+\label{fig:converge}
+\end{figure}
 
-\begin{figure*}
-\begin{center}
-\begin{verbatim}
-$ ./querybool ../index_data
-Loading vocabulary and inverted file ... done
-Type your query using AND, OR and spaces to split terms.
-Default operation is AND (conjunctive).
-Notice: a AND b c OR d == (((a AND b) AND c) OR d )
-> lésbicas OR selvagens AND freiras
-Document(s) found matching query 'lésbicas OR selvagens AND freiras':  31922
-65842 84882 94838 108508 115584 124033 130857 141172 158426 168044
-183336 196840 207264 216442 226165 236593 243890 252612 256096 263363
-272922 282825 290036 299370 307725 315274 323257 332230 341223 349546
-356752 364623 373471 382413 390689 409396 426570 439908 449507 456076
-462829 469155 475139 480537 487507 496218 502690 512025 518657 524208
-531037 540090 544070 549361 555214 560007 565528 568628 570142 574648
-579555 585285 591063 592813 604989 610850 615952 625775 630188 632206
-641719 646877 651394 658620 663791 663793 663953 669615 674586 680257
-682757 687234 693030 698780 704742 709824 715349 720210 724919 731019
-737507 737589 743592 748693 754156 756055 758788 760390 760392 763375
-769037 773114 777792 780059 781749 785801 789528 791333 794381 799364
-804656 809995 817204 826368 828038 830201 834120 838065 849036 854318
-861354 865075 869356 873638 886580 891076 896460 902930 903463 910369
-914225 920268 924571 930078 935533 939771 944401 949906 953827 959028
-963400 967952 972054 976207 980077 984419 989587 994954 999051 1004041
-1006623 1010623 1011280 1015995 1016813 1021027 1026184 1030933 1041424
-1045448 1051886 1057097 1057299 1061454 1065080 1065520 1070027 1074334
-1079421 1083479 1086813 1087051 1091880 1092497 1099165 1172010 1172012
-1208717 1215003 1225674 1231362 1237443 1242387 1253852 1260545 1266924
-1271244 1277691 1283726 1289641 1296986 1302666 1304467 1307215 1313336
-1318746 1324809 1329855 1335839 1340520 1342909 1346002 1350950 1355268
-1361052 1366442 1373461 1385372 1390943 1396249 1401501 1406075 1411560
-1417425 1423514 1427359 1429289 1433270 1438565 1442471 1447409 1451165
-1455432 1461749 1466591 1470365 1473606 1477900 1481885 1485432 1488742
-1492894 1496786 1501076 1501246 1505783 1508451 1510345 1510486 1514772
-1518651 1523382 1527498 1533617 1537628 1540675 1544839 1548062 1551580
-1552308 1878118 1914096 2172227 2172229 2520734 2566735 2566737 2647844
-2665235 2953721 3080068 3704516 3726904 4307367
-> freiras hentai
-Document(s) found matching query 'freiras hentai':  5090591
-> psicanalistas AND psicopatas
-Document(s) found matching query 'psicanalistas AND psicopatas':  1940391
-2091678
->
-\end{verbatim}
-\caption{Uso da ferramenta com dados reais}
-\label{fig:real}
-\end{center}
-\end{figure*}
+Na Figura~\ref{fig:converge} podemos ver o gráfico de convergência do
+PageRank, apresentado em escala Log-Normal. O valor da norma \(L_1\) é
+calculado para as diferências das estimativas de PageRank encontradas em
+duas execuções consecutivas. A fórmula para o cálculo da norma \(L_1\) é
+apresentada na equação~\ref{eq:l1}. Como pode ser visto na figura, até
+aproximadamente a interação 70 a curva apresenta o decaimento
+exponencial -- evidenciado pela reta no gráfico em escala
+log-normal. Após isso, o decaimento é consideravelmente mais lento,
+indicando que para obter uma maior precisão (ou seja, um valor menor de
+norma \(L_1\)), um número de iterações será bemm maior, não justificando
+seu custo.
 
+\begin{equation}
+L_1(X) = \sum_{i=0}^{n}|x_i|
+\label{fig:li}
+\end{equation}
 
 
 
@@ -835,7 +765,9 @@ Document(s) found matching query 'psicanalistas AND psicopatas':  1940391
 
 \section{Agradecimentos}
 
-Hélio, Anísio.
+Esse trabalho não poderia ser entregue sem a ajuda de Hélio Almeida e
+sem a colaboração de  Anísio Lacerda, que forneceu o código das funções
+de hash.
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%% Bibliografia %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%

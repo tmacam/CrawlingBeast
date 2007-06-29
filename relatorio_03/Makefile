@@ -1,7 +1,7 @@
 
 all: view
 
-LIST_OF_PDF_FIGS := plot_linkranking.pdf
+LIST_OF_PDF_FIGS := plot_linkranking.pdf plot_pagerankconverge.pdf
 
 include images.mk
 
